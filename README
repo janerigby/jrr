@@ -1,0 +1,11 @@
+These are Jane Rigby's python routines to deal with astronomical data.  
+They use Pandas data frames and Astropy.
+Components:
+mage.py 	tools to deal w Magellan/MagE spectra
+fire.py		tools to deal w Magellan/FIRE spectra
+spec.py		general tools to deal with spectra
+peakdet.py	simple peak detection
+util.py		general utilities
+
+First commit to github: July 2016
+Jane.Rigby@gmail.com
