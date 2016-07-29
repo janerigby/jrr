@@ -1,0 +1,39 @@
+''' General-purpose utilities.  jrigby May 2016'''
+
+import numpy as np
+from   re import split
+import fileinput
+
+#####  Math  #####
+
+def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and siga, sigb are uncerts in a,b
+    return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
+
+def mad(data, axis=None):
+    return np.median(np.absolute(data - np.median(data, axis)), axis)
+
+#####  Handle files  #####
+
+def split_grab(line, place) :
+    splitted = line.split()
+    return(splitted[place])
+
+def replace_text_in_file_like_sed(oldtext, newtext, infile):
+    ''' This edits a file in-place, globally replacing oldtext with newtext.
+    Should act like this sed equivalent:  sed -i .bak 's/oldtext/newtext/g' infile '''
+    for line in fileinput.FileInput(infile,inplace=1):
+        line = line.replace(oldtext, newtext)
+        print line,
+    return(0)
+
+## Basic astronomy
+
+def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
+    AB = -2.5 * np.log10(Jy * 1E-23) - 48.57
+    return(AB)
+
+def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies    
+    Jy = 10**(-0.4*(AB + 48.57))/1E-23  
+    return(Jy)
+
+
