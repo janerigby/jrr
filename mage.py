@@ -1,5 +1,5 @@
 ''' Scripts to read and analyze MagE spectra.  
-    jrigby, begun Oct 2015.  Updates March--May 2016
+    jrigby, begun Oct 2015.  Updates March--July 2016
 '''
 from jrr import spec
 from jrr import util
