@@ -9,6 +9,8 @@ from   matplotlib import pyplot as plt
 from   astropy.io import fits
 from   re import split, sub, search
 from   os.path import expanduser
+import re
+import glob
 from subprocess import check_output   # Used for grepping from files
 import astropy.convolution
 
@@ -174,20 +176,30 @@ def open_S99_spectrum(rootname, zz) :
     linelist = line_path + "stacked.linelist"
     (LL, z_sys) = get_linelist(linelist)  #z_syst should be zero here.    
     auto_fit_cont(sp, LL, zz)
-    return(sp)    
-    
+    return(sp)
+
+def dict_of_stacked_spectra(mage_mode) :
+    ''' Returns:  a) main directory of stacked spectra,  b) a list of all the stacked spectra.'''
+    (spec_path, line_path)  = getpath(mage_mode)
+    if mage_mode == "reduction" :
+        indir = spec_path + "../Analysis/Stacked_spectra/"
+    elif mage_mode == "released" :
+        indir = spec_path + "../Stacked/"
+    files = glob.glob(indir+"*spectrum.txt")
+    justfiles = [re.sub(indir, "", file) for file in files]         # list comprehension
+    short_stackname = [re.sub("magestack_", "", file) for file in justfiles]         # list comprehension
+    short_stackname = [re.sub("_spectrum.txt", "", file) for file in short_stackname]         # list comprehension
+    stack_dict =  dict(zip(short_stackname, justfiles))
+    return(indir, stack_dict)
+        
 def open_stacked_spectrum(mage_mode, alt_infile=False) :
     #call: (restwave, X_avg, X_clipavg, X_median, X_sigma, X_jack_std, Ngal)= jrr.mage.open_stacked_spectrum(mage_mode)
+    (indir, stack_dict) = dict_of_stacked_spectra(mage_mode)
     if alt_infile :
         print "Caution, I am using ", alt_infile, "instead of the default stacked spectrum."
-        infile = alt_infile
+        infile = indir + alt_infile
     else :
-        (spec_path, line_path)  = getpath(mage_mode)
-        if mage_mode == "reduction" :
-            infile = spec_path + "../Analysis/Stacked_spectra/Stack_by_zsyst/"
-        elif mage_mode == "released" :
-            infile = spec_path + "../Stacked/Stack_by_zsyst/"
-        infile += "mage_stack_standard_spectrum.txt"        
+        infile = indir + "magestack_bystars_standard_spectrum.txt"
     sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)
     sp['X_avg'] = sp['X_avg'].astype(np.float64)   #force to be a float, not a str
     sp['X_avg_flam']      = spec.fnu2flam(sp['restwave'], sp['X_avg'])
