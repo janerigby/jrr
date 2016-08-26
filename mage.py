@@ -6,6 +6,7 @@ from jrr import util
 import numpy as np
 import pandas 
 from   matplotlib import pyplot as plt
+from cycler import cycler
 from   astropy.io import fits
 from   re import split, sub, search
 from   os.path import expanduser
@@ -346,96 +347,61 @@ def mage2D_iswave(filename, wave) :
     else :
         return(False)
 
-def mage_boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Ncol, LL, spec_label="",figsize=(8,8), vel_plot=True) :
-    '''Make a plot of flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines, in a
-    [Nrow x Ncol] box.    Inputs are:
-    wave:        observed wavelength (currently Angstrom)
-    fnu:         cont-normalized flux density (erg/s/cm^2/Hz)  ** should this be flambda instead?.
-    dfnu:        1 sigma uncertainty on fnu
-    line_label:  tuple of line labels
-    line_center: np array of rest-frame wavelengths (Angstroms)
-    redshift:    redshift to assume,
-    win:         window to use (km/s if vel_plot; if not, wavelength units.)
-    Ncol:        number of columns to plot.  Number of rows set automatically.
-    LL:          The linelist, a Pandas data frame, read in by jrr.mage.get_linelist(linelist).
-    spec_label:  Name of spectrum to plot in lower panel.  May be blank
-    figsize:     (Optional) Figure size in inches.
-    vel_plot:    (Optional, Boolean):  If True, x-axis is velocity.  If False, x-axis is wavelength.
-    '''
-    Nrow = np.ceil(line_center.size / Ncol)  # Calculate how many rows to generate
-    fig = plt.figure(figsize=figsize)
-    restwave = wave / (1.0 + redshift)
-
-    for ii, dum in enumerate(line_label) :
-        print "    Plotting ", line_label[ii], " at ", line_center[ii]
-        ax = fig.add_subplot(Nrow, Ncol, ii+1)
-        plt.annotate( line_label[ii], (0.3,0.9), xycoords="axes fraction")
-        if(vel_plot) :
-            vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
-            in_window = vel.between(-1*win, win)
-            plt.step(vel[in_window], fnu[in_window], color=color1)   # assumes input is continuum-normalized
-            plt.step(vel[in_window], dfnu[in_window], color=color2)  # plot uncertainty
-            plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum. 
-            plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
-            plt.ylim(0.0, 1.5)  # May need to change these limits
-            plt.xlim(-1*win, win)
-        else :
-            in_window = restwave.between((line_center[ii] - win), (line_center[ii] + win))
-            plt.step(restwave[in_window], fnu[in_window],  color=color1)
-            plt.step(restwave[in_window], dfnu[in_window], color=color2)
-            plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
-            plt.xlim(line_center[ii] - win, line_center[ii] + win)
-        plot_linelist(LL, redshift, True, vel_plot, line_center[ii])  # plot the line IDs
-        if ii == len(line_label) -1 :
-            if vel_plot : 
-                plt.xlabel("rest-frame velocity (km/s)")  # if last subplot, make xlabel
-            else :
-                plt.xlabel(r'rest-frame wavelength($\AA$)')
-        else :
-            ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
-            # But warning, this will disable x= on interactive matplotlib.  comment out above line to measure numbers interactively on graph
-        fig.subplots_adjust(hspace=0)
-
-def mage_boxplot_2spectra(wave1, fnu1, dfnu1, wave2, fnu2, dfnu2, line_label, line_center, redshift1, redshift2, win, Ncol, LL, spec_label="",figsize=(8,8), vel_plot=True, plot_xaxis=True) :
-    ''' Same as mage_boxplot_spectra, but overplot two different spectra, for comparison.'''
+def mage_boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL, extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ylims=(0.0,1.5)) :
+    '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
+    in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
+    Inputs are:
+    thewaves:        tuple of arrays of observed wavelength (Angstrom).  If only 1 spectrum, use thewaves=(wav_ar,) to keep as tuple.
+    thefnus:         tuple of arrays of cont-normalized flux density (erg/s/cm^2/Hz)  ** should this be flambda instead?.
+    thedfnus:        tuple of arrays of 1 sigma uncertainty on fnu
+    thezs:           tuple of arrays of redshifts, to convert to rest-frame
+    line_label:      tuple of line labels.  Makes one box per line
+    line_center:     np array of rest-frame wavelengths (Angstroms).  Makes one box per line
+    win:             window to use (km/s if vel_plot; if not, wavelength units.)
+    Ncol:            number of columns to plot.  Number of rows set automatically.
+    LL:              The linelist, a Pandas data frame, read in by jrr.mage.get_linelist(linelist).
+    extra_label:     (Optional) Extra text to annotate to lower panel.
+    figsize:         (Optional) Figure size in inches.
+    vel_plot:        (Optional, Bool) If True, x-axis is velocity.  If False, x-axis is wavelength.
+    plot_xaxis:      (Optional, Bool) Plot the xaxis?
+    ylims:           (Optional, tuple) ylim, over-rides default
+         thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
+    If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
+    
+    mycol = ['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan']
+    linestyles = ['solid'] #, 'dashed', 'dotted']#, 'dashdot']
+    plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles)))  # fix stupid colors after lunch.**
+    
     Nrow = int(np.ceil( float(line_center.size) / Ncol))  # Calculate how many rows to generate
     print "DEBUGGING ", Nrow, Ncol, len(line_center)
     fig = plt.figure(figsize=figsize)
-    restwave1 = wave1 / (1.0 + redshift1)
-    restwave2 = wave2 / (1.0 + redshift2)
 
     for ii, dum in enumerate(line_label) :
         print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
         plt.annotate( line_label[ii], (0.3,0.9), xycoords="axes fraction")
         if(vel_plot) :
-            vel1 = spec.convert_restwave_to_velocity(restwave1, line_center[ii])   # velocity in km/s
-            vel2 = spec.convert_restwave_to_velocity(restwave2, line_center[ii])   # velocity in km/s
-            in_window1 = vel1.between(-1*win, win)
-            in_window2 = vel2.between(-1*win, win)
-            plt.step(vel1[in_window1], fnu1[in_window1], color=color1)   # assumes input is continuum-normalized
-            plt.step(vel1[in_window1], dfnu1[in_window1], color=color2)  # plot uncertainty
-            plt.step(vel2[in_window2], fnu2[in_window2], color=color4)   # assumes input is continuum-normalized
-            plt.step(vel2[in_window2], dfnu2[in_window2], color=color2)  # plot uncertainty
-            #plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum. 
+            for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
+                restwave = thewaves[ss] / (1.0 + thezs[ss])
+                vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
+                in_window = vel.between(-1*win, win)
+                plt.step(vel[in_window], thefnus[ss][in_window], color=mycol[ss])   # assumes input is continuum-normalized
+                plt.step(vel[in_window], thedfnus[ss][in_window], color=mycol[ss])  # plot uncertainty
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
-            plt.ylim(0.0, 1.5)  # May need to change these limits
             plt.xlim(-1*win, win)
         else :
-            in_window1 = restwave1.between((line_center[ii] - win), (line_center[ii] + win))
-            in_window2 = restwave2.between((line_center[ii] - win), (line_center[ii] + win))
-            plt.step(restwave1[in_window1], fnu1[in_window1],  color=color1)
-            plt.step(restwave1[in_window1], dfnu1[in_window1], color=color2)
-            plt.step(restwave2[in_window2], fnu2[in_window2],  color=color4)
-            plt.step(restwave2[in_window2], dfnu2[in_window2], color=color2)
-            #plt.plot((line_center[ii] - win, line_center[ii] + win), (1.0,1.0), color=color3)        # plot unity continuum. 
+            for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
+                restwave = thewaves[ss] / (1.0 + thezs[ss])
+                in_window = restwave.between((line_center[ii] - win), (line_center[ii] + win))
+                plt.step(restwave[in_window], thefnus[ss][in_window], color=mycol[ss])
+                plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss])
             plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
-            plt.ylim(0.1, 1.3)  # May need to change these limits
-
-        plot_linelist(LL, redshift1, True, vel_plot, line_center[ii])  # plot the line IDs
+        plt.ylim(ylims[0], ylims[1])  # May need to change these limits
+        plot_linelist(LL, thezs[0], True, vel_plot, line_center[ii])  # plot the line IDs for the first spectrum only
      # plot_linelist(L_all, z_systemic=0.0, restframe=False, velplot=False, line_center=0.0) :  
         if ii == len(line_label) -1 :
+            plt.annotate(extra_label, (0.6,0.1), xycoords="axes fraction")
             if vel_plot : 
                 plt.xlabel("rest-frame velocity (km/s)")  # if last subplot, make xlabel
             else :
@@ -445,7 +411,8 @@ def mage_boxplot_2spectra(wave1, fnu1, dfnu1, wave2, fnu2, dfnu2, line_label, li
             # But warning, this will disable x= on interactive matplotlib.  comment out above line to measure numbers interactively on graph
         if not plot_xaxis :
             fig.subplots_adjust(hspace=0)
-        
+
+                    
 def flag_skylines(sp) :
     # Mask skylines [O I] 5577\AA\ and [O I]~6300\AA,
     skyline = (5577., 6300.)
