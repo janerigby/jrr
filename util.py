@@ -12,6 +12,9 @@ def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and 
 def mad(data, axis=None):
     return np.median(np.absolute(data - np.median(data, axis)), axis)
 
+def round_up_to_odd(f):
+    return np.ceil(f) // 2 * 2 + 1
+
 #####  Handle files  #####
 
 def split_grab(line, place) :
