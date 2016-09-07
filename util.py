@@ -12,6 +12,10 @@ def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and 
 def mad(data, axis=None):
     return np.median(np.absolute(data - np.median(data, axis)), axis)
 
+def IQR(Series) :
+    ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''
+    return ( (Series.quantile(0.25) + Series.quantile(0.75))/2.)
+
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1
 

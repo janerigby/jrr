@@ -241,11 +241,11 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, colfnu='X_avg', colfnuu='
     sp['flam_u']    = spec.fnu2flam(sp['wave'], sp['fnu_u'])
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
     calc_dispersion(sp, 'disp', 'wave')
-    sp['badmask'] = np.nan
-    sp['linemask'] = np.nan
+    sp['badmask'] = False
+    sp['linemask'] = False
     convert_spectrum_to_restframe(sp, 0.0)  # z=0
     boxcar = get_boxcar4autocont(sp)
-    print "DEBUGGING, boxcar is ", boxcar
+    #print "DEBUGGING, boxcar is ", boxcar
     auto_fit_cont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
     return(sp) # return the Pandas DataFrame containing the stacked spectrum
      

@@ -3,16 +3,22 @@ jrigby, may 2016 '''
 
 from jrr import spec
 from jrr import mage
+from jrr import util
 import pandas
 from   math import ceil
 from   matplotlib import pyplot as plt
+from mpl_toolkits.axes_grid1 import host_subplot
+from matplotlib.ticker import MultipleLocator, FormatStrFormatter, MaxNLocator
 import numpy as np
-from   matplotlib import pyplot as plt
 from cycler import cycler
+from matplotlib.backends.backend_pdf import PdfPages
 
 color1 = 'k'     # color for spectra
 color2 = '0.65'  # color for uncertainty spectra
 color3 = '0.5'   # color for continuum
+
+def standard_colors1():
+    return(['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan'])
 
 def onclick(event):  # Setting up interactive clicking.  Right now, just prints location.  Need to add fitting.
     print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
@@ -87,8 +93,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     ylims:           (Optional, tuple) ylim, over-rides default
          thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
-    
-    mycol = ['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan']
+    mycol = standard_colors1()
     linestyles = ['solid'] #, 'dashed', 'dotted']#, 'dashdot']
     plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles))) 
     
@@ -153,3 +158,91 @@ def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2
         plt.xlabel("rest-frame velocity (km/s)")
     plt.plot( (0.,0.), plt.ylim(),  color=color2, linewidth=2)  # plot tics at zero velocity
     plt.plot( plt.xlim(), (1.0,1.0), color=color2)  # plot unity continuum
+
+def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, xtics=30, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, annotate=False) :
+    ''' Plot an echelle(ette) spectrum with several pages and many panels for page.  Based on multipanel-spectrum-ids.py,
+    but modular. and with more features.  Inputs:
+    the_dfs:    an array of dataframes containing spectra, to plot. Usually this is just one dataframe, one spectrum,
+                but want to allow overplotting of multiple spectra.  First spectrum will be used to set the wavelength range.
+    the_zzs:    an array of redshifts
+    LL:         (Optional). a linelist to plot features.  At present, takes redshift from the_zzs[0].
+    Npages:     pages of plots in the output PDF.  Will split evenly.
+    Npanels:    Total number of panels to plot, across all pages
+    plotsize:   (Optional) Size of the plot
+    outfile:    Name of output PDF file.
+    norm_by_cont: (Optional), Normalize by continuum?
+    plot_cont:  (Optional) Plot the continuum, too?
+    apply_bad:  (Optional) Apply bad pixel map?
+    xtics:      Spacing of majorLocator (xticks) for plotting
+    waverange:  (Optional) Only plot this wavelength range, rather than full range. Format is (wave_lo, wave_hi).
+    colwave, colfnu, colfnu_u, colcont:  columns in the dataframe to use for wave, fnu, fnu_uncert, continuum
+    colortab:   (Optional) color table to use, to replace default colortab
+    annotate:   (Optional) Function that will annotate the first page.  For plot customization.'''
+    
+    contcolor = '0.75'
+    if colortab :  linecolor=colortab
+    else : 
+        #linecolor = standard_colors1()
+        linecolor = ('black', 'midnightblue', 'dimgray', 'lightgrey')
+    pp = PdfPages(outfile)  # output
+    # Set up the wavelength ranges.  Each panel has same # of pixels, not same dlambda, since dispersion may change.
+    if not len(waverange) in (0, 2) : raise Exception("Error: len(waverange) must be 0 or 2")
+    if len(waverange) :  # If user selected wavelength range, modify index, but keep same # of pixels per panel
+        first_index = the_dfs[0][the_dfs[0]['wave'].between(waverange[0], waverange[0]*1.01)]['wave'].index[0]
+        last_index  = the_dfs[0][the_dfs[0]['wave'].between(waverange[1], waverange[1]*1.01)]['wave'].index[-1]
+    else : 
+        first_index = 0
+        last_index  = len(the_dfs[0][colwave])-1
+    ind = (np.linspace(first_index, last_index, num=Npanels+1)).astype(np.int)
+    start = the_dfs[0][colwave][ind[0:-1]].values
+    end   = the_dfs[0][colwave][ind[1:]].values
+
+    max_per_page = np.int(np.float64(Npanels) / Npages)
+    the_format = max_per_page*100 + 11  # makes label: 311 for 3 rows, 1 col, start at 1
+
+    for df in the_dfs :
+        if norm_by_cont :   df['normby'] = df[colcont]  # easy to plot whether or not it's continuum normalized
+        else :              df['normby'] = 1.0
+    for kk in range(0, Npanels) :
+        if kk % max_per_page == 0 :   # Start a new page
+            current_page = kk /  max_per_page + 1  # should be int division
+            print "Starting page", current_page, "of", Npages
+            fig    = plt.figure(figsize=plotsize)
+        subit = host_subplot(the_format + kk % max_per_page)
+        print "Plotting panel", kk, "for wavelengths", start[kk], "to",end[kk]
+        for ss, df in enumerate(the_dfs) :
+            if apply_bad : subset = df[df[colwave].between(start[kk], end[kk]) & ~df['badmask']]
+            else:          subset = df[df[colwave].between(start[kk], end[kk])]
+
+            plt.plot(subset[colwave], subset[colfnu]/subset['normby'],   color=linecolor[ss],  linestyle='steps')
+            plt.plot(subset[colwave], subset[colfnu_u]/subset['normby'], color=linecolor[ss], linestyle='steps') # plot 1 sigma uncert spectrum
+            if plot_cont :  plt.plot(subset[colwave], subset[colcont]/subset['normby'], contcolor, linestyle='steps', zorder=1) # plot the continuum
+                    
+            if ss == 0 :  # If the first df, set the plot ranges
+                top = (subset[colfnu]/subset['normby']).median()*1.1 + util.IQR(subset[colfnu]/subset['normby'])*0.3
+        plt.ylim(0, top)  # trying to fix weird autoscaling from bad pixels
+        plt.xlim(start[kk], end[kk])
+        if len(LL) : mage.plot_linelist(LL, the_zzs[0])   # Plot the line IDs.  Use the first redshift for z.
+        upper = subit.twiny()  # make upper x-axis in rest wave (systemic, or of abs lines)
+        upper.set_xlim( start[kk]/(1.0+the_zzs[0]), end[kk]/(1.0+the_zzs[0]))
+        majorLocator   = MultipleLocator(xtics)  # put subticks on lower x-axis
+        minorLocator   = MultipleLocator(xtics/3)
+        subit.xaxis.set_major_locator(majorLocator)
+        subit.xaxis.set_minor_locator(minorLocator)
+        subit.xaxis.tick_bottom()  # don't let lower ticks be mirrored  on upper axis
+        subit.yaxis.set_major_locator(MaxNLocator(nbins=4, integer=False, Symmetric=False))
+        #upper.xaxis.set_major_locator(MaxNLocator(nbins=4, integer=False, Symmetric=False))
+
+        if  kk % max_per_page == (max_per_page-1) or kk == Npanels-1:   # last plot on this page
+            subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")
+            plt.ylabel('fnu') # fnu in cgs units: erg/s/cm^2/Hz
+            pp.savefig()    
+            #fig.canvas.draw()
+
+        if(kk == 0):
+            if callable(annotate) : annotate()
+            plt.suptitle(title)  # global title
+            upper.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")
+    pp.close()
+    print "   Generated PDF:  ", outfile
+    return(0)
