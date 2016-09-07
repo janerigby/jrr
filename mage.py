@@ -6,7 +6,6 @@ from jrr import util
 import numpy as np
 import pandas 
 from   matplotlib import pyplot as plt
-from cycler import cycler
 from   astropy.io import fits
 from   re import split, sub, search
 from   os.path import expanduser
@@ -20,11 +19,12 @@ color2 = '0.65'  # color for uncertainty spectra
 color3 = '0.5'   # color for continuum
 color4 = 'b'     # color for 2nd spectrum, for comparison
 
-def calc_dispersion(sp) :
-    sp['disp'] = sp.wave.diff()  # dispersion, in Angstroms
-    sp['disp'].iloc[0] = sp['disp'][1] # first value will be nan
+def calc_dispersion(sp, coldisp, colwave) :
+    # inputs are spectrum dataframe, column for dispersion ('disp'), column for wave ('wave')
+    sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
+    sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
-
+            
 def get_boxcar4autocont(sp) :
     # For fit_autocont(), find the number of pixels that corresponds to target Angstroms in the rest frame
     target = 100. # rest-frame Angstroms
@@ -109,7 +109,7 @@ def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_flam, rest_flam_u) = spec.convert2restframe(sp.wave, sp.flam,  sp.flam_u,  zz, 'flam')
     sp['rest_flam']    = pandas.Series(rest_flam)
     sp['rest_flam_u']  = pandas.Series(rest_flam_u)
-    sp['rest_disp'] = sp['disp'] / (1.0+zz)  # rest-frame dispersion, in Angstroms    
+    calc_dispersion(sp, 'rest_disp', 'rest_wave')   # rest-frame dispersion, in Angstroms    
     if 'fnu_cont' in sp :
         (junk   , rest_fnu_cont, rest_fnu_cont_u) = spec.convert2restframe(sp.wave, sp.fnu_cont, sp.fnu_cont_u, zz, 'fnu')
         sp['rest_fnu_cont']   = pandas.Series(rest_fnu_cont)
@@ -143,7 +143,7 @@ def open_spectrum(infile, zz, mage_mode) :
     sp.rename(columns= {'noise'  : 'fnu_u'}, inplace=True)
     sp.rename(columns= {'avgsky' : 'fnu_sky'}, inplace=True)
     sp.rename(columns= {'obswave' : 'wave_sky'}, inplace=True)
-    calc_dispersion(sp)
+    calc_dispersion(sp, 'disp', 'wave')
     
     if hascont :
         sp.rename(columns= {'cont_fnu'    : 'fnu_cont'}, inplace=True)  # Rename for consistency
@@ -164,7 +164,9 @@ def open_spectrum(infile, zz, mage_mode) :
     sp['fnu_autocont'] = pandas.Series(np.ones_like(sp.wave)*np.nan)  # Will fill this with automatic continuum fit
     flag_skylines(sp)    # Flag the skylines.  This modifies sp.badmask
     sp.replace([np.inf, -np.inf], np.nan, inplace=True) # Replace any inf values with nan
-    flag_huge_uncert(sp, 0.5)  # flag uncertainties >0.5
+    flag_huge(sp, colfnu='fnu',   thresh_hi=3E4, thresh_lo=-3E4, norm_by_med=True)
+    flag_huge(sp, colfnu='fnu_u', thresh_hi=0.5, thresh_lo=-0.5, norm_by_med=False)    
+    flag_oldflags(sp)
     convert_spectrum_to_restframe(sp, zz)
     return(sp, resoln, dresoln)   # Returns the spectrum as a Pandas data frame, the spectral resoln as a float, and its uncertainty
 
@@ -188,18 +190,17 @@ def open_S99_spectrum(rootname, zz) :
     (spec_path, line_path) = getpath(mage_mode)
     S99path = spec_path + "../Contrib/S99/"
     S99file = S99path + rootname + '-sb99-fit.txt'
-    sp =  pandas.read_table(S99file, delim_whitespace=True, comment="#", names=('wave', 'data_fnu', 'data_fnu_u', 's99_fnu'))
-    sp['fnu'] = sp['s99_fnu']      # Ayan's EW fitter is looking for fnu, so put the s99 spectrum into fnu
-    sp['fnu_u'] = sp['fnu']  * 0.01 # hardcoded, feeding a dummy fnu_u that is 1% of fnu
-    sp['badmask'] = False
-    sp['flam']     = spec.fnu2flam(sp.wave, sp.fnu)          # convert fnu to flambda
-    sp['flam_u']   = spec.fnu2flam(sp.wave, sp.fnu_u)
+    sp =  pandas.read_table(S99file, delim_whitespace=True, comment="#", names=('rest_wave', 'rest_fnu_data', 'rest_fnu_data_u', 'rest_fnu_s99'))
+    sp['rest_fnu_s99_u'] = np.nan
+    sp['badmask']  = False
+    sp['linemask'] = False
+    flag_huge(sp, colfnu='rest_fnu_data', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
+    flag_huge(sp, colfnu='rest_fnu_s99', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-    calc_dispersion(sp)
-    convert_spectrum_to_restframe(sp, 0.0)  # z=0  # this makes auto_fit_cont happy bc populates rest_disp
+    calc_dispersion(sp, 'rest_disp', 'rest_wave')
     boxcar = get_boxcar4autocont(sp)
-    print "DEBUGGING boxcar", boxcar
-    auto_fit_cont(sp, LL, zz=0.0, boxcar=boxcar)
+    auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_s99', colfnuu='rest_fnu_s99_u', colcont='rest_fnu_s99_autocont', boxcar=boxcar)
+    auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_data', colfnuu='rest_fnu_data_u', colcont='rest_fnu_data_autocont', boxcar=boxcar)
     return(sp, LL)
     
 def dict_of_stacked_spectra(mage_mode) :
@@ -239,7 +240,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, colfnu='X_avg', colfnuu='
     sp['flam']      = spec.fnu2flam(sp['wave'], sp['fnu'])
     sp['flam_u']    = spec.fnu2flam(sp['wave'], sp['fnu_u'])
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-    calc_dispersion(sp)
+    calc_dispersion(sp, 'disp', 'wave')
     sp['badmask'] = np.nan
     sp['linemask'] = np.nan
     convert_spectrum_to_restframe(sp, 0.0)  # z=0
@@ -385,82 +386,6 @@ def mage2D_iswave(filename, wave) :
     else :
         return(False)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL, renorm=[], extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, plotcont=False, ylims=(0.0,1.5)) :
-    '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
-    in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
-    Inputs are:
-    thewaves:        tuple of arrays of observed wavelength (Angstrom).  If only 1 spectrum, use thewaves=(wav_ar,) to keep as tuple.
-    thefnus:         tuple of arrays of cont-normalized flux density (erg/s/cm^2/Hz)  ** should this be flambda instead?.
-    thedfnus:        tuple of arrays of 1 sigma uncertainty on fnu
-    thezs:           tuple of arrays of redshifts, to convert to rest-frame
-    line_label:      tuple of line labels.  Makes one box per line
-    line_center:     np array of rest-frame wavelengths (Angstroms).  Makes one box per line
-    win:             window to use (km/s if vel_plot; if not, wavelength units.)
-    Ncol:            number of columns to plot.  Number of rows set automatically.
-    LL:              The linelist, a Pandas data frame, read in by jrr.mage.get_linelist(linelist).
-    theconts:        (Optional, tuple of continuum fits)
-    renorm:          (Optional) Boolean array of which lines to renormalize to fit in plotwindow.  same size as line_label
-    extra_label:     (Optional) Extra text to annotate to lower panel.
-    figsize:         (Optional) Figure size in inches.
-    vel_plot:        (Optional, Bool) If True, x-axis is velocity.  If False, x-axis is wavelength.
-    plot_xaxis:      (Optional, Bool) Plot the xaxis?
-    plot_cont        (Optional, Bool) Plot the continuum in fnu_autocont?
-    ylims:           (Optional, tuple) ylim, over-rides default
-         thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
-    If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
-    
-    mycol = ['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan']
-    linestyles = ['solid'] #, 'dashed', 'dotted']#, 'dashdot']
-    plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles)))  # fix stupid colors after lunch.**
-    
-    Nrow = int(np.ceil( float(line_center.size) / Ncol))  # Calculate how many rows to generate
-    print "DEBUGGING ", Nrow, Ncol, len(line_center)
-    fig = plt.figure(figsize=figsize)
-
-    if len(renorm) == 0 :  renorm = (np.zeros_like(line_center)).astype(np.bool)  # Array of which lines get renormalized
-    if len(renorm) != len(line_center) :   raise Exception('ERROR: unexpected size for input renorm', renorm)
-
-    for ii, dum in enumerate(line_label) :
-        print "    Plotting ", line_label[ii], " at ", line_center[ii]
-        ax = fig.add_subplot(Nrow, Ncol, ii+1)
-        plt.annotate( line_label[ii], (0.3,0.9), xycoords="axes fraction")
-        if(vel_plot) :
-            for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
-                restwave = thewaves[ss] / (1.0 + thezs[ss])
-                vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
-                in_window = vel.between(-1*win, win)
-                if renorm[ii] : normby = np.median(thefnus[ss][in_window])  # optional additional renormalization in window
-                else :          normby = 1.0
-                plt.step(vel[in_window], thefnus[ss][in_window] /normby, color=mycol[ss])  
-                plt.step(vel[in_window], thedfnus[ss][in_window]/normby, color=mycol[ss])  # plot uncertainty
-                plt.step(vel[in_window], thefnus[ss][in_window] /normby, color=mycol[ss])  
-            plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
-            plt.xlim(-1*win, win)
-        else :
-            for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
-                restwave = thewaves[ss] / (1.0 + thezs[ss])
-                in_window = restwave.between((line_center[ii] - win), (line_center[ii] + win))
-                if renorm[ii] : normby = np.median(thefnus[ss][in_window])  # optional additional renormalization in window
-                else :          normby = 1.0
-                plt.step(restwave[in_window], thefnus[ss][in_window]/normby, color=mycol[ss])
-                plt.step(restwave[in_window], thedfnus[ss][in_window]/normby, color=mycol[ss])
-            plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
-            plt.xlim(line_center[ii] - win, line_center[ii] + win)
-        plt.ylim(ylims[0], ylims[1])  # May need to change these limits
-        plot_linelist(LL, thezs[0], True, vel_plot, line_center[ii])  # plot the line IDs for the first spectrum only
-     # plot_linelist(L_all, z_systemic=0.0, restframe=False, velplot=False, line_center=0.0) :  
-        if ii == len(line_label) -1 :
-            plt.annotate(extra_label, (0.6,0.1), xycoords="axes fraction")
-            if vel_plot : 
-                plt.xlabel("rest-frame velocity (km/s)")  # if last subplot, make xlabel
-            else :
-                plt.xlabel(r'rest-frame wavelength($\AA$)')
-        if (not plot_xaxis) and (ii < len(line_label)-1) :
-            ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
-            # But warning, this will disable x= on interactive matplotlib.  comment out above line to measure numbers interactively on graph
-        if not plot_xaxis :
-            fig.subplots_adjust(hspace=0)
-
                     
 def flag_skylines(sp) :
     # Mask skylines [O I] 5577\AA\ and [O I]~6300\AA,
@@ -470,22 +395,27 @@ def flag_skylines(sp) :
         sp.badmask.loc[sp['wave'].between(thisline-skywidth, thisline+skywidth)] = True 
     return(0)  # This function works directly on sp
 
-def flag_huge_uncert(sp, thresh=0.5, crazy_high=30000) :
+def flag_huge(sp, colfnu='fnu', thresh_hi=3E4, thresh_lo=-3E4, norm_by_med=False) :
     # Set mask for pixels that have crazy high uncertainty.  These were flagged further upstream, where i had no mask.
     # Inputs:  sp is spectrum as Pandas data frame
-    #          thresh is threshold of uncertainty values to flag.
+    # if norm_by_med,  treat thresh_hi and thresh_lo as values
+    # if not norm_by_med, treat thresh_hi and thresh_lo as relative to mean of colfnu
     # Output:  None.  It directly acts on sp.badmask
-    sp.badmask.loc[sp.fnu_u.ge(thresh)] = True    # these are fluxed spectra, so normal values are 1E-28 or so.
-    sp.badmask.loc[sp.fnu.eq(-0.999)]   = True  # a flag from upstream
-    sp.badmask.loc[sp.fnu.gt(sp.fnu.median() * crazy_high)] = True  # flag pixels with crazy high flux.
-    sp.badmask.loc[sp.fnu.lt(sp.fnu.median() * crazy_high * -1)] = True  # flag pixels with crazy high flux.
-    return(0)
+    if norm_by_med :
+        thresh_hi *= sp[colfnu].median()
+        thresh_lo *= sp[colfnu].median()
+    sp.badmask.loc[sp[colfnu].gt(thresh_hi)] = True
+    sp.badmask.loc[sp[colfnu].lt(thresh_lo)] = True
+    return(0)    
+
+def flag_oldflags(sp, colfnu='fnu') :
+    sp.badmask.loc[sp[colfnu].eq(-0.999)]   = True  # a flag from upstream
 
 def flag_where_nocont(sp) :
     sp.badmask.loc[sp['fnu_cont'].eq(9999)] = True  # where hand-drawn continuum is undefined
     return(0)
 
-def flag_near_lines(sp, LL, zz, vmask) :
+def flag_near_lines(sp, LL, zz, vmask, colwave='wave') :
     # Flag regions within +- vmask km/s around lines in linelist LL
     # Inputs:   sp, the spectrum as Pandas data frame
     #           LL, the linelist as pandas data frame
@@ -496,7 +426,7 @@ def flag_near_lines(sp, LL, zz, vmask) :
     rest_cen = np.array( LL.restwav)
     line_lo   = rest_cen * (1.0 - vmask/2.997E5) * (1. + LL.zz)
     line_hi   = rest_cen * (1.0 + vmask/2.997E5) * (1. + LL.zz)
-    temp_wave = np.array(sp.wave)
+    temp_wave = np.array(sp[colwave])
     temp_mask = np.zeros_like(temp_wave).astype(np.bool)
     for ii in range(0, len(rest_cen)) :    # doing this in observed wavelength
         temp_mask[np.where( (temp_wave > line_lo[ii]) & (temp_wave < line_hi[ii]))] = True
@@ -504,9 +434,8 @@ def flag_near_lines(sp, LL, zz, vmask) :
     return(0)
     # To make this work for S99 synthetic spectra, should load S99 into a similar sp data frame, 
     # with zz=0 and sp.wave = the rest wavelength.
-
         
-def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u') : 
+def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
     ''' Automatically fits a smooth continuum to a spectrum.
      Inputs:  sp,  a Pandas data frame containing the spectra, opened by mage.open_spectrum or similar
               LL,  a Pandas data frame containing the linelist, opened by mage.get_linelist(linelist) or similar
@@ -517,15 +446,15 @@ def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deri
               colwave, colfnu, colfnuu:  which columns to find wave, fnu, fnu_u.
     '''
     # First, mask out big skylines. Done by mage.flag_skylines, which is called by mage.open_spectrum
-    # Second, flag regions with crazy high uncertainty.  done in flag_huge_uncert, called by mage.open_spectrum
+    # Second, flag regions with crazy high uncertainty.  done in flag_huge, called by mage.open_spectrum
     # Third, mask out regions near lines.  Flagged in sp.linemask
-    if flag_lines : flag_near_lines(sp, LL, zz, vmask)
-    # Populate fnu_autocont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
+    if flag_lines : flag_near_lines(sp, LL, zz, vmask, colwave=colwave)
+    # Populate colcont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
     temp_fnu = sp[colfnu].copy(deep=True)
     temp_fnu.loc[(sp.badmask | sp.linemask).astype(np.bool)] = np.nan
     # Last, smooth with a boxcar
     smooth1 = astropy.convolution.convolve(np.array(temp_fnu), np.ones((boxcar,))/boxcar, boundary='fill', fill_value=np.nan)
-    sp['fnu_autocont'] = pandas.Series(smooth1)  # Write the smooth continuum back to data frame
+    sp[colcont] = pandas.Series(smooth1)  # Write the smooth continuum back to data frame
     if make_derived : 
         # Make derived products from fnu_autocont:    flam_autocont,  rest_flam_autocont
         (dum, rest_fnu_autocont, dum) =  spec.convert2restframe(sp[colwave], sp.fnu_autocont, sp.fnu_autocont,  zz, 'fnu')
@@ -534,6 +463,5 @@ def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deri
         (dum, rest_flam, dum)  = spec.convert2restframe(sp[colwave], sp.flam_autocont,  sp.flam_u,  zz, 'flam')    
         sp['rest_flam_autocont'] = pandas.Series(rest_flam)
     return(0)
-
 
 
