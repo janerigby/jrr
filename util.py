@@ -14,7 +14,8 @@ def mad(data, axis=None):
 
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''
-    return ( (Series.quantile(0.25) + Series.quantile(0.75))/2.)
+    notnull = Series[Series.notnull()]
+    return ( (notnull.quantile(0.25) + notnull.quantile(0.75))/2.)
 
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1

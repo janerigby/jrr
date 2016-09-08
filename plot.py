@@ -159,7 +159,17 @@ def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2
     plt.plot( (0.,0.), plt.ylim(),  color=color2, linewidth=2)  # plot tics at zero velocity
     plt.plot( plt.xlim(), (1.0,1.0), color=color2)  # plot unity continuum
 
-def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, xtics=30, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, annotate=False) :
+def annotate_echelle() :
+    plt.annotate("f_nu (erg/s/cm^2/Hz)",  xy=(0.05,0.055), color="black", xycoords="figure fraction")
+    plt.annotate("Line color coding:", xy=(0.05,0.043), color="black", xycoords="figure fraction")
+    plt.annotate("Photosphere", xy=(0.05,0.03), color="blue", xycoords="figure fraction")
+    plt.annotate("Emission",    xy=(0.17,0.03), color="red", xycoords="figure fraction")
+    plt.annotate("ISM",         xy=(0.25,0.03), color="green", xycoords="figure fraction")
+    plt.annotate("Wind",        xy=(0.32,0.03), color="cyan", xycoords="figure fraction")
+    plt.annotate("Fine structure", xy=(0.4,0.03), color="purple", xycoords="figure fraction")
+    plt.annotate("Intervening", xy=(0.55,0.03), color="orange", xycoords="figure fraction")
+
+def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, xtics=30, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, topfid=(1.1,0.3), annotate=annotate_echelle) :
     ''' Plot an echelle(ette) spectrum with several pages and many panels for page.  Based on multipanel-spectrum-ids.py,
     but modular. and with more features.  Inputs:
     the_dfs:    an array of dataframes containing spectra, to plot. Usually this is just one dataframe, one spectrum,
@@ -177,6 +187,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     waverange:  (Optional) Only plot this wavelength range, rather than full range. Format is (wave_lo, wave_hi).
     colwave, colfnu, colfnu_u, colcont:  columns in the dataframe to use for wave, fnu, fnu_uncert, continuum
     colortab:   (Optional) color table to use, to replace default colortab
+    topfid:     (Optional) fiddle parameters to adjust tightness of y axis.  first scales the median, second scales the IQR
     annotate:   (Optional) Function that will annotate the first page.  For plot customization.'''
     
     contcolor = '0.75'
@@ -217,9 +228,9 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             plt.plot(subset[colwave], subset[colfnu]/subset['normby'],   color=linecolor[ss],  linestyle='steps')
             plt.plot(subset[colwave], subset[colfnu_u]/subset['normby'], color=linecolor[ss], linestyle='steps') # plot 1 sigma uncert spectrum
             if plot_cont :  plt.plot(subset[colwave], subset[colcont]/subset['normby'], contcolor, linestyle='steps', zorder=1) # plot the continuum
-                    
             if ss == 0 :  # If the first df, set the plot ranges
-                top = (subset[colfnu]/subset['normby']).median()*1.1 + util.IQR(subset[colfnu]/subset['normby'])*0.3
+                top = (subset[colfnu]/subset['normby']).median()*topfid[0] + util.IQR(subset[colfnu]/subset['normby'])*topfid[1]
+                #print "DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby'])
         plt.ylim(0, top)  # trying to fix weird autoscaling from bad pixels
         plt.xlim(start[kk], end[kk])
         if len(LL) : mage.plot_linelist(LL, the_zzs[0])   # Plot the line IDs.  Use the first redshift for z.
