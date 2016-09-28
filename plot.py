@@ -246,6 +246,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
 
         if  kk % max_per_page == (max_per_page-1) or kk == Npanels-1:   # last plot on this page
             subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")
+            upper.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")
             plt.ylabel('fnu') # fnu in cgs units: erg/s/cm^2/Hz
             pp.savefig()    
             #fig.canvas.draw()
@@ -253,7 +254,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
         if(kk == 0):
             if callable(annotate) : annotate()
             plt.suptitle(title)  # global title
-            upper.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")
+
     pp.close()
     print "   Generated PDF:  ", outfile
     return(0)

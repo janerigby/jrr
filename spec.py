@@ -40,8 +40,8 @@ def calc_EW(flam, flam_u, cont, cont_u, disp, redshift) :   # calculate equivale
     EW_u = np.sqrt(np.sum( (flam_u / cont * disp)**2  +  (cont_u * flam / cont**2 * disp)**2 ))  / (1. + redshift)
     return(EW, EW_u)  # return rest-frame equivalent width and uncertainty
 
-def rebin_spec_new(wave, specin, new_wave):
-    f = interp1d(wave, specin, bounds_error=False)  # With these settings, writes NaN to extrapolated regions
+def rebin_spec_new(wave, specin, new_wave, fill=np.nan):
+    f = interp1d(wave, specin, bounds_error=False, fill_value=fill)  # With these settings, writes NaN to extrapolated regions
     new_spec = f(new_wave)
     return(new_spec)
 
