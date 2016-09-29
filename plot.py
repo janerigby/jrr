@@ -19,7 +19,13 @@ color3 = '0.5'   # color for continuum
 
 def standard_colors1():
     return(['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan'])
-
+def standard_colors2():
+    return(['black', 'midnightblue', 'dimgray', 'lightgrey'])
+def standard_colors3():
+    return(['blue', 'black', 'red'])
+def standard_colors4():
+    return([color1, color2, color3])
+        
 def onclick(event):  # Setting up interactive clicking.  Right now, just prints location.  Need to add fitting.
     print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
         event.button, event.x, event.y, event.xdata, event.ydata)
@@ -72,7 +78,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ylims=(0.0,1.5)) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ylims=(0.0,1.5), colortab=False) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -91,9 +97,12 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     vel_plot:        (Optional, Bool) If True, x-axis is velocity.  If False, x-axis is wavelength.
     plot_xaxis:      (Optional, Bool) Plot the xaxis?
     ylims:           (Optional, tuple) ylim, over-rides default
-         thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
+    colortab:   (Optional) color table to use, to replace default colortab
+    thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
-    mycol = standard_colors1()
+
+    if colortab :  mycol=colortab
+    else : mycol = standard_colors1()
     linestyles = ['solid'] #, 'dashed', 'dotted']#, 'dashdot']
     plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles))) 
     
@@ -192,9 +201,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     
     contcolor = '0.75'
     if colortab :  linecolor=colortab
-    else : 
-        #linecolor = standard_colors1()
-        linecolor = ('black', 'midnightblue', 'dimgray', 'lightgrey')
+    else : linecolor = standard_colors2()
     pp = PdfPages(outfile)  # output
     # Set up the wavelength ranges.  Each panel has same # of pixels, not same dlambda, since dispersion may change.
     if not len(waverange) in (0, 2) : raise Exception("Error: len(waverange) must be 0 or 2")
