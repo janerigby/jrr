@@ -236,12 +236,14 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
         if len(LL) : mage.plot_linelist(LL, the_zzs[0])   # Plot the line IDs.  Use the first redshift for z.
         upper = subit.twiny()  # make upper x-axis in rest wave (systemic, or of abs lines)
         upper.set_xlim( start[kk]/(1.0+the_zzs[0]), end[kk]/(1.0+the_zzs[0]))
-        majorLocator   = MultipleLocator(xtics)  # put subticks on lower x-axis
-        minorLocator   = MultipleLocator(xtics/3)
-        subit.xaxis.set_major_locator(majorLocator)
-        subit.xaxis.set_minor_locator(minorLocator)
+        upper.locator_params(axis='x', nbins=5)
+        subit.locator_params(axis='x', nbins=5)
+        #majorLocator   = MultipleLocator(xtics)  # put subticks on lower x-axis
+        #minorLocator   = MultipleLocator(xtics/3)
+        #subit.xaxis.set_major_locator(majorLocator)
+        #subit.xaxis.set_minor_locator(minorLocator)
         subit.xaxis.tick_bottom()  # don't let lower ticks be mirrored  on upper axis
-        subit.yaxis.set_major_locator(MaxNLocator(nbins=4, integer=False, Symmetric=False))
+        #subit.yaxis.set_major_locator(MaxNLocator(nbins=4, integer=False, Symmetric=False))
         #upper.xaxis.set_major_locator(MaxNLocator(nbins=4, integer=False, Symmetric=False))
 
         if  kk % max_per_page == (max_per_page-1) or kk == Npanels-1:   # last plot on this page
