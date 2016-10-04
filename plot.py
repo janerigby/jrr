@@ -78,7 +78,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ylims=(0.0,1.5), colortab=False) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, colortab=False) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -96,7 +96,6 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     figsize:         (Optional) Figure size in inches.
     vel_plot:        (Optional, Bool) If True, x-axis is velocity.  If False, x-axis is wavelength.
     plot_xaxis:      (Optional, Bool) Plot the xaxis?
-    ylims:           (Optional, tuple) ylim, over-rides default
     colortab:   (Optional) color table to use, to replace default colortab
     thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
@@ -114,6 +113,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
         print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
         plt.annotate( line_label[ii], (0.5,0.85), xycoords="axes fraction")
+        max_in_window = 0.
         if(vel_plot) :
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
                 restwave = thewaves[ss] / (1.0 + thezs[ss])
@@ -131,9 +131,12 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 plt.step(restwave[in_window], thefnus[ss][in_window], color=mycol[ss])
                 if len(thedfnus[ss]) :
                     plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss])
+                thismax = thefnus[ss][in_window].max()
+                max_in_window =  jrr.util.robust_max(thismax, max_in_window)
+            print "max_in_window would be", max_in_window
             plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
-        plt.ylim(ylims[0], ylims[1])  # May need to change these limits
+        plt.ylim(0., max_in_window*1.2)  # May need to change these limits
         if len(LL) :
             mage.plot_linelist(LL, thezs[0], True, vel_plot, line_center[ii])  # plot the line IDs for the first spectrum only
         if ii == len(line_label) -1 :

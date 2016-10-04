@@ -17,6 +17,15 @@ def IQR(Series) :
     notnull = Series[Series.notnull()]
     return ( (notnull.quantile(0.25) + notnull.quantile(0.75))/2.)
 
+def reject_outliers(data, m=2.) :
+    d = np.abs(data - np.median(data))
+    mdev = np.median(d)
+    s = d/mdev if mdev else 0.
+    return data[s<m]
+
+def robust_max(data, m=2.):
+    return max(reject_outliers(data,m=m))
+
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1
 
