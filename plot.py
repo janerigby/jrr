@@ -106,7 +106,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     linestyles = ['solid'] #, 'dashed', 'dotted']#, 'dashdot']
     plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles))) 
     
-    Nrow = int(np.ceil( float(line_center.size) / Ncol))  # Calculate how many rows to generate
+    Nrow = int(np.ceil( float(len(line_center)) / Ncol))  # Calculate how many rows to generate
     #print "DEBUGGING ", Nrow, Ncol, len(line_center)
     fig = plt.figure(figsize=figsize)
 
