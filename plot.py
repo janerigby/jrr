@@ -132,7 +132,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 if len(thedfnus[ss]) :
                     plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss])
                 thismax = thefnus[ss][in_window].max()
-                max_in_window =  jrr.util.robust_max(thismax, max_in_window)
+                max_in_window =  util.robust_max(thismax, max_in_window)
             print "max_in_window would be", max_in_window
             plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
