@@ -122,6 +122,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 plt.step(vel[in_window], thefnus[ss][in_window], color=mycol[ss])
                 if len(thedfnus[ss]) :
                     plt.step(vel[in_window], thedfnus[ss][in_window], color=mycol[ss])  # plot uncertainty
+                thismax = thefnus[ss][in_window].max()
+                max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
             plt.xlim(-1*win, win)
         else :
