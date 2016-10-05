@@ -35,7 +35,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
     [Nrow x Ncol] box.
     Inputs are:
     wave:        observed wavelength (currently Angstrom)
-    fnu:         cont-normalized flux density (erg/s/cm^2/Hz)  ** should this be flambda instead?.
+    fnu:         cont-normalized flux density (erg/s/cm^2/Hz) 
     dfnu:        1 sigma uncertainty on fnu
     line_label:  tuple of line labels
     line_center: np array of rest-frame wavelengths (Angstroms)
@@ -112,7 +112,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     for ii, dum in enumerate(line_label) :
         print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
-        plt.annotate( line_label[ii], (0.5,0.85), xycoords="axes fraction")
+        plt.annotate( line_label[ii], (0.55,0.85), xycoords="axes fraction")
         max_in_window = 0.
         if(vel_plot) :
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
@@ -132,11 +132,11 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 if len(thedfnus[ss]) :
                     plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss])
                 thismax = thefnus[ss][in_window].max()
-                max_in_window =  util.robust_max(thismax, max_in_window)
+                max_in_window =  util.robust_max((thismax, max_in_window))
             print "max_in_window would be", max_in_window
-            plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
+            plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
-        plt.ylim(0., max_in_window*1.2)  # May need to change these limits
+        plt.ylim(0., max_in_window*1.1)  # May need to change these limits
         if len(LL) :
             mage.plot_linelist(LL, thezs[0], True, vel_plot, line_center[ii])  # plot the line IDs for the first spectrum only
         if ii == len(line_label) -1 :
@@ -151,7 +151,6 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
         if not plot_xaxis :
             fig.subplots_adjust(hspace=0)
 
-        
 
 def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2, figsize=(8,8)) :
     '''Same as boxplot_spectra(vel_plot=True), but OVERPLOT all the lines on 1 plot, no subplots'''
@@ -197,7 +196,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     apply_bad:  (Optional) Apply bad pixel map?
     xtics:      Spacing of majorLocator (xticks) for plotting
     waverange:  (Optional) Only plot this wavelength range, rather than full range. Format is (wave_lo, wave_hi).
-    colwave, colfnu, colfnu_u, colcont:  columns in the dataframe to use for wave, fnu, fnu_uncert, continuum
+    colwave, colfnu, colfnu_u, colcont:  columns in the dataframes to use for wave, fnu, fnu_uncert, continuum
     colortab:   (Optional) color table to use, to replace default colortab
     topfid:     (Optional) fiddle parameters to adjust tightness of y axis.  first scales the median, second scales the IQR
     annotate:   (Optional) Function that will annotate the first page.  For plot customization.'''
