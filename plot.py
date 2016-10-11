@@ -78,7 +78,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, colortab=False) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -96,6 +96,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     figsize:         (Optional) Figure size in inches.
     vel_plot:        (Optional, Bool) If True, x-axis is velocity.  If False, x-axis is wavelength.
     plot_xaxis:      (Optional, Bool) Plot the xaxis?
+    ymax:            (Optional), array of max y values to use in subplots.  Over-rides auto-scaling. Size must == line_center
     colortab:   (Optional) color table to use, to replace default colortab
     thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
@@ -135,12 +136,12 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                     plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss])
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
-            print "max_in_window would be", max_in_window
             plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
         ax.locator_params(axis='y', nbins=5)
         ax.locator_params(axis='x', nbins=5)
-        plt.ylim(0., max_in_window*1.1)  # May need to change these limits
+        if len(ymax) :   plt.ylim(0, ymax[ii])  # user can over-ride autoscaling 
+        else :           plt.ylim(0., max_in_window*1.1)  
         if len(LL) :
             mage.plot_linelist(LL, thezs[0], True, vel_plot, line_center[ii])  # plot the line IDs for the first spectrum only
         if ii == len(line_label) -1 :
