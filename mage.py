@@ -99,6 +99,9 @@ def getlist_labels(mage_mode, labels, optional_file=False) :
     ''' Get the list of MagE spectra and redshifts, filtered by a list of short_labels (galaxy names)'''
     pspecs = getlist(mage_mode, optional_file) 
     filtlist = pspecs[pspecs['short_label'].isin(labels)].reset_index()
+    filtlist['sort_cat'] = pandas.Categorical(filtlist['short_label'], categories=labels, ordered=True)  # use same order as labels
+    filtlist.sort_values('sort_cat', inplace=True)
+    filtlist.reset_index(inplace=True)
     return(filtlist)
 
 def convert_spectrum_to_restframe(sp, zz) :
@@ -256,19 +259,20 @@ def open_Crowther2016_spectrum() :
     sp['fnu'] = spec.fnu2flam(sp['wave'], sp['flam'])
     return(sp)
         
-def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="reduction", specs=[]) :
+def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="reduction", specs=[], size=(5,16)) :
     ''' Plot one transition, versus (wavelength or velocity?), for many MagE spectra
     line_cen:     rest-wavelength of line to plot, in Angstroms.
     line_label:   label for that line
     win:          window around that line.  If vel_plot, then units are km/s.  If not vel_plot, units are rest-frame Angstroms
     vel_plot:     (optional, Boolean): If True, x-axis is velocity.  If False, x-axis is wavelength.
-    specs:        (optional) Pandas dataframe of MagE filenames & redshifts.'''
+    specs:        (optional) Pandas dataframe of MagE filenames & redshifts.
+    size:         (optional) size of plot, in inches'''
     if len(specs) == 0 :
         (specs) = getlist_wcont(mage_mode)  # Default grabs all MagE spectra w continuum fits
     Nspectra = len(specs)
     Ncol = 1
     Nrow = np.ceil(Nspectra / Ncol)  # Calculate how many rows to generate
-    fig = plt.figure(figsize=(5,16))
+    fig = plt.figure(figsize=size)
     
     for ii in range(0, Nspectra) :              
         label     = specs['short_label'][ii]
@@ -292,6 +296,7 @@ def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="
             plt.step(restwave[in_window], fnu_norm[in_window], color=color1)
             plt.step(restwave[in_window], fnu_norm_u[in_window], color=color2)
             plt.plot( (line_cen, line_cen), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
+            plt.plot( (1037.6167, 1037.6167), (0.0,2), color=color3, linewidth=2)  # TEMP KLUDGE PLOT OVI 1037 as well
             plt.xlim(line_cen - win, line_cen + win)
         plt.plot( (-1*win, win), (1.0,1.0), color=color3)  # Already normalized by continuum, so plot unity continuum. 
         plt.ylim(0.0, 1.5)  # May need to change these limits
