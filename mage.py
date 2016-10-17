@@ -259,14 +259,17 @@ def open_Crowther2016_spectrum() :
     sp['fnu'] = spec.fnu2flam(sp['wave'], sp['flam'])
     return(sp)
         
-def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="reduction", specs=[], size=(5,16)) :
+def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="reduction", specs=[], size=(5,16), fontsize=16, suptitle=False) :
     ''' Plot one transition, versus (wavelength or velocity?), for many MagE spectra
     line_cen:     rest-wavelength of line to plot, in Angstroms.
     line_label:   label for that line
     win:          window around that line.  If vel_plot, then units are km/s.  If not vel_plot, units are rest-frame Angstroms
     vel_plot:     (optional, Boolean): If True, x-axis is velocity.  If False, x-axis is wavelength.
     specs:        (optional) Pandas dataframe of MagE filenames & redshifts.
-    size:         (optional) size of plot, in inches'''
+    size:         (optional) size of plot, in inches
+    fontsize:     (optional) fontsize
+    suptitle:     (optional) plot line label as super title?
+'''    
     if len(specs) == 0 :
         (specs) = getlist_wcont(mage_mode)  # Default grabs all MagE spectra w continuum fits
     Nspectra = len(specs)
@@ -301,16 +304,18 @@ def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="
         plt.plot( (-1*win, win), (1.0,1.0), color=color3)  # Already normalized by continuum, so plot unity continuum. 
         plt.ylim(0.0, 1.5)  # May need to change these limits
         if ii == (Nspectra - 1) :  # if last subplot, make xlabel
-            plt.annotate( line_label, (0.2,0.1), xycoords="axes fraction")
+            #plt.annotate( line_label, (0.2,0.1), xycoords="axes fraction", fontsize=fontsize)
+            if suptitle : plt.suptitle(line_label, fontsize=fontsize)
             if vel_plot :
-                plt.xlabel("rest-frame velocity (km/s)")  
+                plt.xlabel("rest-frame velocity (km/s)", fontsize=fontsize)  
             else :
-                plt.xlabel(r'rest-frame wavelength($\AA$)')                                
+                plt.xlabel(r'rest-frame wavelength ($\rm \AA$)', fontsize=fontsize)    
         else :
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
-        plt.annotate( label, (0.2,0.8), xycoords="axes fraction")
-        plt.annotate("z="+str(zz), (0.75,0.1), xycoords="axes fraction")
+        plt.annotate( label, (0.2,0.8), xycoords="axes fraction", fontsize=fontsize)
+        plt.annotate("z="+str(zz), (0.75,0.1), xycoords="axes fraction", fontsize=fontsize)
         #plt.ylabel("continuum-normalized fnu")
+        plt.ylabel(r'norm. f$_{\nu}$', fontsize=14)  #fontsize=fontsize)
 #        fig.(hspace=0)
     return(0)
 
