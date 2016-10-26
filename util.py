@@ -4,6 +4,7 @@ import numpy as np
 from   re import split
 import fileinput
 from astropy.stats import sigma_clip
+from astropy.stats import mad_std
 
 #####  Math  #####
 
@@ -11,7 +12,8 @@ def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and 
     return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
 
 def mad(data, axis=None):
-    return np.median(np.absolute(data - np.median(data, axis)), axis)
+    #return np.median(np.absolute(data - np.median(data, axis)), axis) #obsolete
+    return mad_std(data, axis=axis)
 
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''
