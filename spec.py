@@ -1,6 +1,10 @@
 ''' General-purpose functions to convert and deal with spectra.  Nothing
 instrument-specific should go here.  jrigby, May 2016'''
 
+from astropy.wcs import WCS
+from astropy.io import fits
+from re import sub
+import pandas
 import numpy as np
 from   scipy.interpolate import interp1d
 
@@ -58,3 +62,28 @@ def convert_restwave_to_velocity(restwave, line_center) :
     ''' Utility, convert rest-frame wavelength array to velocity array, relative to v=0 at line_center '''
     vel =  (restwave - line_center)/line_center * A_c/1E5     # km/s     
     return(vel) 
+
+def iraf_1D_spectrum_to_pandas(infile, uncert_file=None, outfile=None) :
+    ''' Takes a 1D spectrum with the wavelength stuck in the WCS header,
+    gets the wavelength array out, and packages the spectrum into a nice 
+    pandas data frame.  Returns DF, and dumps a pickle file too.
+    This was written to reach Chuck Steidel's stacked spectrum, and may
+    not yet be general enough, for example the wcs.dropaxis munge.'''
+    sp = fits.open(infile)
+    header = sp[0].header
+    wcs = WCS(header)
+    wcs2 = wcs.dropaxis(1)  # Kill the WCS's dummy 2nd dimension
+    index = np.arange(header['NAXIS1'])
+    temp =  (np.array(wcs2.wcs_pix2world(index, 0))).T
+    wavelength = (10**temp)[:,0]
+    fnu = sp[0].data
+    sp2 = fits.open(uncert_file)      # Get the uncertainty
+    fnu_u = sp2[0].data
+
+    # Make a pandas data frame
+    foo = np.array((wavelength, fnu, fnu_u))
+    df = pandas.DataFrame(foo.T, columns=("wave", "fnu", "fnu_u"))
+    if not outfile :
+        outfile = sub(".fits", ".p", infile)
+    df.to_pickle(outfile)
+    return(df)
