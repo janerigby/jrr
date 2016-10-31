@@ -77,8 +77,10 @@ def iraf_1D_spectrum_to_pandas(infile, uncert_file=None, outfile=None) :
     temp =  (np.array(wcs2.wcs_pix2world(index, 0))).T
     wavelength = (10**temp)[:,0]
     fnu = sp[0].data
-    sp2 = fits.open(uncert_file)      # Get the uncertainty
-    fnu_u = sp2[0].data
+    if uncert_file :
+        sp2 = fits.open(uncert_file)      # Get the uncertainty
+        fnu_u = sp2[0].data
+    else : fnu_u = np.zeros_like(fnu)
 
     # Make a pandas data frame
     foo = np.array((wavelength, fnu, fnu_u))
