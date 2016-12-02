@@ -1,7 +1,7 @@
 ''' General-purpose utilities.  jrigby May 2016'''
 
 import numpy as np
-from   re import split
+from   re import split, sub
 import fileinput
 from astropy.stats import sigma_clip
 from astropy.stats import mad_std
@@ -32,14 +32,15 @@ def split_grab(line, place) :
     splitted = line.split()
     return(splitted[place])
 
-def replace_text_in_file_like_sed(oldtext, newtext, infile):
-    ''' This edits a file in-place, globally replacing oldtext with newtext.
-    Should act like this sed equivalent:  sed -i .bak 's/oldtext/newtext/g' infile '''
-    for line in fileinput.FileInput(infile,inplace=1):
-        line = line.replace(oldtext, newtext)
-        print line,
-    return(0)
-
+def replace_text_in_file(oldtext, newtext, infile, outfile=None):
+    ''' Globally replaces oldtext with newtext.  Like sed. If outfile=None, edits file inplace.'''
+    data = open(infile, 'r').read()
+    new = sub(oldtext, newtext, data)
+    if not outfile : outfile = infile
+    f2 = open(outfile, 'w')
+    f2.write(new)
+        
+        
 ## Basic astronomy
 
 def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude

@@ -13,6 +13,8 @@ import re
 import glob
 from subprocess import check_output   # Used for grepping from files
 import astropy.convolution
+from astropy.wcs import WCS
+from astropy.io import fits
 
 color1 = 'k'     # color for spectra
 color2 = '0.65'  # color for uncertainty spectra
@@ -32,14 +34,14 @@ def get_boxcar4autocont(sp) :
     
 def getpath(mage_mode) : 
     ''' Haqndle paths for python MagE scripts.  Two use cases:
-    A) I am on satchmo, & want to use spectra in  /Volumes/Apps_and_Docs/WORK/Lensed-LBGs/Mage/Combined-spectra/
+    A) I am on satchmo, & want to use spectra in  /Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/
        mage_mode = "reduction"
     B) I am on Milk, or a collaborator, using the "released" version of the MagE data, ~/Dropbox/MagE_atlas/
        mage_mode = "released"
        This is how to analyze the mage Data, same as the other collaborators.'''
     if mage_mode == "reduction" :
-        spec_path = "/Volumes/Apps_and_Docs/WORK/Lensed-LBGs/Mage/Combined-spectra/"
-        line_path = "/Volumes/Apps_and_Docs/WORK/Lensed-LBGs/Mage/Analysis/Plot-all/Lines/"
+        spec_path = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/"
+        line_path = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Analysis/Plot-all/Lines/"
         return(spec_path, line_path)
     elif mage_mode == "released" :
         homedir = expanduser('~')
@@ -82,7 +84,7 @@ def getlist(mage_mode, optional_file=False) :
     pspecs['dz_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM'])] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
     pspecs['dz_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM'])] = -999  
 
-    if mage_mode == "reduction" :  # Add the path to the filename, if on satchmo in /WORK/
+    if mage_mode == "reduction" :  # Add the path to the filename, if on satchmo in /SCIENCE/
         pspecs['filename'] = pspecs['origdir'] + pspecs['filename']
     return(pspecs)  # I got rid of Nspectra.  If need it, use len(pspecs)
 
@@ -254,7 +256,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, colfnu='X_avg', colfnuu='
      
 def open_Crowther2016_spectrum() :
     print "STATUS:  making velocity plots of the stacked Crowther et al. 2016 spectrum"
-    infile = "/Volumes/Apps_and_Docs/WORK/Lensed-LBGs/Mage/Lit-spectra/Crowther2016/r136_stis_all.txt" # on satchmo
+    infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Crowther2016/r136_stis_all.txt" # on satchmo
     sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)  # cols are wave, flam
     sp['fnu'] = spec.fnu2flam(sp['wave'], sp['flam'])
     return(sp)
@@ -374,7 +376,7 @@ def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line
     
 def open_Leitherer_2011_stack() :
     # call:  (restwave, avg_flux, median_flux) = open_Leitherer_2011_stack() :
-    infile = "/Volumes/Apps_and_Docs/WORK/Lensed-LBGs/Mage/Lit-spectra/Leitherer_2011/fos_ghrs_composite.txt"
+    infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Leitherer_2011/fos_ghrs_composite.txt"
     leith =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)
     return(leith)
 
@@ -475,3 +477,75 @@ def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deri
     return(0)
 
 
+# Routines to read in spectra from the literature
+
+def add_columns_to_litspec(df) :
+    ''' Add the right columns to a pandas df created for a spectrum from the literature, so that my plotting
+    tools won't barf.'''
+    df['badmask']  = False  
+    df['linemask'] = False  
+    df['fnu_autocont'] = pandas.Series(np.ones_like(df.wave)*np.nan)  # Will fill this with automatic continuum fit
+    df['flam']     = spec.fnu2flam(df.wave, df.fnu)          # convert fnu to flambda
+    df['flam_u']   = spec.fnu2flam(df.wave, df.fnu_u)
+    # Give it a default line-list, so it can fit autocont w smoothing
+    mage_mode = "reduction"
+    (spec_path, line_path) = getpath(mage_mode)
+    (LL, foobar) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.    
+    auto_fit_cont(df, LL, 0.0, boxcar=501)
+    return(0) # directly modified the df
+    
+def read_chuck_UV_spec(infile="KBSS-LM1.uv.fnu.fits", uncert_file="KBSS-LM1.uv.fnu.sig.fits", outfile=None) :
+    ''' Takes a 1D spectrum with the wavelength stuck in the WCS header,          
+    gets the wavelength array out, and packages the spectrum into a nice          
+    pandas data frame.  Returns DF, and dumps a pickle file and csv file too.                  
+    This was written to reach Chuck Steidel's stacked spectrum, and is not
+    general enough to make into a function.  Example of munging: the wcs.dropaxis business.'''
+    litdir = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Steidel2016/"
+    sp = fits.open(litdir + infile)
+    header = sp[0].header
+    wcs = WCS(header)
+    wcs2 = wcs.dropaxis(1)  # Kill the WCS's dummy 2nd dimension                  
+    index = np.arange(header['NAXIS1'])
+    temp =  (np.array(wcs2.wcs_pix2world(index, 0))).T
+    wavelength = (10**temp)[:,0]
+    fnu = sp[0].data
+    if uncert_file :
+        sp2 = fits.open(litdir + uncert_file)      # Get the uncertainty                   
+        fnu_u = sp2[0].data
+    else : fnu_u = np.zeros_like(fnu)
+    # Make a pandas data frame                                                    
+    foo = np.array((wavelength, fnu, fnu_u))
+    print "DEBUG", foo.shape, wavelength.shape, fnu.shape, fnu_u.shape
+    df = pandas.DataFrame(foo.T, columns=("wave", "fnu", "fnu_u"))
+    add_columns_to_litspec(df)
+    if not outfile :
+        outfile = sub(".fits", ".p", litdir + infile)
+    df.to_pickle(outfile)
+    txtfile = sub(".fits", ".csv", litdir + infile)
+    df.to_csv(txtfile, sep='\t')    
+    return(df)
+
+def read_chuck_mosfire(infile, outfile=None) :
+    sp = fits.open(infile)
+    header = sp[0].header
+    wcs = WCS(header)
+    wcs2 = wcs.dropaxis(1)  # Kill the WCS's dummy 2nd dimension
+    index = np.arange(header['NAXIS1'])
+    temp =  (np.array(wcs2.wcs_pix2world(index, 0))).T
+    wavelength = (temp)[:,0]
+    (flam, flam_u) = sp[0].data
+    # Make a pandas data frame
+    foo = np.array((wavelength, flam, flam_u))
+    print "DEBUG", foo.shape, wavelength.shape, flam.shape, flam_u.shape
+    df = pandas.DataFrame(foo.T, columns=("wave", "flam", "flam_u"))
+    if not outfile :
+        outfile = sub(".fits", ".p", infile)
+    df.to_pickle(outfile)
+    return(df)
+
+def read_shapley_composite() :
+    infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/LBGs/composite-LBG-shapley.dat"
+    df = pandas.read_table(infile, delim_whitespace=True, comment="#")
+    df['fnu_u'] = 0.0
+    add_columns_to_litspec(df)
+    return(df)
