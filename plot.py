@@ -140,8 +140,9 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
         ax.locator_params(axis='y', nbins=5)
         ax.locator_params(axis='x', nbins=5)
-        if len(ymax) :   plt.ylim(0, ymax[ii])  # user can over-ride autoscaling 
-        else :           plt.ylim(0., max_in_window*1.1)  
+        if len(ymax)  == 1 :  plt.ylim(0, ymax[0])   # user can over-ride autoscaling
+        elif len(ymax) > 1 :  plt.ylim(0, ymax[ii])  # user can over-ride autoscaling 
+        else :                plt.ylim(0., max_in_window*1.1)  
         if len(LL) :
             mage.plot_linelist(LL, thezs[0], True, vel_plot, line_center[ii])  # plot the line IDs for the first spectrum only
         if ii == len(line_label) -1 :

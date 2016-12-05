@@ -193,7 +193,7 @@ def open_S99_spectrum(rootname, zz) :
     '''
     mage_mode = "released"
     (spec_path, line_path) = getpath(mage_mode)
-    S99path = spec_path + "../Contrib/S99/"
+    S99path = spec_path + "../Contrib/S99/New_right_flam/"
     S99file = S99path + rootname + '-sb99-fit.txt'
     sp =  pandas.read_table(S99file, delim_whitespace=True, comment="#", names=('rest_wave', 'rest_fnu_data', 'rest_fnu_data_u', 'rest_fnu_s99'))
     sp['rest_fnu_s99_u'] = np.nan
