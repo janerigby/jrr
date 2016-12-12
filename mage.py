@@ -115,7 +115,6 @@ def getlist_labels(mage_mode, labels, optional_file=False) :
     filtlist.reset_index(inplace=True)
     return(filtlist)
 
-    
 def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_fnu, rest_fnu_u)         = spec.convert2restframe(sp.wave, sp.fnu,  sp.fnu_u,  zz, 'fnu')
     sp['rest_wave']   = pandas.Series(rest_wave)
