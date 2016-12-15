@@ -78,7 +78,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win, Ncol, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -98,6 +98,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     plot_xaxis:      (Optional, Bool) Plot the xaxis?
     ymax:            (Optional), array of max y values to use in subplots.  Over-rides auto-scaling. Size must == line_center
     colortab:   (Optional) color table to use, to replace default colortab
+    verbose:          Verbose or terse account of status?
     thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
 
@@ -111,7 +112,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     fig = plt.figure(figsize=figsize)
 
     for ii, dum in enumerate(line_label) :
-        print "    Plotting ", line_label[ii], " at ", line_center[ii]
+        if verbose : print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
         plt.annotate( line_label[ii], (0.55,0.85), xycoords="axes fraction")
         max_in_window = 0.
@@ -186,7 +187,7 @@ def annotate_echelle() :
     plt.annotate("Fine structure", xy=(0.4,0.03), color="purple", xycoords="figure fraction")
     plt.annotate("Intervening", xy=(0.55,0.03), color="orange", xycoords="figure fraction")
 
-def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, topfid=(1.1,0.3), annotate=annotate_echelle) :
+def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, topfid=(1.1,0.3), annotate=annotate_echelle, verbose=False) :
     ''' Plot an echelle(ette) spectrum with several pages and many panels for page.  Based on multipanel-spectrum-ids.py,
     but modular. and with more features.  Inputs:
     the_dfs:    an array of dataframes containing spectra, to plot. Usually this is just one dataframe, one spectrum,
@@ -234,7 +235,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             print "Starting page", current_page, "of", Npages
             fig    = plt.figure(figsize=plotsize)
         subit = host_subplot(the_format + kk % max_per_page)
-        print "Plotting panel", kk, "for wavelengths", start[kk], "to",end[kk]
+        if verbose : print "Plotting panel", kk, "for wavelengths", start[kk], "to",end[kk]
         for ss, df in enumerate(the_dfs) :
             if apply_bad : subset = df[df[colwave].between(start[kk], end[kk]) & ~df['badmask']]
             else:          subset = df[df[colwave].between(start[kk], end[kk])]

@@ -34,7 +34,22 @@ def convert2restframe(wave, f, f_u, zz, units) :
         return(rest_wave, rest_fnu, rest_fnu_u)
     else :
         raise Exception('ERROR: last argument must specify whether  units of f, f_u are fnu or flam.  Must be same units for input and output')
-    
+
+def convert2obsframe(rest_wave, rest_f, rest_f_u, zz, units) :
+    if units == 'flam' :
+        wave    = rest_wave * (1.0+zz)      # convert to rest frame
+        flam    = rest_f    / (1.0+zz)      # deal w bandwith compression
+        flam_u  = rest_f_u  / (1.0+zz)
+        return(wave, flam, flam_u)
+    elif units == 'fnu' :
+        wave    = rest_wave * (1.0+zz)      # convert to rest frame
+        fnu       = rest_f    * (1.0+zz)      # deal w bandwith compression
+        fnu_u     = rest_f_u  * (1.0+zz)
+        return(wave, fnu, fnu_u)
+    else :
+        raise Exception('ERROR: last argument must specify whether  units of f, f_u are fnu or flam.  Must be same units for input and output')
+
+        
 def calc_EW(flam, flam_u, cont, cont_u, disp, redshift) :   # calculate equivalent width as simple sum over the region of interest.
     # bare-bones simple.
     # Inputs are flambda, uncertainty, continuum, uncertainty, dispersion in Angstroms

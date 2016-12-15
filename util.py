@@ -21,7 +21,7 @@ def IQR(Series) :
     return ( (notnull.quantile(0.25) + notnull.quantile(0.75))/2.)
 
 def robust_max(data, sigma=3) :  # maximum value after sigma clipping
-    return max(sigma_clip(data, sigma=sigma))
+    return (  (sigma_clip(data, sigma=sigma)).max())
 
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1
