@@ -1,5 +1,5 @@
 These are Jane Rigby's python routines to deal with astronomical data.  
-They use Pandas data frames and Astropy.
+They use Pandas DataFrames and AstroPy.
 Components:
 mage.py 	tools to deal w Magellan/MagE spectra
 fire.py		tools to deal w Magellan/FIRE spectra
