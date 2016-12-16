@@ -1,5 +1,5 @@
 ''' Scripts to read and analyze MagE spectra.  
-    jrigby, begun Oct 2015.  Updates March--July 2016
+    jrigby, begun Oct 2015.  Updates March--Dec 2016
 '''
 from jrr import spec
 from jrr import util
@@ -105,7 +105,7 @@ def getlist_wcont(mage_mode, drop_s2243=True) :
     if drop_s2243 :
         wcont = wcont[wcont.short_label.ne("S2243-0935")].reset_index()
     return(wcont)
-    
+        
 def getlist_labels(mage_mode, labels, optional_file=False) :
     ''' Get the list of MagE spectra and redshifts, filtered by a list of short_labels (galaxy names)'''
     pspecs = getlist(mage_mode, optional_file) 
@@ -114,6 +114,14 @@ def getlist_labels(mage_mode, labels, optional_file=False) :
     filtlist.sort_values('sort_cat', inplace=True)
     filtlist.reset_index(inplace=True)
     return(filtlist)
+
+def get_just_shortlabels(mage_mode, which_list="wcont", drop_s2243=True, labels=()) :
+    ''' Get the list of short_label of MagE spectra'''
+    if   which_list == "wcont" :             list = getlist_wcont(mage_mode, drop_s2243)
+    elif which_list == "all"   :             list = getlist(mage_mode)
+    elif which_list == "labels" and labels : list = getlist_labels(mage_mode, labels)
+    else : raise Exception("Error: variable which_list not understood")
+    return(list['short_label'])
 
 def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_fnu, rest_fnu_u)         = spec.convert2restframe(sp.wave, sp.fnu,  sp.fnu_u,  zz, 'fnu')
@@ -204,6 +212,17 @@ def wrap_open_spectrum(label, mage_mode, addS99=False) :
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
     return(sp, resoln, dresoln, LL, zz_syst, boxcar)
 
+def open_many_spectra(mage_mode, which_list="wcont", labels=()) :
+    ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes'''
+    print "Loading MagE spectra; this may take a while, but worthwhile if doing a lot of back and forth."
+    sp = {}; resoln = {}; dresoln = {}
+    LL = {}; zz_sys = {}; boxcar  = {}
+    list_of_labels = get_just_shortlabels(mage_mode, which_list=which_list, labels=labels)
+    for label in list_of_labels :
+        print "Loading  ", label
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label], boxcar[label]) = wrap_open_spectrum(label, mage_mode, addS99=False)
+    return(sp, resoln, dresoln, LL, zz_sys, boxcar)
+    
 def get_S99_path() :  # Get path for S99
     (spec_path, line_path) = getpath("released")
     S99path = spec_path + "../Contrib/S99/New_right_flam/"
@@ -268,20 +287,15 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
     auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_s99', colfnuu='rest_fnu_s99_u', colcont='rest_fnu_s99_autocont', boxcar=boxcar)
     auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_data', colfnuu='rest_fnu_data_u', colcont='rest_fnu_data_autocont', boxcar=boxcar)
     return(sp, LL)
-
+    
 def open_all_S99_spectra() :
-    ''' This opens all of JC's Starburst99 spectra, into two honking dictionaries,
+    ''' This opens all of JC's Starburst99 spectra, into two honking dictionaries of pandas dataframes
     one for spectra, pone for linelists'''
-    S99 = {}
-    LL = {}
+    S99 = {} ;  LL = {}
     for rootname in list_S99_rootnames() :
         print "Loading S99 ", rootname
-        temp_df = redo_open_S99_spectrum(rootname)
         (S99[rootname], LL[rootname]) = redo_open_S99_spectrum(rootname)
     return(S99, LL)
-
-#  ** This is nice!  Should do the same for the mage spectra themselves, would speed up mage_winds...
-
            
 def dict_of_stacked_spectra(mage_mode) :
     ''' Returns:  a) main directory of stacked spectra,  b) a list of all the stacked spectra.'''
