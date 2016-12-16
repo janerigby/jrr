@@ -115,13 +115,13 @@ def getlist_labels(mage_mode, labels, optional_file=False) :
     filtlist.reset_index(inplace=True)
     return(filtlist)
 
-def get_just_shortlabels(mage_mode, which_list="wcont", drop_s2243=True, labels=()) :
+def wrapper_getlist(mage_mode, which_list="wcont", drop_s2243=True, labels=()) :
     ''' Get the list of short_label of MagE spectra'''
-    if   which_list == "wcont" :             list = getlist_wcont(mage_mode, drop_s2243)
-    elif which_list == "all"   :             list = getlist(mage_mode)
-    elif which_list == "labels" and labels : list = getlist_labels(mage_mode, labels)
+    if   which_list == "wcont" :             speclist = getlist_wcont(mage_mode, drop_s2243=drop_s2243)
+    elif which_list == "all"   :             speclist = getlist(mage_mode)
+    elif which_list == "labels" and labels : speclist = getlist_labels(mage_mode, labels)
     else : raise Exception("Error: variable which_list not understood")
-    return(list['short_label'])
+    return(speclist) # , list['short_label'])
 
 def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_fnu, rest_fnu_u)         = spec.convert2restframe(sp.wave, sp.fnu,  sp.fnu_u,  zz, 'fnu')
@@ -210,18 +210,24 @@ def wrap_open_spectrum(label, mage_mode, addS99=False) :
         sp['fnu_s99data']       = spec.rebin_spec_new(S99['wave'], S99['fnu_data'], sp['wave'])  # used for debugging
         sp['rest_fnu_s99model'] = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_s99'], sp['rest_wave'])
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
-    return(sp, resoln, dresoln, LL, zz_syst, boxcar)
+    return(sp, resoln, dresoln, LL, zz_syst)
 
 def open_many_spectra(mage_mode, which_list="wcont", labels=()) :
-    ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes'''
+    ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
+    sp:        dictionary of pandas dataframes containing the spectra
+    resoln:    dictionary of resolutions (float)
+    dresoln:   dictionary of uncertainty in resolutions (float)
+    LL:        dictionary of pandas dataframes of linelists
+    zz_syst:   dictionary of systemic redshifts (float)
+    speclist:  pandas dataframe describing the spectra (from getlist or variants)'''
     print "Loading MagE spectra; this may take a while, but worthwhile if doing a lot of back and forth."
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
-    list_of_labels = get_just_shortlabels(mage_mode, which_list=which_list, labels=labels)
-    for label in list_of_labels :
+    speclist = wrapper_getlist(mage_mode, which_list=which_list, labels=labels)
+    for label in speclist['short_label'] :
         print "Loading  ", label
-        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label], boxcar[label]) = wrap_open_spectrum(label, mage_mode, addS99=False)
-    return(sp, resoln, dresoln, LL, zz_sys, boxcar)
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=False)
+    return(sp, resoln, dresoln, LL, zz_sys, speclist)
     
 def get_S99_path() :  # Get path for S99
     (spec_path, line_path) = getpath("released")
@@ -259,7 +265,7 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
         elif rootname == "Stack-A" :
             orig_sp = open_stacked_spectrum("reduction", which_stack="Stack-A")
         else:
-            (orig_sp, orig_resoln, orig_dresoln, orig_LL, orig_zz_syst, orig_boxcar)  =  wrap_open_spectrum(rootname, "released")
+            (orig_sp, orig_resoln, orig_dresoln, orig_LL, orig_zz_syst)  =  wrap_open_spectrum(rootname, "released")
         norm_region = Chisholm_norm_regionA() 
         norm1 = orig_sp['rest_flam'][orig_sp['rest_wave'].between(*norm_region)].median() #norm for orig spectrum
         norm2 = sp['rest_flam_data_norm'][sp['rest_wave'].between(*norm_region)].median() #norm for JC's fit.  should be ~1
