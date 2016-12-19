@@ -220,13 +220,13 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=()) :
     LL:        dictionary of pandas dataframes of linelists
     zz_syst:   dictionary of systemic redshifts (float)
     speclist:  pandas dataframe describing the spectra (from getlist or variants)'''
-    print "Loading MagE spectra; this may take a while, but worthwhile if doing a lot of back and forth."
+    print "Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth."
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
     speclist = wrapper_getlist(mage_mode, which_list=which_list, labels=labels)
     for label in speclist['short_label'] :
         print "Loading  ", label
-        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=False)
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)
     
 def get_S99_path() :  # Get path for S99
@@ -263,7 +263,7 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
         # JC converted spectra to flam, then normalized over norm_regionA.  I need to take this back out.
         if rootname == "chuck" :  orig_sp =  read_chuck_UVspec()
         elif rootname == "Stack-A" :
-            orig_sp = open_stacked_spectrum("reduction", which_stack="Stack-A")
+            (orig_sp, dummyLL) = open_stacked_spectrum("reduction", which_stack="Stack-A")
         else:
             (orig_sp, orig_resoln, orig_dresoln, orig_LL, orig_zz_syst)  =  wrap_open_spectrum(rootname, "released")
         norm_region = Chisholm_norm_regionA() 
@@ -284,6 +284,7 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
     sp['rest_fnu_data']    = spec.flam2fnu(sp['rest_wave'], sp['rest_flam_data']) # convert back to fnu
     sp['rest_fnu_data_u']  = spec.flam2fnu(sp['rest_wave'], sp['rest_flam_data_u'])
     sp['rest_fnu_s99']    = spec.flam2fnu(sp['rest_wave'], sp['rest_flam_s99'])
+    sp['rest_fnu_s99model'] =  sp['rest_fnu_s99'] 
     sp['rest_fnu_s99_u']  = spec.flam2fnu(sp['rest_wave'], sp['rest_flam_s99_u'])
     flag_huge(sp, colfnu='rest_fnu_data', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
     flag_huge(sp, colfnu='rest_fnu_s99', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
@@ -361,7 +362,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", c
     boxcar = get_boxcar4autocont(sp)
     #print "DEBUGGING, boxcar is ", boxcar
     auto_fit_cont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
-    return(sp) # return the Pandas DataFrame containing the stacked spectrum
+    return(sp, LL) # return the Pandas DataFrame containing the stacked spectrum
      
 def open_Crowther2016_spectrum() :
     print "STATUS:  making velocity plots of the stacked Crowther et al. 2016 spectrum"
@@ -635,14 +636,28 @@ def convert_chuck_UVspec(infile="KBSS-LM1.uv.fnu.fits", uncert_file="KBSS-LM1.uv
     df.to_csv(txtfile, sep='\t')    
     return(df)
 
-def read_chuck_UVspec(mage_mode="released") :
+def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
     (spec_path, line_path) = getpath(mage_mode)
     litfile = spec_path + "../Lit-spectra/Steidel2016/KBSS-LM1.uv.fnu.csv"
     names = ("index", "rest_wave", "rest_fnu", "rest_fnu_u")
-    df = pandas.read_table(litfile, delim_whitespace=True, comment="#", names=names, skiprows=1, index_col=0)
-    df['rest_flam']    = spec.fnu2flam(df['rest_wave'], df['rest_fnu'])
-    df['rest_flam_u']  = spec.fnu2flam(df['rest_wave'], df['rest_fnu_u'])
-    return(df)
+    sp = pandas.read_table(litfile, delim_whitespace=True, comment="#", names=names, skiprows=1, index_col=0)
+    sp['rest_flam']    = spec.fnu2flam(sp['rest_wave'], sp['rest_fnu'])
+    sp['rest_flam_u']  = spec.fnu2flam(sp['rest_wave'], sp['rest_fnu_u'])
+    if addS99 and getfullname_S99_spectrum("chuck") :
+        sp['rest_wave'] = sp['rest_wave'] / (1 + 0.00013013)
+        (S99, ignore_linelist) = redo_open_S99_spectrum("chuck", denorm=True)
+        #print "DEBUGGING", sp.keys(), "\n\n", S99.keys()
+        sp['fnu_s99model']      = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_s99'], sp['rest_wave'])
+        sp['fnu_s99data']       = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave'])  # used for debugging
+        sp['rest_fnu_s99model'] = sp['fnu_s99model']
+        sp['rest_fnu_s99data']  = sp['fnu_s99data']
+    if autofitcont :
+        calc_dispersion(sp, 'rest_disp', 'rest_wave')   # rest-frame dispersion, in Angstroms
+        sp['badmask'] = False   
+        boxcar = get_boxcar4autocont(sp)
+        (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
+        auto_fit_cont(sp, LL, 0.0, make_derived=False, boxcar=boxcar, colwave='rest_wave', colfnu='rest_fnu', colfnuu='rest_fnu_u', colcont='rest_fnu_autocont')
+    return(sp)
     
 def convert_chuck_mosfire(infile, outfile=None) :
     sp = fits.open(infile)

@@ -20,7 +20,8 @@ color3 = '0.5'   # color for continuum
 def standard_colors1():
     return(['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan'])
 def standard_colors2():
-    return(['black', 'midnightblue', 'dimgray', 'lightgrey'])
+#    return(['black', 'midnightblue', 'dimgray', 'lightgrey'])
+    return(['black', 'blue', 'dimgray', 'lightgrey'])
 def standard_colors3():
     return(['blue', 'black', 'red'])
 def standard_colors4():
@@ -171,7 +172,7 @@ def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2
         plt.xlim(vwin1, vwin2)
         plt.ylim(0, 1.4)
         xy = (0.1,  0.26 - float(ii)/len(line_label)*0.3)
-        print "DEBUG, xy is ", xy
+        #print "DEBUG, xy is ", xy
         plt.annotate( line_label[ii], xy, xycoords="axes fraction", color=hist.get_color())
         plt.xlabel("rest-frame velocity (km/s)")
     plt.plot( (0.,0.), plt.ylim(),  color=color2, linewidth=2)  # plot tics at zero velocity
