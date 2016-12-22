@@ -25,7 +25,7 @@ def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
     return(1267.0, 1276.0)  # These are rest wavelengths
 
 def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
-    # Normalize by the median with a spectral range norm_region
+    # Normalize by the median with a spectral range norm_region.  Assumes Pandas.
     normalization = np.median(rest_fnu[wave.between(*norm_region)])
     #print "normalization was", normalization, type(normalization)
     return(rest_fnu / normalization,  rest_fnu_u / normalization)

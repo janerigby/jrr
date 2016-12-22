@@ -5,6 +5,7 @@ from   re import split, sub
 import fileinput
 from astropy.stats import sigma_clip
 from astropy.stats import mad_std
+import subprocess
 
 #####  Math  #####
 
@@ -39,7 +40,13 @@ def replace_text_in_file(oldtext, newtext, infile, outfile=None):
     if not outfile : outfile = infile
     f2 = open(outfile, 'w')
     f2.write(new)
-        
+
+def strip_pound_before_colnames(infile) :
+    # astronomers often preface column names with "#", which I can't figure out how to ignore in pandas
+    # input is a file.  Returns filename of temp file that has first # stripped
+    tmp = "/tmp/workaround"
+    subprocess.check_output("sed s/\#// < " + infile + "> "+tmp, shell=True)
+    return(tmp)
         
 ## Basic astronomy
 
