@@ -12,6 +12,11 @@ import subprocess
 def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and siga, sigb are uncerts in a,b
     return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
 
+def add_in_quad(array) :
+    # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
+    quad_sum = np.sqrt((array**2).sum())
+    return (quad_sum)
+    
 def mad(data, axis=None):
     #return np.median(np.absolute(data - np.median(data, axis)), axis) #obsolete
     return mad_std(data, axis=axis)
@@ -23,6 +28,12 @@ def IQR(Series) :
 
 def robust_max(data, sigma=3) :  # maximum value after sigma clipping
     return (  (sigma_clip(data, sigma=sigma)).max())
+
+def robust_mean(data, sigma=2.5) :
+    return (  (sigma_clip(data, sigma=sigma)).mean())
+
+def robust_sum(data, sigma=2.5) :
+    return (  (sigma_clip(data, sigma=sigma)).sum())
 
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1
