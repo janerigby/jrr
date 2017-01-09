@@ -160,15 +160,17 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
             fig.subplots_adjust(hspace=0)
 
 
-def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2, figsize=(8,8)) :
+def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2, figsize=(8,8), colortab=False) :
     '''Same as boxplot_spectra(vel_plot=True), but OVERPLOT all the lines on 1 plot, no subplots'''
+    if colortab :  mycol=colortab
+    else : mycol = standard_colors1()
     restwave = wave / (1.0 + redshift)
     plt.figure(figsize=figsize)
     for ii, dum in enumerate(line_label) :
         print "Trying to plot ", line_label[ii], " at ", line_center[ii]
         vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
         in_window = vel.between((vwin1), vwin2)
-        hist, = plt.step(vel[in_window], fnu[in_window])
+        hist, = plt.step(vel[in_window], fnu[in_window], color=mycol[ii])
         plt.xlim(vwin1, vwin2)
         plt.ylim(0, 1.4)
         xy = (0.1,  0.26 - float(ii)/len(line_label)*0.3)
