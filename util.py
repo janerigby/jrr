@@ -5,8 +5,18 @@ from   re import split, sub
 import fileinput
 from astropy.stats import sigma_clip
 from astropy.stats import mad_std
+import scipy  
+import scikits.bootstrap as bootstrap  
 
 #####  Math  #####
+
+def bootstrap_val_confint(df, statfunction, alpha=0.05) :
+    '''Calculates the value of statfunction for a dataset df (numpy array or pandas df), and
+    also the confidence interval (by default, 5%,95%)
+    Returns the value, and the -,+ uncertainties'''
+    result = statfunction(df)
+    CI = bootstrap.ci(data=df, statfunction=statfunction, alpha=alpha)
+    return( result,  CI[0] - result,  CI[1] - result) 
 
 def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and siga, sigb are uncerts in a,b
     return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
@@ -16,9 +26,8 @@ def add_in_quad(array) :
     quad_sum = np.sqrt((array**2).sum())
     return (quad_sum)
     
-def mad(data, axis=None):
-    #return np.median(np.absolute(data - np.median(data, axis)), axis) #obsolete
-    return mad_std(data, axis=axis)
+def mad(data):
+    return mad_std(data)
 
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''

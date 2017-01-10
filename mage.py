@@ -212,7 +212,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False) :
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
     return(sp, resoln, dresoln, LL, zz_syst)
 
-def open_many_spectra(mage_mode, which_list="wcont", labels=()) :
+def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True) :
     ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
     sp:        dictionary of pandas dataframes containing the spectra
     resoln:    dictionary of resolutions (float)
@@ -225,7 +225,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=()) :
     LL = {}; zz_sys = {}; boxcar  = {}
     speclist = wrapper_getlist(mage_mode, which_list=which_list, labels=labels)
     for label in speclist['short_label'] :
-        print "Loading  ", label
+        if verbose: print "Loading  ", label
         (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)
     
@@ -263,7 +263,7 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
         # JC converted spectra to flam, then normalized over norm_regionA.  I need to take this back out.
         if rootname == "chuck" :  orig_sp =  read_chuck_UVspec()
         elif rootname == "Stack-A" :
-            (orig_sp, dummyLL) = open_stacked_spectrum("reduction", which_stack="Stack-A")
+            (orig_sp, dummyLL) = open_stacked_spectrum("released", which_stack="Stack-A")
         else:
             (orig_sp, orig_resoln, orig_dresoln, orig_LL, orig_zz_syst)  =  wrap_open_spectrum(rootname, "released")
         norm_region = Chisholm_norm_regionA() 
