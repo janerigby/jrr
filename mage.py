@@ -98,7 +98,7 @@ def getlist(mage_mode, optional_file=False) :
     pspecs.set_index("short_label", inplace=True, drop=False)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
     return(pspecs)  # I got rid of Nspectra.  If need it, use len(pspecs)
 
-def wrapper_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=()) :
+def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=()) :
     ''' Wrapper for getlist above.  Get list of MagE spectra and redshifts, for subsets.'''
     if which_list == "wcont" :      # Get those w continuum fit.
         pspecs = getlist(mage_mode) 
@@ -189,7 +189,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False) :
     '''  Convenience wrapper, open one MagE spectrum in one line.  label is one short_name.
     if addS99, adds Chisholm's S99 continuum fit to the sp dataframe  '''
     (spec_path, line_path) = getpath(mage_mode)
-    specs = getlist_labels(mage_mode, [label])
+    specs = wrap_getlist(mage_mode, which_list="labels", labels=[label])
     zz_syst = specs.z_syst.values[0]
     infile = specs.filename[0]
     (sp, resoln, dresoln) = open_spectrum(infile, zz_syst, mage_mode)
@@ -216,7 +216,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True) :
     print "Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth."
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
-    speclist = wrapper_getlist(mage_mode, which_list=which_list, labels=labels)
+    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels)
     for label in speclist.index :
         if verbose: print "Loading  ", label
         (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True)
