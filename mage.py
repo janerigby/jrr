@@ -95,33 +95,26 @@ def getlist(mage_mode, optional_file=False) :
 
     if mage_mode == "reduction" :  # Add the path to the filename, if on satchmo in /SCIENCE/
         pspecs['filename'] = pspecs['origdir'] + pspecs['filename']
+    pspecs.set_index("short_label", inplace=True, drop=False)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
     return(pspecs)  # I got rid of Nspectra.  If need it, use len(pspecs)
 
-def getlist_wcont(mage_mode, drop_s2243=True) :
-    ''' Get the list of MagE spectra and redshifts, for those w continuum fit.'''
-    pspecs = getlist(mage_mode) 
-    wcont =   pspecs[pspecs['filename'].str.contains('combwC1')].reset_index()  # only w continuum
-    # Drop S2243 bc it's an AGN
-    if drop_s2243 :
-        wcont = wcont[wcont.short_label.ne("S2243-0935")].reset_index()
-    return(wcont)
-        
-def getlist_labels(mage_mode, labels, optional_file=False) :
-    ''' Get the list of MagE spectra and redshifts, filtered by a list of short_labels (galaxy names)'''
-    pspecs = getlist(mage_mode, optional_file) 
-    filtlist = pspecs[pspecs['short_label'].isin(labels)].reset_index()
-    filtlist['sort_cat'] = pandas.Categorical(filtlist['short_label'], categories=labels, ordered=True)  # use same order as labels
-    filtlist.sort_values('sort_cat', inplace=True)
-    filtlist.reset_index(inplace=True)
-    return(filtlist)
-
-def wrapper_getlist(mage_mode, which_list="wcont", drop_s2243=True, labels=()) :
-    ''' Get the list of short_label of MagE spectra'''
-    if   which_list == "wcont" :             speclist = getlist_wcont(mage_mode, drop_s2243=drop_s2243)
-    elif which_list == "all"   :             speclist = getlist(mage_mode)
-    elif which_list == "labels" and labels : speclist = getlist_labels(mage_mode, labels)
+def wrapper_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=()) :
+    ''' Wrapper for getlist above.  Get list of MagE spectra and redshifts, for subsets.'''
+    if which_list == "wcont" :      # Get those w continuum fit.
+        pspecs = getlist(mage_mode) 
+        speclist =   pspecs[pspecs['filename'].str.contains('combwC1')]  # only w continuum
+        if drop_s2243 :          # Drop S2243 bc it's an AGN
+            #wcont = wcont[~wcont.index.isin("S2243-0935")].reset_index(drop=True)
+            speclist = speclist[~speclist.index.isin(("S2243-0935",))]
+    elif which_list == "all" :
+        speclist = getlist(mage_mode)
+    elif which_list == "labels" and labels :   # Get speclist for a list of short_labels
+        pspecs = getlist(mage_mode, optional_file) 
+        speclist = pspecs[pspecs.index.isin(labels)]
+        speclist['sort_cat'] = pandas.Categorical(speclist['short_label'], categories=labels, ordered=True)  #same order as labels
+        speclist.sort_values('sort_cat', inplace=True)
     else : raise Exception("Error: variable which_list not understood")
-    return(speclist) # , list['short_label'])
+    return(speclist)   # "short_label" is now .index
 
 def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_fnu, rest_fnu_u)         = spec.convert2restframe(sp.wave, sp.fnu,  sp.fnu_u,  zz, 'fnu')
@@ -224,7 +217,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True) :
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
     speclist = wrapper_getlist(mage_mode, which_list=which_list, labels=labels)
-    for label in speclist['short_label'] :
+    for label in speclist.index :
         if verbose: print "Loading  ", label
         (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)

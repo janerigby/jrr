@@ -5,12 +5,9 @@ from   re import split, sub
 import fileinput
 from astropy.stats import sigma_clip
 from astropy.stats import mad_std
-<<<<<<< HEAD
 import scipy  
 import scikits.bootstrap as bootstrap  
-=======
 import subprocess
->>>>>>> fe5d831f8fcf9e67648b718c547b438fc8c2f001
 
 #####  Math  #####
 
