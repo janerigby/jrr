@@ -60,7 +60,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             in_window = vel.between(-1*win, win)
             plt.step(vel[in_window], fnu[in_window], color=color1)   # assumes input is continuum-normalized
             plt.step(vel[in_window], dfnu[in_window], color=color2)  # plot uncertainty
-            plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum. 
+            plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
             plt.ylim(0.0, 1.5)  # May need to change these limits
             plt.xlim(-1*win, win)
@@ -68,6 +68,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             in_window = restwave.between((line_center[ii] - win), (line_center[ii] + win))
             plt.step(restwave[in_window], fnu[in_window],  color=color1)
             plt.step(restwave[in_window], dfnu[in_window], color=color2)
+            plt.plot( (line_center[ii] - win, line_center[ii] + win), (1., 1.), color=color3)  # plot unity continuum
             plt.plot( (line_center[ii], line_center[ii]), (0.0,2), color=color3, linewidth=2)  # plot tics at zero velocity
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
         if ii == len(line_label) -1 :
@@ -79,7 +80,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -128,6 +129,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
+            if drawunity: plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum
             plt.xlim(-1*win, win)
         else :
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
@@ -139,6 +141,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity
+            if drawunity: plt.plot( (line_center[ii] - win, line_center[ii] + win), (1.0,1.0), color=color3)        # plot unity continuum
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
         ax.locator_params(axis='y', nbins=5)
         ax.locator_params(axis='x', nbins=5)

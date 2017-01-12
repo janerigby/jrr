@@ -30,7 +30,7 @@ def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_regi
     #print "normalization was", normalization, type(normalization)
     return(rest_fnu / normalization,  rest_fnu_u / normalization)
 
-def calc_dispersion(sp, coldisp, colwave) :
+def calc_dispersion(sp, coldisp='disp', colwave='wave') :
     # inputs are spectrum dataframe, column for dispersion ('disp'), column for wave ('wave')
     sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
