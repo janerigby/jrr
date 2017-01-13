@@ -143,17 +143,17 @@ def open_spectrum(infile, zz, mage_mode) :
       fnu			     observed-frame f_nu, in erg/s/cm^2/s
       wave_sky 	         ignore
       fnu_sky		     ignore
-      badmask		     True: this pixel is flagged as bad.
-      fnu_cont		     JRR’s hand-fit continuum, to the fnu
-      fnu_cont_u	     uncertainty in “
+      badmask		     True: this pixel is flagged as bad
+      fnu_cont		     JRR's hand-fit continuum, to fnu
+      fnu_cont_u         uncertainty in above
       disp			     dispersion in wave, in Angstroms
       rest_fnu		     rest-frame f_nu, in erg/s/cm^2/s
-      rest_fnu_cont	     JRR’s hand-fit continuum, in rest-frame f_nu
+      rest_fnu_cont	     JRR's hand-fit continuum, in rest-frame f_nu
       rest_fnu_autocont	 An automatic continuum fit.  Almost as good as hand-fit
-      fnu_s99model		 John Chisholm’s best S99 fit, same units as fnu
-      rest_fnu_s99model	 Same as “ but for rest-frame fnu
+      fnu_s99model		 John Chisholm's best S99 fit, same units as fnu
+      rest_fnu_s99model	 Same as above but for rest-frame fnu
       fnu_s99data	     ignore (sanity-checking, should be identical to fnu, checks that s99 model imported correctly)
-      Many of the key columns have an equivalent f_lambda, abbreviated “flam”, for example,  rest_flam_cont.
+      Many of the key columns have an equivalent f_lambda, abbreviated flam, for example rest_flam_cont
       call:  (Pandas_spectrum_dataframe, spectral_resolution) = jrr.mage.open_spectrum(infile, zz, mage_mode)
     '''
     (spec_path, line_path) = getpath(mage_mode)
@@ -602,7 +602,7 @@ def add_columns_to_litspec(df) :
     tools won't barf.'''
     df['badmask']  = False  
     df['linemask'] = False  
-    df['fnu_autocont'] = pandas.Series(np.ones_like(df.wave)*np.nan)  # Will fill this with automatic continuum fit
+    df['fnu_autocont'] = pandas.Series(np.ones_like(df.rest_wave)*np.nan)  # Will fill this with automatic continuum fit
     df['flam']     = spec.fnu2flam(df.wave, df.fnu)          # convert fnu to flambda
     df['flam_u']   = spec.fnu2flam(df.wave, df.fnu_u)
     # Give it a default line-list, so it can fit autocont w smoothing
@@ -665,6 +665,7 @@ def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
         boxcar = get_boxcar4autocont(sp)
         (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
         auto_fit_cont(sp, LL, 0.0, make_derived=False, boxcar=boxcar, colwave='rest_wave', colfnu='rest_fnu', colfnuu='rest_fnu_u', colcont='rest_fnu_autocont')
+        sp['fnu_autocont'] = sp['rest_fnu_autocont'] # make multipanel-stacks.py happy
     return(sp)
     
 def convert_chuck_mosfire(infile, outfile=None) :
@@ -689,5 +690,8 @@ def read_shapley_composite() :
     infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/LBGs/composite-LBG-shapley.dat"
     df = pandas.read_table(infile, delim_whitespace=True, comment="#")
     df['fnu_u'] = 0.0
+    df['flam']     = spec.fnu2flam(df.wave, df.fnu)          # convert fnu to flambda
+    df['flam_u']   = spec.fnu2flam(df.wave, df.fnu_u)
+    convert_spectrum_to_restframe(df, 0.0)
     add_columns_to_litspec(df)
     return(df)
