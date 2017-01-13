@@ -154,13 +154,13 @@ def open_spectrum(infile, zz, mage_mode) :
       rest_fnu_s99model	 Same as above but for rest-frame fnu
       fnu_s99data	     ignore (sanity-checking, should be identical to fnu, checks that s99 model imported correctly)
       Many of the key columns have an equivalent f_lambda, abbreviated flam, for example rest_flam_cont
-      call:  (Pandas_spectrum_dataframe, spectral_resolution) = jrr.mage.open_spectrum(infile, zz, mage_mode)
+      call:  (Pandas_spectrum_dataframe, spectral_resolution, dresoln) = jrr.mage.open_spectrum(infile, zz, mage_mode)
     '''
     (spec_path, line_path) = getpath(mage_mode)
     specdir = spec_path
 
     if 'RESOLUTIONGOESHERE' in open(specdir+infile).read() :  # spectral_resoln hasn't set resln yet
-        resoln = -99
+        resoln = -99; dresoln=-99
     else :
         command = "grep resolution " + specdir+infile   
         resoln = float(check_output(command, shell=True).split()[1])

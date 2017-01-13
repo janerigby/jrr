@@ -3,8 +3,7 @@
 import numpy as np
 from   re import split, sub
 import fileinput
-from astropy.stats import sigma_clip
-from astropy.stats import mad_std
+from astropy.stats import sigma_clip, median_absolute_deviation, mad_std
 import scipy  
 import scikits.bootstrap as bootstrap  
 import subprocess
@@ -28,7 +27,7 @@ def add_in_quad(array) :
     return (quad_sum)
     
 def mad(data):
-    return mad_std(data)
+    return median_absolute_deviation(data)
 
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''
