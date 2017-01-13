@@ -138,7 +138,22 @@ def open_spectrum(infile, zz, mage_mode) :
     '''Reads a reduced MagE spectrum, probably ending in *combwC1.txt
       Inputs:   filename to read in, systemic redshift (to convert to rest-frame), mage_mode
       Outputs:  the object spectrum, in both flam and fnu (why not?)  plus continuum both ways, all in Pandas data frame
-      Pandas keys:  wave, fnu, fnu_u, wave_sky, fnu_sky, fnu_cont, fnu_cont_u, flam, flam_u, flam_sky, flam_cont, flam_cont_u
+      Here are the most important columns in the output spectrum:
+      wave               observed-frame vacuum barycentric wavelength in angstroms
+      fnu			     observed-frame f_nu, in erg/s/cm^2/s
+      wave_sky 	         ignore
+      fnu_sky		     ignore
+      badmask		     True: this pixel is flagged as bad.
+      fnu_cont		     JRR’s hand-fit continuum, to the fnu
+      fnu_cont_u	     uncertainty in “
+      disp			     dispersion in wave, in Angstroms
+      rest_fnu		     rest-frame f_nu, in erg/s/cm^2/s
+      rest_fnu_cont	     JRR’s hand-fit continuum, in rest-frame f_nu
+      rest_fnu_autocont	 An automatic continuum fit.  Almost as good as hand-fit
+      fnu_s99model		 John Chisholm’s best S99 fit, same units as fnu
+      rest_fnu_s99model	 Same as “ but for rest-frame fnu
+      fnu_s99data	     ignore (sanity-checking, should be identical to fnu, checks that s99 model imported correctly)
+      Many of the key columns have an equivalent f_lambda, abbreviated “flam”, for example,  rest_flam_cont.
       call:  (Pandas_spectrum_dataframe, spectral_resolution) = jrr.mage.open_spectrum(infile, zz, mage_mode)
     '''
     (spec_path, line_path) = getpath(mage_mode)
