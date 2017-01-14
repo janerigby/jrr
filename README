@@ -5,6 +5,7 @@ mage.py 	tools to deal w Magellan/MagE spectra
 fire.py		tools to deal w Magellan/FIRE spectra
 spec.py		general tools to deal with spectra
 peakdet.py	simple peak detection
+plot.py		tools to make plots.  
 util.py		general utilities
 
 First commit to github: July 2016
