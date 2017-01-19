@@ -77,3 +77,9 @@ def convert_restwave_to_velocity(restwave, line_center) :
     ''' Utility, convert rest-frame wavelength array to velocity array, relative to v=0 at line_center '''
     vel =  (restwave - line_center)/line_center * A_c/1E5     # km/s     
     return(vel) 
+
+def get_waverange_spectrum(sp, wavcol='wave') :
+    # Get the first and last wavelengths of input spectrum sp (assumed to be a pandas data frame).
+    # Assumes spectrum is already ordered by wavelength.
+    return (np.float(sp[0:1][wavcol].values), np.float(sp[-1:][wavcol].values))
+    
