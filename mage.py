@@ -1,4 +1,4 @@
-''' Scripts to read and analyze MagE spectra.  
+''' Scripts to read and analyze MagE/Magellan spectra.  
     jrigby, begun Oct 2015.  Updates March--Dec 2016
 '''
 from jrr import spec
@@ -6,15 +6,14 @@ from jrr import util
 import numpy as np
 import pandas 
 from   matplotlib import pyplot as plt
-from   astropy.io import fits
 from   re import split, sub, search
 from   os.path import expanduser, isfile, basename
 import re
 import glob
 from subprocess import check_output   # Used for grepping from files
+from   astropy.io import fits
 import astropy.convolution
 from astropy.wcs import WCS
-from astropy.io import fits
 
 color1 = 'k'     # color for spectra
 color2 = '0.65'  # color for uncertainty spectra
@@ -22,16 +21,17 @@ color3 = '0.5'   # color for continuum
 color4 = 'b'     # color for 2nd spectrum, for comparison
 
 def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
-    return(1267.0, 1276.0)  # These are rest wavelengths
+    return(1267.0, 1276.0)  # These are rest wavelengths, in Angstroms
 
 def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
-    # Normalize by the median with a spectral range norm_region.  Assumes Pandas.
+    '''Normalize by the median within a spectral range norm_region.  Assumes Pandas.'''
     normalization = np.median(rest_fnu[wave.between(*norm_region)])
     #print "normalization was", normalization, type(normalization)
     return(rest_fnu / normalization,  rest_fnu_u / normalization)
 
-def calc_dispersion(sp, coldisp='disp', colwave='wave') :
-    # inputs are spectrum dataframe, column for dispersion ('disp'), column for wave ('wave')
+def calc_dispersion(sp, colwave='wave', coldisp='disp') :
+    '''Calculate the dispersion.
+    Inputs: spectrum dataframe, column to write dispersion, column to read wavelength'''
     sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
@@ -124,7 +124,7 @@ def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_flam, rest_flam_u) = spec.convert2restframe(sp.wave, sp.flam,  sp.flam_u,  zz, 'flam')
     sp['rest_flam']    = pandas.Series(rest_flam)
     sp['rest_flam_u']  = pandas.Series(rest_flam_u)
-    calc_dispersion(sp, 'rest_disp', 'rest_wave')   # rest-frame dispersion, in Angstroms    
+    calc_dispersion(sp, 'rest_wave', 'rest_disp')   # rest-frame dispersion, in Angstroms    
     if 'fnu_cont' in sp :
         (junk   , rest_fnu_cont, rest_fnu_cont_u) = spec.convert2restframe(sp.wave, sp.fnu_cont, sp.fnu_cont_u, zz, 'fnu')
         sp['rest_fnu_cont']   = pandas.Series(rest_fnu_cont)
@@ -173,7 +173,7 @@ def open_spectrum(infile, zz, mage_mode) :
     sp.rename(columns= {'noise'  : 'fnu_u'}, inplace=True)
     sp.rename(columns= {'avgsky' : 'fnu_sky'}, inplace=True)
     sp.rename(columns= {'obswave' : 'wave_sky'}, inplace=True)
-    calc_dispersion(sp, 'disp', 'wave')
+    calc_dispersion(sp, 'wave', 'disp')
     
     if hascont :
         sp.rename(columns= {'cont_fnu'    : 'fnu_cont'}, inplace=True)  # Rename for consistency
@@ -297,7 +297,7 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
     flag_huge(sp, colfnu='rest_fnu_data', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
     flag_huge(sp, colfnu='rest_fnu_s99', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-    calc_dispersion(sp, 'rest_disp', 'rest_wave')
+    calc_dispersion(sp, 'rest_wave', 'rest_disp')
     boxcar = get_boxcar4autocont(sp)
     auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_s99', colfnuu='rest_fnu_s99_u', colcont='rest_fnu_s99_autocont', boxcar=boxcar)
     auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_data', colfnuu='rest_fnu_data_u', colcont='rest_fnu_data_autocont', boxcar=boxcar)
@@ -363,7 +363,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", c
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
         sp['rest_fnu_s99data']  = sp['fnu_s99data']
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-    calc_dispersion(sp, 'disp', 'wave')
+    calc_dispersion(sp, 'wave', 'disp')
     sp['badmask'] = False
     sp['linemask'] = False
     convert_spectrum_to_restframe(sp, 0.0)  # z=0
@@ -660,7 +660,7 @@ def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
         sp['rest_fnu_s99data']  = sp['fnu_s99data']
     if autofitcont :
-        calc_dispersion(sp, 'rest_disp', 'rest_wave')   # rest-frame dispersion, in Angstroms
+        calc_dispersion(sp, 'rest_wave', 'rest_disp')   # rest-frame dispersion, in Angstroms
         sp['badmask'] = False   
         boxcar = get_boxcar4autocont(sp)
         (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
