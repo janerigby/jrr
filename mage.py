@@ -340,9 +340,10 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", c
         print "  Caution, I am using ", alt_infile, "instead of the default stacked spectrum."
         infile = indir + alt_infile
     else :
-        if which_stack == "standard" : stackfile = "magestack_bystars_standard_spectrum.txt"
-        elif which_stack == "Stack-A"   : stackfile = "magestack_byneb_ChisholmstackA_spectrum.txt"
-        else : raise Exception("I do not recognize which_stack as one of the choices, standard or Stack-A")
+        if   which_stack == "standard" :  stackfile = "magestack_bystars_standard_spectrum.txt"
+        elif which_stack == "Stack-A"  :  stackfile = "magestack_byneb_ChisholmstackA_spectrum.txt"
+        elif which_stack == "divbys99" :  stackfile = "magestack_bystars_divbyS99_spectrum.txt"
+        else : raise Exception("I do not recognize which_stack as one of the choices: standard, Stack-A, or divbys99")
         infile = indir + stackfile
     if not (any(colfnu in s for s in ('X_avg','X_clipavg','X_median')) and any(colfnuu in tt for tt in ('X_sigma', 'X_jack_std'))):
         raise Exception('ERROR: User selection of colfnu or colfnuu is invald.', colfnu, colfnuu)                
