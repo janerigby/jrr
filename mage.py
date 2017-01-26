@@ -546,25 +546,29 @@ def flag_where_nocont(sp) :
     sp.badmask.loc[sp['fnu_cont'].eq(9999)] = True  # where hand-drawn continuum is undefined
     return(0)
 
-def flag_near_lines(sp, LL, zz, vmask, colwave='wave') :
+def flag_near_lines(sp, LL, vmask, colwave='wave', linetype='all') :
     # Flag regions within +- vmask km/s around lines in linelist LL
-    # Inputs:   sp, the spectrum as Pandas data frame
-    #           LL, the linelist as pandas data frame
-    #           zz, the redshift.  
-    #           vmask, the velocity around which to mask each line +-, in km/s
+    # Inputs:   sp        spectrum as Pandas data frame
+    #           LL        linelist as pandas data frame
+    #           zz        redshift
+    #           vmask     velocity around which to mask each line +-, in km/s
+    #           colwave   column to find the wavelength
+    #           linetype  list of types of lines to mask.  by default, mask all types of lines.  Example: linetype=('INTERVE')
     # Outputs:  None.  It acts directly on sp.linemask
     #print "Flagging regions near lines."
-    rest_cen = np.array( LL.restwav)
-    line_lo   = rest_cen * (1.0 - vmask/2.997E5) * (1. + LL.zz)
-    line_hi   = rest_cen * (1.0 + vmask/2.997E5) * (1. + LL.zz)
+    if linetype == 'all' :  subset = LL
+    else :                  subset = LL[LL['type'].isin(linetype)]
+    rest_cen = np.array( subset.restwav)  # work on all lines
+    line_lo   = rest_cen * (1.0 - vmask/2.997E5) * (1. + np.array(subset.zz))
+    line_hi   = rest_cen * (1.0 + vmask/2.997E5) * (1. + np.array(subset.zz))
     temp_wave = np.array(sp[colwave])
     temp_mask = np.zeros_like(temp_wave).astype(np.bool)
-    for ii in range(0, len(rest_cen)) :    # doing this in observed wavelength
+    for ii in range(0, len(line_lo)) :    # doing this in observed wavelength
         temp_mask[np.where( (temp_wave > line_lo[ii]) & (temp_wave < line_hi[ii]))] = True
     sp['linemask'] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
     return(0)
-    # To make this work for S99 synthetic spectra, should load S99 into a similar sp data frame, 
-    # with zz=0 and sp.wave = the rest wavelength.
+## add to here...  Make option to flag only intervening absorbers, for mage_stack_redo...
+
         
 def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
     ''' Automatically fits a smooth continuum to a spectrum.
@@ -579,7 +583,7 @@ def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deri
     # First, mask out big skylines. Done by mage.flag_skylines, which is called by mage.open_spectrum
     # Second, flag regions with crazy high uncertainty.  done in flag_huge, called by mage.open_spectrum
     # Third, mask out regions near lines.  Flagged in sp.linemask
-    if flag_lines : flag_near_lines(sp, LL, zz, vmask, colwave=colwave)
+    if flag_lines : flag_near_lines(sp, LL, vmask, colwave=colwave)
     # Populate colcont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
     temp_fnu = sp[colfnu].copy(deep=True)
     temp_fnu.loc[(sp.badmask | sp.linemask).astype(np.bool)] = np.nan
