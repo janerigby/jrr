@@ -603,7 +603,7 @@ def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deri
 # Routines to read in spectra from the literature
 
 def add_columns_to_litspec(df) :
-    ''' Add the right columns to a pandas df created for a spectrum from the literature, so that my plotting
+    ''' Add the right columns to a pandas df created fory a spectrum from the literature, so that my plotting
     tools won't barf.'''
     df['badmask']  = False  
     df['linemask'] = False  
