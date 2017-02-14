@@ -3,7 +3,7 @@
 import numpy as np
 from   re import split, sub
 import fileinput
-from astropy.stats import sigma_clip, median_absolute_deviation, mad_std
+from astropy.stats import sigma_clip, median_absolute_deviation
 import scipy  
 import scikits.bootstrap as bootstrap  
 import subprocess

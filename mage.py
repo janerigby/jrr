@@ -40,7 +40,16 @@ def get_boxcar4autocont(sp) :
     # For fit_autocont(), find the number of pixels that corresponds to target Angstroms in the rest frame
     target = 100. # rest-frame Angstroms
     return(np.int(util.round_up_to_odd(target / sp.rest_disp.median())))  # in pixels
+
+def longnames(mage_mode) :
+    (spec_path, line_path) = getpath(mage_mode)
+    thefile = spec_path + "dict_longnames.txt"
+    longnames = pandas.read_table(thefile, delim_whitespace=True, comment="#")
+    longnames['longname'] = longnames['longname'].str.replace("_", " ")
+    longnames.set_index("short_label", inplace=True, drop=True)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
+    return(longnames)
     
+         
 def getpath(mage_mode) : 
     ''' Haqndle paths for python MagE scripts.  Two use cases:
     A) I am on satchmo, & want to use spectra in  /Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/
@@ -76,18 +85,24 @@ def getlist(mage_mode, optional_file=False) :
     # specs holds the filenames and redshifts, for example   specs['filename'], specs['z_stars']
     
     # z_syst is best estimate of systemic redshift.  From stars if measured, else nebular, else ISM
-    pspecs['fl_st'] = pspecs['fl_st'].astype(np.bool, copy=False)
-    pspecs['fl_neb'] = pspecs['fl_neb'].astype(np.bool, copy=False)
-    pspecs['fl_ISM'] = pspecs['fl_ISM'].astype(np.bool, copy=False)
-    pspecs['z_syst'] = 'foobar' # initialize
-    pspecs['z_syst'][~pspecs['fl_st']] = pspecs['z_stars']  # stellar redshift if have it
+    pspecs['fl_st']   = pspecs['fl_st'].astype(np.bool, copy=False)
+    pspecs['fl_neb']  = pspecs['fl_neb'].astype(np.bool, copy=False)
+    pspecs['fl_ISM']  = pspecs['fl_ISM'].astype(np.bool, copy=False)
+    pspecs['z_stars'] = pspecs['z_stars'].astype(np.float64)
+    pspecs['sig_st']  = pspecs['sig_st'].astype(np.float64)
+    pspecs['z_neb']   = pspecs['z_neb'].astype(np.float64)
+    pspecs['sig_neb'] = pspecs['sig_neb'].astype(np.float64)
+    pspecs['z_ISM']   = pspecs['z_ISM'].astype(np.float64)
+    pspecs['sig_ISM'] = pspecs['sig_ISM'].astype(np.float64)
+    pspecs['z_syst'] = np.float64() # initialize
+    pspecs['z_syst'][~pspecs['fl_st']] = pspecs['z_stars']   # stellar redshift if have it
     pspecs['z_syst'][(pspecs['fl_st']) & (~pspecs['fl_neb'])] = pspecs['z_neb']  # else, use nebular z
     pspecs['z_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM'])] = pspecs['z_ISM'] #else ISM
     pspecs['z_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM'])] = -999  # Should never happen
     # dz_syst is uncertainty in systemic redshift.
     extra_dv = 500. # if using a proxy for systematic redshift, increase its uncertainty
     extra_dz = extra_dv / 2.997E5 * (1.+ pspecs['z_syst'])
-    pspecs['dz_syst'] = 'foobar'
+    pspecs['dz_syst'] = np.float64()
     pspecs['dz_syst'][~pspecs['fl_st']] = pspecs['sig_st']
     pspecs['dz_syst'][(pspecs['fl_st']) & (~pspecs['fl_neb'])] = np.sqrt(( pspecs['sig_neb']**2 + extra_dz**2).astype(np.float64))
     pspecs['dz_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM'])] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
