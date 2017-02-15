@@ -21,9 +21,9 @@ def bootstrap_val_confint(df, statfunction, alpha=0.05) :
 def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and siga, sigb are uncerts in a,b
     return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
 
-def add_in_quad(array) :
+def add_in_quad(array, axis=0) :
     # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
-    quad_sum = np.sqrt((array**2).sum())
+    quad_sum = np.sqrt( np.sum((array**2), axis=axis))
     return (quad_sum)
     
 def mad(data):

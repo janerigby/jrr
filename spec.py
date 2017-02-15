@@ -1,12 +1,14 @@
 ''' General-purpose functions to convert and deal with spectra.  Nothing
 instrument-specific should go here.  jrigby, May 2016'''
 
+from jrr import util
 from astropy.wcs import WCS
 from astropy.io import fits
 from re import sub
 import pandas
 import numpy as np
 from   scipy.interpolate import interp1d
+from   astropy.stats import sigma_clip
 
 A_c=2.997925e10   # cm/s
 
@@ -82,4 +84,55 @@ def get_waverange_spectrum(sp, wavcol='wave') :
     # Get the first and last wavelengths of input spectrum sp (assumed to be a pandas data frame).
     # Assumes spectrum is already ordered by wavelength.
     return (np.float(sp[0:1][wavcol].values), np.float(sp[-1:][wavcol].values))
+
+def stack_observed_spectra(spectra, do_sum=True, colwav='wave', colf='fnu', colfu='fnu_u', stacklo=False, stackhi=False, disp=False, sigmaclip=3) :
+    ''' General-purpose function to stack spectra.
+    Rebins wavelength.  Does NOT convert to rest-frame.  
+    Input is a dictionary of pandas data frames that contains the spectra.
+    Output wavelength array will be taken from first spectrum in list,
+    unless overriden by stacklo, stackhi, disp.
+    if do_sum, output colf is straight sum and errors summed in quadrature
+    if not do_sum, output colf is weighted average and uncertainty in weighted avg
+    '''
+    if stacklo and stackhi and disp :
+        print "Caution: overriding the default wavelength range and dispersion!"
+        nbins = int((stackhi - stacklo)/disp)
+        stacked = pandas.DataFrame(data = np.linspace(stacklo, stackhi, num=nbins), columns=(colwav,))
+    else :
+        stacked = pandas.DataFrame(data=spectra[spectra.keys()[0]][colwav])  # Get output wavelength array from first spectrum
+    nbins = stacked.shape[0]  #N of pixels
+    nfnu    = np.zeros(shape=(len(spectra), nbins))   # temp array that will hold the input spectra
+    nfnu_u  = np.zeros(shape=(len(spectra), nbins))
+    Nfiles  = np.ones_like(nfnu, dtype=np.int)
+    jackknife     = np.zeros(shape=(len(spectra), nbins))
+    for ii, spec in enumerate(spectra.itervalues()):   # Load the spectra into big fat arrays.
+        nfnu[ii]   = rebin_spec_new(spec[colwav], spec[colf],  stacked[colwav]) # fnu rebinned
+        nfnu_u[ii] = rebin_spec_new(spec[colwav], spec[colfu], stacked[colwav])  # uncertainty on above
+
+    if do_sum :  # SUM the spectra
+        stacked[colf]    = np.sum(nfnu, axis=0)
+        stacked[colfu]   = util.add_in_quad(nfnu_u, axis=0)
+        stacked['Nfiles'] = np.sum(Nfiles, axis=0)
+        stacked[colf + '_median_xN'] = np.median(nfnu, axis=0) * np.sum(Nfiles, axis=0) 
+        
+    if not do_sum :  # Compute the weighted average
+        weights = nfnu_u ** -2
+        (stacked[colf], sumweight)   = np.average(nfnu, axis=0, weights=weights, returned=True) # weighted avg
+        stacked[colfu] =  sumweight**-0.5
+        nfnu_clip  = sigma_clip(nfnu, sig=sigmaclip, iters=None, axis=0)
+        stacked['clipavg'], sumweight2   = np.average(nfnu_clip, axis=0, weights=weights, returned=True)
+        stacked['clipavg_u'] = sumweight2**-0.5   
+        stacked['median'] = np.median(nfnu, axis=0)
+    return(stacked)
+    
+### Subsection to compute and apply the barycentric correction.  "And yet, it moves..."
+
+def compute_barycentric_correction(observatory, UTdate, UTtime) :
+    barycor = 0  # Need to code this up....  Bones should exist in astropy
+    return(0) # should return correction factor, in km/s, sign as in jskycalc 
+
+def convert_2barycentric(spectrum, barycor, wavcol='wave') : 
+    ''' Bones for this should exist in Astropy.  Need to code up this wrapper.'''
+    # barycor should come from compute_barycentric_correction(), above
+    return(0)
     
