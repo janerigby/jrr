@@ -10,6 +10,12 @@ from astropy.time import Time
 from astropy import coordinates
 from astropy.coordinates import SkyCoord, solar_system, EarthLocation, ICRS
 from astropy import units as u
+from astropy import constants
+A_c = constants.c.to('km/s').value
+
+def apply_velcorr(df, barycor_vel,  colwav='wave', colwavnew='newwave'):
+    df[colwavnew] = df[colwav] * (1.0 + (barycor_vel / A_c))
+    return(0)
 
 def velcorr(mytime, skycoord, location=None):
   """Barycentric velocity correction.
