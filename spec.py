@@ -7,11 +7,10 @@ from astropy.io import fits
 from re import sub
 import pandas
 import numpy as np
-from   scipy.interpolate import interp1d
-from   astropy.stats import sigma_clip
-
+from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
+from astropy.stats import sigma_clip
 A_c=2.997925e10   # cm/s
-
     
 def fnu2flam(wave, fnu) :
     '''Convert fnu (in erg/s/cm^2/Hz) to flambda (in erg/s/cm^2/A). Assumes wave in Angstroms.'''
@@ -61,6 +60,17 @@ def calc_EW(flam, flam_u, cont, cont_u, disp, redshift) :   # calculate equivale
     EW_u = np.sqrt(np.sum( (flam_u / cont * disp)**2  +  (cont_u * flam / cont**2 * disp)**2 ))  / (1. + redshift)
     return(EW, EW_u)  # return rest-frame equivalent width and uncertainty
 
+def onegaus(x, aa, bb, cc, cont): # Define a Gaussian with linear continuum
+    #y = np.zeros_like(x)
+    y = (aa * np.exp((x - bb)**2/(-2*cc**2))  + cont)
+    return y
+    
+def fit_quick_gaussian(sp, guess_pars, colwav='wave', colf='flam', zz=0.) : # Gaussian fit to emission line.  Uses Pandas
+    # guess_pars are the initial guess at the Gaussian.
+    popt, pcov = curve_fit(onegaus, sp[colwav], sp[colf], p0=guess_pars)
+    fit = onegaus(sp[colwav], *popt)
+    return(popt, fit)
+    
 def rebin_spec_new(wave, specin, new_wave, fill=np.nan):
     f = interp1d(wave, specin, bounds_error=False, fill_value=fill)  # With these settings, writes NaN to extrapolated regions
     new_spec = f(new_wave)
