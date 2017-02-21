@@ -10,15 +10,17 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from astropy.stats import sigma_clip
-A_c=2.997925e10   # cm/s
-    
+from astropy import constants
+
 def fnu2flam(wave, fnu) :
     '''Convert fnu (in erg/s/cm^2/Hz) to flambda (in erg/s/cm^2/A). Assumes wave in Angstroms.'''
+    A_c = constants.c.to('cm/s').value
     flam = fnu *  A_c/(wave * 1E-8 ) / wave
     return(flam)
 
 def flam2fnu(wave, flam) :
     '''Convert from flambda (in erg/s/cm^2/A) to fnu (in erg/s/cm^2/Hz).  Assumes wave in Angstroms.'''
+    A_c = constants.c.to('cm/s').value
     fnu = flam * (wave * 1E-8 ) * wave / A_c;
     return(fnu)
 
@@ -77,17 +79,18 @@ def rebin_spec_new(wave, specin, new_wave, fill=np.nan):
     return(new_spec)
 
 def velocity_offset(z1, dz1, z2, dz2) :
-    ''' Compute the relative velocity offset between two similar redshifts.
+    ''' Compute the relative velocity offset (in km/s) between two similar redshifts.
     Only valid for small redshift offsets.  Returns velocity offset and uncertainty.
     call as:  (vel_offset, d_vel_offset) = jrr.spectra.velocity_offset(z1,dz1, z2,dz2)'''
-    const = A_c / 1E5
-    vel_offset  = (z2 - z1) * const / z1
-    d_vel_offset = np.sqrt(( dz1 * const / (1.+z1)**2 )**2 + (dz2 * const / (1.+dz1))**2)
+    A_c = constants.c.to('km/s').value  # speed of light
+    vel_offset  = (z2 - z1) * A_c / z1
+    d_vel_offset = np.sqrt(( dz1 * A_c / (1.+z1)**2 )**2 + (dz2 * A_c / (1.+dz1))**2)
     return(vel_offset, d_vel_offset)
 
 def convert_restwave_to_velocity(restwave, line_center) :
     ''' Utility, convert rest-frame wavelength array to velocity array, relative to v=0 at line_center '''
-    vel =  (restwave - line_center)/line_center * A_c/1E5     # km/s     
+    A_c =  constants.c.to('km/s').value
+    vel =  (restwave - line_center)/line_center * A_c      # km/s     
     return(vel) 
 
 def get_waverange_spectrum(sp, wavcol='wave') :
@@ -135,14 +138,5 @@ def stack_observed_spectra(spectra, do_sum=True, colwav='wave', colf='fnu', colf
         stacked['median'] = np.median(nfnu, axis=0)
     return(stacked)
     
-### Subsection to compute and apply the barycentric correction.  "And yet, it moves..."
 
-def compute_barycentric_correction(observatory, UTdate, UTtime) :
-    barycor = 0  # Need to code this up....  Bones should exist in astropy
-    return(0) # should return correction factor, in km/s, sign as in jskycalc 
-
-def convert_2barycentric(spectrum, barycor, wavcol='wave') : 
-    ''' Bones for this should exist in Astropy.  Need to code up this wrapper.'''
-    # barycor should come from compute_barycentric_correction(), above
-    return(0)
     

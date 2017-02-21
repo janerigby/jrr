@@ -1,7 +1,6 @@
-''' This is code to compute the barycentric velocity correction, as documented in jskycalc.
+''' This is code to compute and apply the barycentric velocity correction, as defined in jskycalc documentation.
 Adapted from https://gist.github.com/StuartLittlefair/5aaf476c5d7b52d20aa9544cfaa936a1
-Eventually such a wrapper function will get written into astropy.  In the meantime, using this 
-stopgap.
+Eventually such a wrapper function will get written into astropy.  In the meantime, using this stopgap.
 I have verified that this code gives the same answers as jskycalc, for a few positions,
 and a few observatories (Las Campanas and Keck), to within 0.01 km/s.
 jrigby, Feb 2017'''
@@ -11,14 +10,18 @@ from astropy import coordinates
 from astropy.coordinates import SkyCoord, solar_system, EarthLocation, ICRS
 from astropy import units as u
 from astropy import constants
-A_c = constants.c.to('km/s').value
 
-def apply_velcorr(df, barycor_vel,  colwav='wave', colwavnew='newwave'):
+
+def apply_barycentric_correction(df, barycor_vel,  colwav='wave', colwavnew='newwave'):
+    ''' Applies the barycentric velocity correction to the wavelength of a spectrum.  Needs to be tested.'''
+    A_c = constants.c  # speed of light
+    print type(A_c), type(barycor_vel), type(df[colwav])
     df[colwavnew] = df[colwav] * (1.0 + (barycor_vel / A_c))
     return(0)
 
-def velcorr(mytime, skycoord, location=None):
-  """Barycentric velocity correction.
+def compute_barycentric_correction(mytime, skycoord, location=None):
+  """Barycentric velocity correction.  was named 'velcorr'
+     Should return barycentric correction factor, in km/s, same sign convention as in jskycalc 
   
   Uses the ephemeris set with  ``astropy.coordinates.solar_system_ephemeris.set`` for corrections. 
   For more information see `~astropy.coordinates.solar_system_ephemeris`.

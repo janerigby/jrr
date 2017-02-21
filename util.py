@@ -8,6 +8,7 @@ import scipy
 import scikits.bootstrap as bootstrap  
 import subprocess
 
+
 #####  Math  #####
 
 def bootstrap_val_confint(df, statfunction, alpha=0.05) :
@@ -46,6 +47,7 @@ def robust_sum(data, sigma=2.5) :
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1
 
+
 #####  Handle files  #####
 
 def split_grab(line, place) :
@@ -61,12 +63,14 @@ def replace_text_in_file(oldtext, newtext, infile, outfile=None):
     f2.write(new)
 
 def strip_pound_before_colnames(infile) :
-    # astronomers often preface column names with "#", which I can't figure out how to ignore in pandas
-    # input is a file.  Returns filename of temp file that has first # stripped
+    ''' Astronomers often preface column names with "#".  I can't figure out
+    how to teach pandas to ignore that, so I wrote this pre-processor.
+    input is a file.  Returns filename of temp file that has first # stripped'''
     tmp = "/tmp/workaround"
     subprocess.check_output("sed s/\#// < " + infile + "> "+tmp, shell=True)
     return(tmp)
-        
+
+       
 ## Basic astronomy
 
 def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
@@ -76,5 +80,3 @@ def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
 def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies    
     Jy = 10**(-0.4*(AB + 48.57))/1E-23  
     return(Jy)
-
-
