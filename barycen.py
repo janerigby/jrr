@@ -12,6 +12,13 @@ from astropy import units as u
 from astropy import constants
 
 
+def demo_site_chooser() :
+    EarthLocation.get_site_names()  # Print names of all sites astropy knows about. May need internet connection
+    keck = EarthLocation.of_site('keck')  
+    lco  = EarthLocation.of_site('Las Campanas Observatory') 
+    return(0)
+
+
 def apply_barycentric_correction(df, barycor_vel,  colwav='wave', colwavnew='newwave'):
     ''' Applies the barycentric velocity correction to the wavelength of a spectrum.  Needs to be tested.'''
     A_c = constants.c  # speed of light

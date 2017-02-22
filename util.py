@@ -33,7 +33,7 @@ def mad(data):
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''
     notnull = Series[Series.notnull()]
-    return ( (notnull.quantile(0.25) + notnull.quantile(0.75))/2.)
+    return ( (notnull.quantile(0.25) + notnull.quantile(0.75))/2.)  # IS THIS RIGHT?  DiSAGREES W pandas.describe()
 
 def robust_max(data, sigma=3) :  # maximum value after sigma clipping
     return (  (sigma_clip(data, sigma=sigma)).max())
