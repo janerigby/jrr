@@ -70,6 +70,13 @@ def strip_pound_before_colnames(infile) :
     subprocess.check_output("sed s/\#// < " + infile + "> "+tmp, shell=True)
     return(tmp)
 
+def put_header_on_file(infile, header_text, outfile) :
+    ''' Pandas doesn't allow user to add explanatory header
+    to output files.  Headers are useful.  So, writing wrapper to add one.'''
+    tmp = "/tmp/header"
+    with open(tmp, "w") as myfile:  myfile.write(header_text)
+    subprocess.check_output("cat " + tmp + " " + infile + " > " + outfile, shell=True)
+    return(0)
        
 ## Basic astronomy
 
