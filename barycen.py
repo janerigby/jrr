@@ -15,7 +15,6 @@ from astropy import constants
 def apply_barycentric_correction(df, barycor_vel,  colwav='wave', colwavnew='newwave'):
     ''' Applies the barycentric velocity correction to the wavelength of a spectrum.  Needs to be tested.'''
     A_c = constants.c  # speed of light
-    print type(A_c), type(barycor_vel), type(df[colwav])
     df[colwavnew] = df[colwav] * (1.0 + (barycor_vel / A_c))
     return(0)
 
