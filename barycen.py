@@ -20,7 +20,12 @@ def demo_site_chooser() :
 
 
 def apply_barycentric_correction(df, barycor_vel,  colwav='wave', colwavnew='newwave'):
-    ''' Applies the barycentric velocity correction to the wavelength of a spectrum.  Needs to be tested.'''
+    ''' Applies the barycentric velocity correction to the wavelength of a spectrum.  Assumes Pandas.
+    Inputs:
+    df:           the spectrum, as a pandas DataFrame
+    barycor_vel:  barycentric correction velocity, from compute_barycentric_correction()
+    colwav:       column name that holds the wavelength
+    colwavenew:   column name for new wavelength.  Have not tested what happens if you try to overwrite colwav'''
     A_c = constants.c  # speed of light
     df[colwavnew] = df[colwav] * (1.0 + (barycor_vel / A_c))
     return(0)
