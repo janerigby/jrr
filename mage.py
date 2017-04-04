@@ -667,8 +667,12 @@ def convert_chuck_UVspec(infile="KBSS-LM1.uv.fnu.fits", uncert_file="KBSS-LM1.uv
 def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
     (spec_path, line_path) = getpath(mage_mode)
     litfile = spec_path + "../Lit-spectra/Steidel2016/KBSS-LM1.uv.fnu.csv"
-    names = ("index", "rest_wave", "rest_fnu", "rest_fnu_u")
-    sp = pandas.read_table(litfile, delim_whitespace=True, comment="#", names=names, skiprows=1, index_col=0)
+    #names = ("index", "rest_wave", "rest_fnu", "rest_fnu_u")
+    #sp = pandas.read_table(litfile, delim_whitespace=True, comment="#", names=names, skiprows=1, index_col=0)
+    sp = pandas.read_table(litfile, delim_whitespace=True, comment="#")
+    sp['rest_wave'] = sp['wave']
+    sp['rest_fnu']  = sp['fnu']
+    sp['rest_fnu_u']  = sp['fnu_u']
     sp['rest_flam']    = spec.fnu2flam(sp['rest_wave'], sp['rest_fnu'])
     sp['rest_flam_u']  = spec.fnu2flam(sp['rest_wave'], sp['rest_fnu_u'])
     if addS99 and getfullname_S99_spectrum("chuck") :

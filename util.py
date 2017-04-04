@@ -4,6 +4,8 @@ import numpy as np
 from   re import split, sub
 import fileinput
 from astropy.stats import sigma_clip, median_absolute_deviation
+from astropy.coordinates import SkyCoord
+from astropy import units
 import scipy  
 import scikits.bootstrap as bootstrap  
 import subprocess
@@ -87,3 +89,12 @@ def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
 def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies    
     Jy = 10**(-0.4*(AB + 48.57))/1E-23  
     return(Jy)
+
+def convert_RADEC_segi_decimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
+    thisradec = SkyCoord(RA_segi, DEC_segi, unit=(units.hourangle, units.deg), frame='icrs')
+    return(thisradec.ra.value, thisradec.dec.value)
+
+def convert_RADEC_segi_decimal_df(df, newRA='RA_deg', newDEC='DEC_deg') : #same as above, but act on a pandas dataframe
+    df[newRA]  = df.apply(lambda row : convert_RADEC_segi_decimal(row.RA, row.DEC)[0], axis=1)
+    df[newDEC] = df.apply(lambda row : convert_RADEC_segi_decimal(row.RA, row.DEC)[1], axis=1)
+    return(0)
