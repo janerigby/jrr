@@ -90,11 +90,26 @@ def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies
     Jy = 10**(-0.4*(AB + 48.57))/1E-23  
     return(Jy)
 
-def convert_RADEC_segi_decimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
+def convert_RADEC_segidecimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
     thisradec = SkyCoord(RA_segi, DEC_segi, unit=(units.hourangle, units.deg), frame='icrs')
     return(thisradec.ra.value, thisradec.dec.value)
 
-def convert_RADEC_segi_decimal_df(df, newRA='RA_deg', newDEC='DEC_deg') : #same as above, but act on a pandas dataframe
+def convert_RADEC_Galactic(RA, DEC) :    # Convert (decimal) RA, DEC to Galactic
+    thisradec = SkyCoord(RA, DEC, unit=(units.deg, units.deg), frame='icrs')
+    return(thisradec.galactic.l.value, thisradec.galactic.b.value)
+
+def convert_RADEC_Ecliptic(RA, DEC) :    # Convert (decimal) RA, DEC to Ecliptic
+    thisradec = SkyCoord(RA, DEC, unit=(units.deg, units.deg), frame='icrs')
+    return(thisradec.barycentrictrueecliptic.lon, thisradec.barycentrictrueecliptic.lat)
+
+def convert_RADEC_segidecimal_df(df, newRA='RA_deg', newDEC='DEC_deg') : #same as above, but act on a pandas dataframe
     df[newRA]  = df.apply(lambda row : convert_RADEC_segi_decimal(row.RA, row.DEC)[0], axis=1)
     df[newDEC] = df.apply(lambda row : convert_RADEC_segi_decimal(row.RA, row.DEC)[1], axis=1)
     return(0)
+
+def convert_RADEC_GalEclip_df(df, newframe="Galactic") : # Convert RADEC to Galactic & Ecliptic coord
+    df['Gal_lon'] = df.apply(lambda row : convert_RADEC_Galactic(row.RA, row.DEC)[0], axis=1)
+    df['Gal_lat'] = df.apply(lambda row : convert_RADEC_Galactic(row.RA, row.DEC)[1], axis=1)
+    df['Ecl_lon'] = df.apply(lambda row : convert_RADEC_Ecliptic(row.RA, row.DEC)[0], axis=1)
+    df['Ecl_lat'] = df.apply(lambda row : convert_RADEC_Ecliptic(row.RA, row.DEC)[1], axis=1)
+    return(0)  # acts on the dataframe
