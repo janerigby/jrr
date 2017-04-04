@@ -36,11 +36,6 @@ def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
             
-def get_boxcar4autocont(sp) :
-    # For fit_autocont(), find the number of pixels that corresponds to target Angstroms in the rest frame
-    target = 100. # rest-frame Angstroms
-    return(np.int(util.round_up_to_odd(target / sp.rest_disp.median())))  # in pixels
-
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
     thefile = spec_path + "dict_longnames.txt"
@@ -582,8 +577,11 @@ def flag_near_lines(sp, LL, vmask, colwave='wave', linetype='all') :
         temp_mask[np.where( (temp_wave > line_lo[ii]) & (temp_wave < line_hi[ii]))] = True
     sp['linemask'] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
     return(0)
-## add to here...  Make option to flag only intervening absorbers, for mage_stack_redo...
 
+def get_boxcar4autocont(sp) :
+    # For fit_autocont(), find the number of pixels that corresponds to target Angstroms in the rest frame
+    target = 100. # rest-frame Angstroms
+    return(np.int(util.round_up_to_odd(target / sp.rest_disp.median())))  # in pixels
         
 def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
     ''' Automatically fits a smooth continuum to a spectrum.
