@@ -103,8 +103,8 @@ def convert_RADEC_Ecliptic(RA, DEC) :    # Convert (decimal) RA, DEC to Ecliptic
     return(thisradec.barycentrictrueecliptic.lon, thisradec.barycentrictrueecliptic.lat)
 
 def convert_RADEC_segidecimal_df(df, newRA='RA_deg', newDEC='DEC_deg') : #same as above, but act on a pandas dataframe
-    df[newRA]  = df.apply(lambda row : convert_RADEC_segi_decimal(row.RA, row.DEC)[0], axis=1)
-    df[newDEC] = df.apply(lambda row : convert_RADEC_segi_decimal(row.RA, row.DEC)[1], axis=1)
+    df[newRA]  = df.apply(lambda row : convert_RADEC_segidecimal(row.RA, row.DEC)[0], axis=1)
+    df[newDEC] = df.apply(lambda row : convert_RADEC_segidecimal(row.RA, row.DEC)[1], axis=1)
     return(0)
 
 def convert_RADEC_GalEclip_df(df, newframe="Galactic") : # Convert RADEC to Galactic & Ecliptic coord
