@@ -91,25 +91,31 @@ def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies
     return(Jy)
 
 def convert_RADEC_segidecimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
+    # RA_segi, DEC_segi are *lists*.  ([0., 22, 180], [-10., 10., 10])
     thisradec = SkyCoord(RA_segi, DEC_segi, unit=(units.hourangle, units.deg), frame='icrs')
     return(thisradec.ra.value, thisradec.dec.value)
 
-def convert_RADEC_Galactic(RA, DEC) :    # Convert (decimal) RA, DEC to Galactic
-    thisradec = SkyCoord(RA, DEC, unit=(units.deg, units.deg), frame='icrs')
+def convert_RADEC_segidecimal_df(df, colra='RA', coldec='DEC', newRA='RA_deg', newDEC='DEC_deg') :
+    #same as above, but act on a pandas dataframe
+    (temp1, temp2) = convert_RADEC_segidecimal(df[colra], df[coldec])
+    df[newRA]  = temp1
+    df[newDEC] = temp2
+    return(0)
+    
+def convert_RADEC_Galactic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Galactic.  Can be LISTS []
+    thisradec = SkyCoord(RA_deg, DEC_deg, unit=(units.deg, units.deg), frame='icrs')
     return(thisradec.galactic.l.value, thisradec.galactic.b.value)
 
-def convert_RADEC_Ecliptic(RA, DEC) :    # Convert (decimal) RA, DEC to Ecliptic
-    thisradec = SkyCoord(RA, DEC, unit=(units.deg, units.deg), frame='icrs')
-    return(thisradec.barycentrictrueecliptic.lon, thisradec.barycentrictrueecliptic.lat)
+def convert_RADEC_Ecliptic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Ecliptic. Can be LISTS []
+    thisradec = SkyCoord(RA_deg, DEC_deg, unit=(units.deg, units.deg), frame='icrs')
+    return(thisradec.barycentrictrueecliptic.lon.value, thisradec.barycentrictrueecliptic.lat.value)
 
-def convert_RADEC_segidecimal_df(df, newRA='RA_deg', newDEC='DEC_deg') : #same as above, but act on a pandas dataframe
-    df[newRA]  = df.apply(lambda row : convert_RADEC_segidecimal(row.RA, row.DEC)[0], axis=1)
-    df[newDEC] = df.apply(lambda row : convert_RADEC_segidecimal(row.RA, row.DEC)[1], axis=1)
-    return(0)
-
-def convert_RADEC_GalEclip_df(df, newframe="Galactic") : # Convert RADEC to Galactic & Ecliptic coord
-    df['Gal_lon'] = df.apply(lambda row : convert_RADEC_Galactic(row.RA, row.DEC)[0], axis=1)
-    df['Gal_lat'] = df.apply(lambda row : convert_RADEC_Galactic(row.RA, row.DEC)[1], axis=1)
-    df['Ecl_lon'] = df.apply(lambda row : convert_RADEC_Ecliptic(row.RA, row.DEC)[0], axis=1)
-    df['Ecl_lat'] = df.apply(lambda row : convert_RADEC_Ecliptic(row.RA, row.DEC)[1], axis=1)
+def convert_RADEC_GalEclip_df(df, colra='RA', coldec='DEC') :
+    # For a dataframe, compute Galactic & Ecliptic coords from RADEC
+    (tempL, tempB) = convert_RADEC_Galactic(df[colra], df[coldec])
+    (templon, templat) = convert_RADEC_Ecliptic(df[colra], df[coldec])
+    df['Gal_lon'] = tempL
+    df['Gal_lat'] = tempB
+    df['Ecl_lon'] = templon
+    df['Ecl_lat'] = templat
     return(0)  # acts on the dataframe
