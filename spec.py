@@ -38,6 +38,13 @@ def convert2restframe(wave, f, f_u, zz, units) :
     else :
         raise Exception('ERROR: last argument must specify whether  units of f, f_u are fnu or flam.  Must be same units for input and output')
 
+def convert2restframe_df(df, zz, units='fnu', colwave='wave', colf='fnu', colf_u='fnu_u') : # same, for a data fram
+    (rest_wave, rest_f, rest_f_u) = convert2restframe(df[colwave], df[colf],  df[colf_u], zz, units)
+    df['rest_wave']      = pandas.Series(rest_wave)
+    df['rest_' + colf]   = pandas.Series(rest_f)
+    df['rest_' + colf_u] = pandas.Series(rest_f_u)
+    return(0)  # acts on df
+    
 def convert2obsframe(rest_wave, rest_f, rest_f_u, zz, units) :
     if units == 'flam' :
         wave    = rest_wave * (1.0+zz)      # convert to rest frame
@@ -52,6 +59,16 @@ def convert2obsframe(rest_wave, rest_f, rest_f_u, zz, units) :
     else :
         raise Exception('ERROR: last argument must specify whether  units of f, f_u are fnu or flam.  Must be same units for input and output')
 
+def convert2obsframe_df(df, zz, units='fnu', colrw='rest_wave', colrf='rest_fnu', colrf_u='rest_fnu_u') :
+    (wave, f, f_u) =  convert2obsframe(df[colrw], df[colf], df[colf_u], zz, units)
+    colwave = re.sub('rest_', '', colrw)
+    colf    = re.sub('rest_', '', colrf)
+    colf_u  = re.sub('rest_', '', colrf_u)     
+    df[colwave] = pandas.Series(wave)
+    df[colf]    = pandas.Series(f)
+    df[colf_u]  = pandas.Series(f_u)
+    return(0)  # acts on df
+ 
         
 def calc_EW(flam, flam_u, cont, cont_u, disp, redshift) :   # calculate equivalent width as simple sum over the region of interest.
     # bare-bones simple.
