@@ -11,6 +11,14 @@ from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from astropy.stats import sigma_clip
 from astropy import constants
+import astropy.convolution
+
+def calc_dispersion(sp, colwave='wave', coldisp='disp') :
+    '''Calculate the dispersion for a pandas dataframe
+    Inputs: spectrum dataframe, column to write dispersion, column to read wavelength'''
+    sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
+    sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
+    return(0)
 
 def fnu2flam(wave, fnu) :
     '''Convert fnu (in erg/s/cm^2/Hz) to flambda (in erg/s/cm^2/A). Assumes wave in Angstroms.'''
@@ -69,7 +77,6 @@ def convert2obsframe_df(df, zz, units='fnu', colrw='rest_wave', colrf='rest_fnu'
     df[colf_u]  = pandas.Series(f_u)
     return(0)  # acts on df
  
-        
 def calc_EW(flam, flam_u, cont, cont_u, disp, redshift) :   # calculate equivalent width as simple sum over the region of interest.
     # bare-bones simple.
     # Inputs are flambda, uncertainty, continuum, uncertainty, dispersion in Angstroms
@@ -89,12 +96,14 @@ def fit_quick_gaussian(sp, guess_pars, colwav='wave', colf='flam', zz=0.) : # Ga
     popt, pcov = curve_fit(onegaus, sp[colwav], sp[colf], p0=guess_pars)
     fit = onegaus(sp[colwav], *popt)
     return(popt, fit)
-    
-def rebin_spec_new(wave, specin, new_wave, fill=np.nan):
+
+def rebin_spec_new(wave, specin, new_wave, fill=np.nan, return_masked=False):
+    # Rebin spectra (wave, specin) to new wavelength aray new_wave.  Fill values are nan.  If return_masked, then mask the nans
     f = interp1d(wave, specin, bounds_error=False, fill_value=fill)  # With these settings, writes NaN to extrapolated regions
     new_spec = f(new_wave)
-    return(new_spec)
-
+    if return_masked :  return(util.mask_nans(new_spec))
+    else :              return(new_spec)
+    
 def velocity_offset(z1, dz1, z2, dz2) :
     ''' Compute the relative velocity offset (in km/s) between two similar redshifts.
     Only valid for small redshift offsets.  Returns velocity offset and uncertainty.
@@ -115,45 +124,99 @@ def get_waverange_spectrum(sp, wavcol='wave') :
     # Assumes spectrum is already ordered by wavelength.
     return (np.float(sp[0:1][wavcol].values), np.float(sp[-1:][wavcol].values))
 
-def stack_observed_spectra(spectra, do_sum=True, colwav='wave', colf='fnu', colfu='fnu_u', stacklo=False, stackhi=False, disp=False, sigmaclip=3) :
-    ''' General-purpose function to stack spectra.
-    Rebins wavelength.  Does NOT convert to rest-frame.  
-    Input is a dictionary of pandas data frames that contains the spectra.
+def stack_spectra(df, straight_sum=True, colwav='wave', colf='fnu', colfu='fnu_u', stacklo=False, stackhi=False, disp=False, sigmaclip=3) :
+    ''' General-purpose function to stack spectra.  Rebins wavelength.
+    Does not de-redshift spectra.  If you want to stack in rest frame, run jrr.spec.convert2restframe_df(df) beforehand.
+    Input spectra{} is a dictionary of pandas data frames that contains the spectra.
     Output wavelength array will be taken from first spectrum in list,
     unless overriden by stacklo, stackhi, disp.
-    if do_sum, output colf is straight sum and errors summed in quadrature
-    if not do_sum, output colf is weighted average and uncertainty in weighted avg
+    if straight_sum, output colf is straight sum and errors summed in quadrature
+    if not straight_sum, output colf is weighted average and uncertainty in weighted avg
     '''
     if stacklo and stackhi and disp :
         print "Caution: overriding the default wavelength range and dispersion!"
         nbins = int((stackhi - stacklo)/disp)
-        stacked = pandas.DataFrame(data = np.linspace(stacklo, stackhi, num=nbins), columns=(colwav,))
+        stacked = pandas.DataFrame(data = np.linspace(stacklo, stackhi, num=nbins+1), columns=(colwav,))
     else :
-        stacked = pandas.DataFrame(data=spectra[spectra.keys()[0]][colwav])  # Get output wavelength array from first spectrum
+        stacked = pandas.DataFrame(data=df[df.keys()[0]][colwav])  # Get output wavelength array from first spectrum
     nbins = stacked.shape[0]  #N of pixels
-    nfnu    = np.zeros(shape=(len(spectra), nbins))   # temp array that will hold the input spectra
-    nfnu_u  = np.zeros(shape=(len(spectra), nbins))
-    Nfiles  = np.ones_like(nfnu, dtype=np.int)
-    jackknife     = np.zeros(shape=(len(spectra), nbins))
-    for ii, spec in enumerate(spectra.itervalues()):   # Load the spectra into big fat arrays.
-        nfnu[ii]   = rebin_spec_new(spec[colwav], spec[colf],  stacked[colwav]) # fnu rebinned
-        nfnu_u[ii] = rebin_spec_new(spec[colwav], spec[colfu], stacked[colwav])  # uncertainty on above
+    nf    = np.ma.zeros(shape=(len(df), nbins))   # temp array that will hold the input spectra
+    nf_u  = np.ma.zeros(shape=(len(df), nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
+    Nfiles  = np.ones_like(nf, dtype=np.int)
+    jackknife     = np.zeros(shape=(len(df), nbins))  # This isn't used.  **Write it up, copy from red_stack_mage***
+    for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
+        nf[ii]   = rebin_spec_new(spec[colwav], spec[colf],  stacked[colwav], return_masked=True) # fnu/flam rebinned
+        nf_u[ii] = rebin_spec_new(spec[colwav], spec[colfu], stacked[colwav], return_masked=True)  # uncertainty on above
+    #return(nf, nf_u, stacked, spec)
 
-    if do_sum :  # SUM the spectra
-        stacked[colf]    = np.sum(nfnu, axis=0)
-        stacked[colfu]   = util.add_in_quad(nfnu_u, axis=0)
-        stacked['Nfiles'] = np.sum(Nfiles, axis=0)
-        stacked[colf + '_median_xN'] = np.median(nfnu, axis=0) * np.sum(Nfiles, axis=0) 
+    if straight_sum :  # SUM the spectra
+        stacked[colf]    = np.ma.sum(nf, axis=0)
+        stacked[colfu]   = util.add_in_quad(nf_u, axis=0)
+        stacked['Nfiles'] = np.ma.sum(Nfiles, axis=0)
+        stacked[colf + '_median_xN'] = np.ma.median(nf, axis=0) * np.ma.sum(Nfiles, axis=0) 
         
-    if not do_sum :  # Compute the weighted average
-        weights = nfnu_u ** -2
-        (stacked[colf], sumweight)   = np.average(nfnu, axis=0, weights=weights, returned=True) # weighted avg
+    if not straight_sum :  # Compute the weighted average
+        weights = nf_u ** -2
+        (stacked[colf], sumweight)   = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
         stacked[colfu] =  sumweight**-0.5
-        nfnu_clip  = sigma_clip(nfnu, sig=sigmaclip, iters=None, axis=0)
-        stacked['clipavg'], sumweight2   = np.average(nfnu_clip, axis=0, weights=weights, returned=True)
+        nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
+        stacked['clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
         stacked['clipavg_u'] = sumweight2**-0.5   
-        stacked['median'] = np.median(nfnu, axis=0)
+        stacked['median'] = np.ma.median(nf, axis=0)
     return(stacked)
-    
 
-    
+
+# Below are functions to automatically fit a smooth continuum to a spectrum.  Generalized from jrr.mage
+
+def get_boxcar4autocont(sp, smooth_length=100.) :
+    # Helper function for fit_autocont().  For the given input spectrum, finds of pixels that
+    # corresponds to smooth_length in rest-frame Angstroms.  This will be the boxcar smoothing length.
+    # target is in rest-frame Angstroms.  Default is 100 A, which works well for MagE spectra.
+    return(np.int(util.round_up_to_odd(smooth_length / sp.rest_disp.median())))  # in pixels
+
+def flag_near_lines(sp, LL, vmask, colwave='wave', linetype='all') :
+    # Flag regions within +- vmask km/s around lines in linelist LL
+    # Inputs:   sp        spectrum as Pandas data frame
+    #           LL        linelist as pandas data frame
+    #           zz        redshift
+    #           vmask     velocity around which to mask each line +-, in km/s
+    #           colwave   column to find the wavelength
+    #           linetype  list of types of lines to mask.  by default, mask all types of lines.  Example: linetype=('INTERVE')
+    # Outputs:  None.  It acts directly on sp.linemask
+    #print "Flagging regions near lines."
+    if linetype == 'all' :  subset = LL
+    else :                  subset = LL[LL['type'].isin(linetype)]
+    rest_cen = np.array( subset.restwav)  # work on all lines
+    line_lo   = rest_cen * (1.0 - vmask/2.997E5) * (1. + np.array(subset.zz))
+    line_hi   = rest_cen * (1.0 + vmask/2.997E5) * (1. + np.array(subset.zz))
+    temp_wave = np.array(sp[colwave])
+    temp_mask = np.zeros_like(temp_wave).astype(np.bool)
+    for ii in range(0, len(line_lo)) :    # doing this in observed wavelength
+        temp_mask[np.where( (temp_wave > line_lo[ii]) & (temp_wave < line_hi[ii]))] = True
+    sp['linemask'] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
+    return(0)
+
+def testing_fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont') : 
+    ''' Automatically fits a smooth continuum to a spectrum.  Generalized from mage version
+     Inputs:  sp,  a Pandas data frame containing the spectra, 
+              LL,  a Pandas data frame containing the linelist, opened by mage.get_linelist(linelist) or similar
+              zz,  the systemic redshift. Used to set window threshold around lines to mask
+              vmask (Optional), velocity around which to mask lines, km/s. 
+              boxcar (Optional), the size of the boxcar smoothing window, in pixels
+              flag_lines (Optional) flag, should the fit mask out known spectral features? Can turn off for debugging
+              colwave, colf:  which columns to find wave, flux/flam/fnu
+              colmask,  the column that has the mask, of what should be ignored in continuum fitting.  True is masked
+              colcont, column to write the continuum.  The output!
+    '''
+    if flag_lines :
+        flag_near_lines(sp, LL, vmask, colwave=colwave)  # lines are masked in sp.linemask
+        sp.loc[sp['linemask'], colmask] = True
+    # Populate colcont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
+    temp_fnu  = np.array(sp[colf].copy(deep=True))
+    temp_mask = np.array(sp[colmask].copy(deep=True))
+    # Last, smooth with a boxcar
+    smooth1 = astropy.convolution.convolve(temp_fnu, np.ones((boxcar,))/boxcar, boundary='fill', fill_value=np.nan, mask=temp_mask)
+    small_kern = int(util.round_up_to_odd(boxcar/10.))
+    smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='fill', fill_value=np.nan) # Smooth again, to remove nans
+    sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
+    return(smooth1, smooth2)

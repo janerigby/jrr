@@ -10,7 +10,6 @@ import scipy
 import scikits.bootstrap as bootstrap  
 import subprocess
 
-
 #####  Math  #####
 
 def bootstrap_val_confint(df, statfunction, alpha=0.05) :
@@ -49,6 +48,8 @@ def robust_sum(data, sigma=2.5) :
 def round_up_to_odd(f):
     return np.ceil(f) // 2 * 2 + 1
 
+def mask_nans(data) :  # return a numpy masked array, with nans masked
+    return(np.ma.masked_array(data,np.isnan(data)))
 
 #####  Handle files  #####
 
@@ -79,8 +80,8 @@ def put_header_on_file(infile, header_text, outfile) :
     with open(tmp, "w") as myfile:  myfile.write(header_text)
     subprocess.check_output("cat " + tmp + " " + infile + " > " + outfile, shell=True)
     return(0)
-       
-## Basic astronomy
+
+#####  Basic Astronomy  #####
 
 def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
     AB = -2.5 * np.log10(Jy * 1E-23) - 48.57
@@ -89,6 +90,8 @@ def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
 def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies    
     Jy = 10**(-0.4*(AB + 48.57))/1E-23  
     return(Jy)
+
+#####  Astronomy coordinate systems  #####
 
 def convert_RADEC_segidecimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
     # RA_segi, DEC_segi are *lists*.  ([0., 22, 180], [-10., 10., 10])

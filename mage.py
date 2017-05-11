@@ -28,13 +28,6 @@ def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_regi
     normalization = np.median(rest_fnu[wave.between(*norm_region)])
     #print "normalization was", normalization, type(normalization)
     return(rest_fnu / normalization,  rest_fnu_u / normalization)
-
-def calc_dispersion(sp, colwave='wave', coldisp='disp') :
-    '''Calculate the dispersion.
-    Inputs: spectrum dataframe, column to write dispersion, column to read wavelength'''
-    sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
-    sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
-    return(0)
             
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
@@ -134,7 +127,7 @@ def convert_spectrum_to_restframe(sp, zz) :
     (rest_wave, rest_flam, rest_flam_u) = spec.convert2restframe(sp.wave, sp.flam,  sp.flam_u,  zz, 'flam')
     sp['rest_flam']    = pandas.Series(rest_flam)
     sp['rest_flam_u']  = pandas.Series(rest_flam_u)
-    calc_dispersion(sp, 'rest_wave', 'rest_disp')   # rest-frame dispersion, in Angstroms    
+    spec.calc_dispersion(sp, 'rest_wave', 'rest_disp')   # rest-frame dispersion, in Angstroms    
     if 'fnu_cont' in sp :
         (junk   , rest_fnu_cont, rest_fnu_cont_u) = spec.convert2restframe(sp.wave, sp.fnu_cont, sp.fnu_cont_u, zz, 'fnu')
         sp['rest_fnu_cont']   = pandas.Series(rest_fnu_cont)
@@ -183,7 +176,7 @@ def open_spectrum(infile, zz, mage_mode) :
     sp.rename(columns= {'noise'  : 'fnu_u'}, inplace=True)
     sp.rename(columns= {'avgsky' : 'fnu_sky'}, inplace=True)
     sp.rename(columns= {'obswave' : 'wave_sky'}, inplace=True)
-    calc_dispersion(sp, 'wave', 'disp')
+    spec.calc_dispersion(sp, 'wave', 'disp')
     
     if hascont :
         sp.rename(columns= {'cont_fnu'    : 'fnu_cont'}, inplace=True)  # Rename for consistency
@@ -220,8 +213,8 @@ def wrap_open_spectrum(label, mage_mode, addS99=False) :
     (sp, resoln, dresoln) = open_spectrum(infile, zz_syst, mage_mode)
     linelist = get_linelist_name(infile, line_path)
     (LL, zz_notused) =  get_linelist(linelist)
-    boxcar = get_boxcar4autocont(sp)
-    auto_fit_cont(sp, LL, zz_syst, boxcar=boxcar)
+    boxcar = spec.get_boxcar4autocont(sp)
+    fit_autocont(sp, LL, zz_syst, boxcar=boxcar)
     if addS99 and  getfullname_S99_spectrum(label) :  # If a Chisholm S99 fit file exists, and user wants to read it
         (S99, ignore_linelist) = redo_open_S99_spectrum(label, denorm=True)
         sp['fnu_s99model']      = spec.rebin_spec_new(S99['wave'], S99['fnu_s99'], sp['wave'])
@@ -307,10 +300,10 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
     flag_huge(sp, colfnu='rest_fnu_data', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
     flag_huge(sp, colfnu='rest_fnu_s99', thresh_hi=50., thresh_lo=-50., norm_by_med=False)
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-    calc_dispersion(sp, 'rest_wave', 'rest_disp')
-    boxcar = get_boxcar4autocont(sp)
-    auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_s99', colfnuu='rest_fnu_s99_u', colcont='rest_fnu_s99_autocont', boxcar=boxcar)
-    auto_fit_cont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_data', colfnuu='rest_fnu_data_u', colcont='rest_fnu_data_autocont', boxcar=boxcar)
+    spec.calc_dispersion(sp, 'rest_wave', 'rest_disp')
+    boxcar = spec.get_boxcar4autocont(sp)
+    fit_autocont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_s99', colfnuu='rest_fnu_s99_u', colcont='rest_fnu_s99_autocont', boxcar=boxcar)
+    fit_autocont(sp, LL, zz=0, make_derived=False, colwave='rest_wave', colfnu='rest_fnu_data', colfnuu='rest_fnu_data_u', colcont='rest_fnu_data_autocont', boxcar=boxcar)
     return(sp, LL)
     
 def open_all_S99_spectra() :
@@ -374,13 +367,13 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", c
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
         sp['rest_fnu_s99data']  = sp['fnu_s99data']
     (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-    calc_dispersion(sp, 'wave', 'disp')
+    spec.calc_dispersion(sp, 'wave', 'disp')
     sp['badmask'] = False
     sp['linemask'] = False
     convert_spectrum_to_restframe(sp, 0.0)  # z=0
-    boxcar = get_boxcar4autocont(sp)
+    boxcar = spec.get_boxcar4autocont(sp)
     #print "DEBUGGING, boxcar is ", boxcar
-    auto_fit_cont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
+    fit_autocont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
     return(sp, LL) # return the Pandas DataFrame containing the stacked spectrum
      
 def open_Crowther2016_spectrum() :
@@ -555,35 +548,8 @@ def flag_oldflags(sp, colfnu='fnu') :
 def flag_where_nocont(sp) :
     sp.badmask.loc[sp['fnu_cont'].eq(9999)] = True  # where hand-drawn continuum is undefined
     return(0)
-
-def flag_near_lines(sp, LL, vmask, colwave='wave', linetype='all') :
-    # Flag regions within +- vmask km/s around lines in linelist LL
-    # Inputs:   sp        spectrum as Pandas data frame
-    #           LL        linelist as pandas data frame
-    #           zz        redshift
-    #           vmask     velocity around which to mask each line +-, in km/s
-    #           colwave   column to find the wavelength
-    #           linetype  list of types of lines to mask.  by default, mask all types of lines.  Example: linetype=('INTERVE')
-    # Outputs:  None.  It acts directly on sp.linemask
-    #print "Flagging regions near lines."
-    if linetype == 'all' :  subset = LL
-    else :                  subset = LL[LL['type'].isin(linetype)]
-    rest_cen = np.array( subset.restwav)  # work on all lines
-    line_lo   = rest_cen * (1.0 - vmask/2.997E5) * (1. + np.array(subset.zz))
-    line_hi   = rest_cen * (1.0 + vmask/2.997E5) * (1. + np.array(subset.zz))
-    temp_wave = np.array(sp[colwave])
-    temp_mask = np.zeros_like(temp_wave).astype(np.bool)
-    for ii in range(0, len(line_lo)) :    # doing this in observed wavelength
-        temp_mask[np.where( (temp_wave > line_lo[ii]) & (temp_wave < line_hi[ii]))] = True
-    sp['linemask'] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
-    return(0)
-
-def get_boxcar4autocont(sp) :
-    # For fit_autocont(), find the number of pixels that corresponds to target Angstroms in the rest frame
-    target = 100. # rest-frame Angstroms
-    return(np.int(util.round_up_to_odd(target / sp.rest_disp.median())))  # in pixels
         
-def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
+def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
     ''' Automatically fits a smooth continuum to a spectrum.
      Inputs:  sp,  a Pandas data frame containing the spectra, opened by mage.open_spectrum or similar
               LL,  a Pandas data frame containing the linelist, opened by mage.get_linelist(linelist) or similar
@@ -596,7 +562,7 @@ def auto_fit_cont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deri
     # First, mask out big skylines. Done by mage.flag_skylines, which is called by mage.open_spectrum
     # Second, flag regions with crazy high uncertainty.  done in flag_huge, called by mage.open_spectrum
     # Third, mask out regions near lines.  Flagged in sp.linemask
-    if flag_lines : flag_near_lines(sp, LL, vmask, colwave=colwave)
+    if flag_lines : spec.flag_near_lines(sp, LL, vmask, colwave=colwave)
     # Populate colcont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
     temp_fnu = sp[colfnu].copy(deep=True)
     temp_fnu.loc[(sp.badmask | sp.linemask).astype(np.bool)] = np.nan
@@ -627,7 +593,7 @@ def add_columns_to_litspec(df) :
     mage_mode = "reduction"
     (spec_path, line_path) = getpath(mage_mode)
     (LL, foobar) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.    
-    auto_fit_cont(df, LL, 0.0, boxcar=501)
+    fit_autocont(df, LL, 0.0, boxcar=501)
     return(0) # directly modified the df
     
 def convert_chuck_UVspec(infile="KBSS-LM1.uv.fnu.fits", uncert_file="KBSS-LM1.uv.fnu.sig.fits", outfile=None, mage_mode="released") :
@@ -682,11 +648,11 @@ def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
         sp['rest_fnu_s99data']  = sp['fnu_s99data']
     if autofitcont :
-        calc_dispersion(sp, 'rest_wave', 'rest_disp')   # rest-frame dispersion, in Angstroms
+        spec.calc_dispersion(sp, 'rest_wave', 'rest_disp')   # rest-frame dispersion, in Angstroms
         sp['badmask'] = False   
-        boxcar = get_boxcar4autocont(sp)
+        boxcar = spec.get_boxcar4autocont(sp)
         (LL, z_sys) = get_linelist(line_path + "stacked.linelist")  #z_syst should be zero here.
-        auto_fit_cont(sp, LL, 0.0, make_derived=False, boxcar=boxcar, colwave='rest_wave', colfnu='rest_fnu', colfnuu='rest_fnu_u', colcont='rest_fnu_autocont')
+        fit_autocont(sp, LL, 0.0, make_derived=False, boxcar=boxcar, colwave='rest_wave', colfnu='rest_fnu', colfnuu='rest_fnu_u', colcont='rest_fnu_autocont')
         sp['fnu_autocont'] = sp['rest_fnu_autocont'] # make multipanel-stacks.py happy
     return(sp)
     
