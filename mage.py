@@ -23,12 +23,6 @@ color4 = 'b'     # color for 2nd spectrum, for comparison
 def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
     return(1267.0, 1276.0)  # These are rest wavelengths, in Angstroms
 
-def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
-    '''Normalize by the median within a spectral range norm_region.  Assumes Pandas.'''
-    normalization = np.median(rest_fnu[wave.between(*norm_region)])
-    #print "normalization was", normalization, type(normalization)
-    return(rest_fnu / normalization,  rest_fnu_u / normalization)
-            
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
     thefile = spec_path + "dict_longnames.txt"
@@ -36,8 +30,7 @@ def longnames(mage_mode) :
     longnames['longname'] = longnames['longname'].str.replace("_", " ")
     longnames.set_index("short_label", inplace=True, drop=True)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
     return(longnames)
-    
-         
+             
 def getpath(mage_mode) : 
     ''' Haqndle paths for python MagE scripts.  Two use cases:
     A) I am on satchmo, & want to use spectra in  /Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/

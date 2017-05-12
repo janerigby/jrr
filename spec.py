@@ -7,6 +7,7 @@ from astropy.io import fits
 from re import sub
 import pandas
 import numpy as np
+import math
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from astropy.stats import sigma_clip
@@ -19,6 +20,19 @@ def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
+
+def make_wavearray_constant_resoln(wavelo, wavehi, R, p=2, asSeries=False) :
+    # Following Ayan's math, make a wavelength array with
+    # Inputs:
+    # wavelo, wavehi, lowest and highest wavelength in array
+    # R, desired resolution.  R === lambda/dlambda_fwhm
+    # p, number of pixels per resolution element.  Default is 2.
+    # If asSeries, return Pandas Series. Else, return np array
+    nmax = int(math.ceil( math.log10(float(wavehi)/float(wavelo)) / math.log10(1. + 1./float(R*p))))  + 1
+    index = np.arange(nmax)
+    wave = wavelo*(1. + 1./float(R*p))**index
+    if asSeries: return pandas.Series(wave)
+    else :       return(wave)
 
 def fnu2flam(wave, fnu) :
     '''Convert fnu (in erg/s/cm^2/Hz) to flambda (in erg/s/cm^2/A). Assumes wave in Angstroms.'''
@@ -124,47 +138,6 @@ def get_waverange_spectrum(sp, wavcol='wave') :
     # Assumes spectrum is already ordered by wavelength.
     return (np.float(sp[0:1][wavcol].values), np.float(sp[-1:][wavcol].values))
 
-def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_u', stacklo=False, stackhi=False, disp=False, sigmaclip=3) :
-    ''' General-purpose function to stack spectra.  Rebins wavelength.
-    Does not de-redshift spectra.  If you want to stack in rest frame, run jrr.spec.convert2restframe_df(df) beforehand.
-    Input spectra{} is a dictionary of pandas data frames that contains the spectra.
-    Output wavelength array will be taken from first spectrum in list,
-    unless overriden by stacklo, stackhi, disp.
-    if straight_sum, output colf is straight sum and errors summed in quadrature
-    if not straight_sum, output colf is weighted average and uncertainty in weighted avg
-    '''
-    if stacklo and stackhi and disp :
-        print "Caution: overriding the default wavelength range and dispersion!"
-        nbins = int((stackhi - stacklo)/disp)
-        stacked = pandas.DataFrame(data = np.linspace(stacklo, stackhi, num=nbins+1), columns=(colwave,))
-    else :
-        stacked = pandas.DataFrame(data=df[df.keys()[0]][colwave])  # Get output wavelength array from first spectrum
-    nbins = stacked.shape[0]  #N of pixels
-    nf    = np.ma.zeros(shape=(len(df), nbins))   # temp array that will hold the input spectra
-    nf_u  = np.ma.zeros(shape=(len(df), nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
-    Nfiles  = np.ones_like(nf, dtype=np.int)
-    jackknife     = np.zeros(shape=(len(df), nbins))  # This isn't used.  **Write it up, copy from red_stack_mage***
-    for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
-        nf[ii]   = rebin_spec_new(spec[colwave], spec[colf],  stacked[colwave], return_masked=True) # fnu/flam rebinned
-        nf_u[ii] = rebin_spec_new(spec[colwave], spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
-    #return(nf, nf_u, stacked, spec)
-
-    if straight_sum :  # SUM the spectra
-        stacked[colf]    = np.ma.sum(nf, axis=0)
-        stacked[colfu]   = util.add_in_quad(nf_u, axis=0)
-        stacked['Nfiles'] = np.ma.sum(Nfiles, axis=0)
-        stacked[colf + '_median_xN'] = np.ma.median(nf, axis=0) * np.ma.sum(Nfiles, axis=0) 
-        
-    if not straight_sum :  # Compute the weighted average
-        weights = nf_u ** -2
-        (stacked[colf], sumweight)   = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
-        stacked[colfu] =  sumweight**-0.5
-        nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
-        stacked['clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
-        stacked['clipavg_u'] = sumweight2**-0.5   
-        stacked['median'] = np.ma.median(nf, axis=0)
-    return(stacked)
-
 
 # Below are functions to automatically fit a smooth continuum to a spectrum.  Generalized from jrr.mage
 
@@ -218,5 +191,67 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
     smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='fill', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
     sp[colcont].interpolate(method='linear',axis=0, inplace=True)
-    print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
-    return(smooth1, smooth2)
+    #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
+    return(0) 
+
+## Normalization methods.  Currently used in mage_stack_redo.py
+
+def byspline_norm_func(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
+    # Normalization method by the spline fit continuum
+    temp_norm_fnu = rest_fnu / rest_cont
+    temp_norm_sig = jrr.util.sigma_adivb(rest_fnu, rest_fnu_u,   rest_cont, rest_cont_u) # propogate uncertainty in continuum fit.
+    return(temp_norm_fnu, temp_norm_sig)
+
+def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
+    '''Normalize by the median within a spectral range norm_region.  Assumes Pandas.'''
+    normalization = np.median(rest_fnu[wave.between(*norm_region)])
+    #print "normalization was", normalization, type(normalization)
+    return(rest_fnu / normalization,  rest_fnu_u / normalization)
+            
+
+### Generalized spectral stacking...
+
+def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=False, sigmaclip=3) :
+    ''' General-purpose function to stack spectra.  Rebins wavelength.
+    Does not de-redshift spectra.  If you want to stack in rest frame, run jrr.spec.convert2restframe_df(df) beforehand.
+    Any normalization by continuum should be done beforehand.
+    Input df{} is a dictionary of pandas data frames that contains the spectra.
+    colwave, colf, colfu, colmask, tell where to find the columns for wavelength, flux/flam/fnu, uncertainty, & input mask.
+    stackmask is a column in dataframe of values to mask (True=masked)
+    Output wavelength array will output_wave_array if it is supplied; else 1st spectrum in df{}.
+    If straight_sum, output colf is straight sum and errors summed in quadrature.
+    If not straight_sum, output colf is weighted average and uncertainty in weighted avg.
+    '''
+    if len(output_wave_array) :
+        print "Caution: overriding the default wavelength range and dispersion!"
+        stacked = pandas.DataFrame(data=output_wave_array, columns=(colwave,))
+    else :
+        stacked = pandas.DataFrame(data=df[df.keys()[0]][colwave])  # Get output wavelength array from first spectrum
+    nbins = stacked.shape[0]  #N of pixels
+    nf    =   np.ma.zeros(shape=(len(df), nbins))   # temp array that will hold the input spectra
+    nf_u  =   np.ma.zeros(shape=(len(df), nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
+    Nfiles  = np.ones_like(nf, dtype=np.int)
+    for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
+        if colmask :  ma_spec = spec.loc[spec[colmask] == False]  # masked version of spectrum
+        else:         ma_spec = spec
+        nf[ii]   = rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True) # fnu/flam rebinned
+        nf_u[ii] = rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
+
+    stacked['Ngal'] = np.ma.count(nf, axis=0)  # How many spectra contribute to each wavelength
+    if straight_sum :  # SUM the spectra
+        stacked[colf]    = np.ma.sum(nf, axis=0)
+        stacked[colfu]   = util.add_in_quad(nf_u, axis=0)
+        stacked['Nfiles'] = np.ma.sum(Nfiles, axis=0)
+        stacked[colf + '_median_xN'] = np.ma.median(nf, axis=0) * np.ma.sum(Nfiles, axis=0) 
+        
+    if not straight_sum :  # Compute the weighted average
+        weights = nf_u ** -2
+        (stacked[colf], sumweight)   = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
+        stacked[colfu] =  sumweight**-0.5
+        nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
+        stacked[colf+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
+        stacked[colf+'clipavg_u'] = sumweight2**-0.5   
+        stacked[colf+'median'] = np.ma.median(nf, axis=0)
+        # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
+        #jackknife=np.zeros(shape=(len(df), nbins)) # this is how to start
+    return(stacked)
