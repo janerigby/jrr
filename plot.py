@@ -248,7 +248,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
 
             plt.plot(subset[colwave], subset[colfnu]/subset['normby'],   color=linecolor[ss],  linestyle='steps', linewidth=1)
             plt.plot(subset[colwave], subset[colfnu_u]/subset['normby'], color=linecolor[ss], linestyle='steps', linewidth=1) # plot 1 sigma uncert spectrum
-            if plot_cont :  plt.plot(subset[colwave], subset[colcont]/subset['normby'], contcolor, linestyle='steps', zorder=1, linewidth=1) # plot the continuum
+            if plot_cont :  plt.plot(subset[colwave], subset[colcont].astype(np.float)/subset['normby'], contcolor, linestyle='steps', zorder=1, linewidth=1) # plot the continuum
             if ss == 0 :  # If the first df, set the plot ranges
                 top = (subset[colfnu]/subset['normby']).median()*topfid[0] + util.IQR(subset[colfnu]/subset['normby'])*topfid[1]
                 #print "DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby'])

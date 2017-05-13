@@ -555,7 +555,9 @@ def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deriv
     # First, mask out big skylines. Done by mage.flag_skylines, which is called by mage.open_spectrum
     # Second, flag regions with crazy high uncertainty.  done in flag_huge, called by mage.open_spectrum
     # Third, mask out regions near lines.  Flagged in sp.linemask
-    if flag_lines : spec.flag_near_lines(sp, LL, vmask, colwave=colwave)
+    if flag_lines :
+        LL['vmask'] = vmask
+        spec.flag_near_lines(sp, LL, colv2mask='vmask', colwave=colwave)
     # Populate colcont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
     temp_fnu = sp[colfnu].copy(deep=True)
     temp_fnu.loc[(sp.badmask | sp.linemask).astype(np.bool)] = np.nan
@@ -683,5 +685,5 @@ def read_our_COS_stack() :
     df = pandas.read_csv(infile)
     df['rest_fnu'] = df['fweightavg']     # Kludge to make multipanel-stacks.py plot it
     df['rest_fnu_u'] = df['fweightavg_u'] # ditto
-    df['rest_fnu_autocont'] = True        # ditto.  Dummy continuum  
+    df['rest_fnu_autocont'] = 1.0        # ditto.  Dummy continuum
     return(df)
