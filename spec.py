@@ -240,7 +240,7 @@ def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_
     stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
     stacked[pre+'avg']    = np.ma.average(nf, axis=0)
     stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
-    stacked[pre+'avg_u']  = stacked[pre+'sum_u'] /  np.count(nf, axis=0)
+    stacked[pre+'avg_u']  = stacked[pre+'sum_u'] /  np.count_nonzero(nf, axis=0)
     stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.ma.sum(Nfiles, axis=0) 
         
     # compute the weighted avg
