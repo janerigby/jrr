@@ -676,3 +676,12 @@ def read_shapley_composite() :
     convert_spectrum_to_restframe(df, 0.0)
     add_columns_to_litspec(df)
     return(df)
+
+def read_our_COS_stack() :
+    (specpath, linepath) = getpath("released")
+    infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum.csv"
+    df = pandas.read_csv(infile)
+    df['rest_fnu'] = df['fweightavg']     # Kludge to make multipanel-stacks.py plot it
+    df['rest_fnu_u'] = df['fweightavg_u'] # ditto
+    df['rest_fnu_autocont'] = True        # ditto.  Dummy continuum  
+    return(df)
