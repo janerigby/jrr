@@ -211,7 +211,7 @@ def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_regi
 
 ### Generalized spectral stacking...
 
-def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=False, pre='f', sigmaclip=3) :
+def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=False, pre='f', sigmaclip=3) :
     ''' General-purpose function to stack spectra.  Rebins wavelength.
     Does not de-redshift spectra.  If you want to stack in rest frame, run jrr.spec.convert2restframe_df(df) beforehand.
     Any normalization by continuum should be done beforehand.
@@ -236,21 +236,19 @@ def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_
         nf[ii]   = rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True) # fnu/flam rebinned
         nf_u[ii] = rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
 
-    stacked['Ngal'] = np.ma.count(nf, axis=0)  # How many spectra contribute to each wavelength
     stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
-    stacked[pre+'avg']    = np.ma.average(nf, axis=0)
     stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
+    stacked[pre+'avg']    = np.ma.average(nf, axis=0)
     stacked[pre+'avg_u']  = stacked[pre+'sum_u'] /  np.count_nonzero(nf, axis=0)
-    stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.count_nonzero(nf, axis=0) 
-        
-    # compute the weighted avg
-    weights = nf_u ** -2
+    weights = nf_u ** -2              # compute the weighted avg
     (stacked[pre+'weightavg'], sumweight) = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
     stacked[pre+'weightavg_u'] =  sumweight**-0.5
     nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
     stacked[pre+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
     stacked[pre+'clipavg_u'] = sumweight2**-0.5   
-    stacked[pre+'median'] = np.ma.median(nf, axis=0)
+    stacked[pre+'median']   = np.ma.median(nf, axis=0)
+    stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.count_nonzero(nf, axis=0) 
+    stacked['Ngal'] = np.ma.count(nf, axis=0)  # How many spectra contribute to each wavelength
     # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
     #jackknife=np.zeros(shape=(len(df), nbins)) # this is how to start
     return(stacked)
