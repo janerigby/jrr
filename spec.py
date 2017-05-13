@@ -211,7 +211,7 @@ def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_regi
 
 ### Generalized spectral stacking...
 
-def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=False, sigmaclip=3) :
+def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=False, pre='f', sigmaclip=3) :
     ''' General-purpose function to stack spectra.  Rebins wavelength.
     Does not de-redshift spectra.  If you want to stack in rest frame, run jrr.spec.convert2restframe_df(df) beforehand.
     Any normalization by continuum should be done beforehand.
@@ -230,7 +230,6 @@ def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_
     nbins = stacked.shape[0]  #N of pixels
     nf    =   np.ma.zeros(shape=(len(df), nbins))   # temp array that will hold the input spectra
     nf_u  =   np.ma.zeros(shape=(len(df), nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
-    Nfiles  = np.ones_like(nf, dtype=np.int)
     for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
         if colmask :  ma_spec = spec.loc[spec[colmask] == False]  # masked version of spectrum
         else:         ma_spec = spec
@@ -238,20 +237,21 @@ def stack_spectra(df, straight_sum=True, colwave='wave', colf='fnu', colfu='fnu_
         nf_u[ii] = rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
 
     stacked['Ngal'] = np.ma.count(nf, axis=0)  # How many spectra contribute to each wavelength
-    if straight_sum :  # SUM the spectra
-        stacked[colf]    = np.ma.sum(nf, axis=0)
-        stacked[colfu]   = util.add_in_quad(nf_u, axis=0)
-        stacked['Nfiles'] = np.ma.sum(Nfiles, axis=0)
-        stacked[colf + '_median_xN'] = np.ma.median(nf, axis=0) * np.ma.sum(Nfiles, axis=0) 
+    stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
+    stacked[pre+'avg']    = np.ma.average(nf, axis=0)
+    stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
+    stacked[pre+'avg_u']  = stacked[pre+'sum_u'] /  np.count(nf, axis=0)
+    stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.ma.sum(Nfiles, axis=0) 
         
-    if not straight_sum :  # Compute the weighted average
-        weights = nf_u ** -2
-        (stacked[colf], sumweight)   = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
-        stacked[colfu] =  sumweight**-0.5
-        nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
-        stacked[colf+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
-        stacked[colf+'clipavg_u'] = sumweight2**-0.5   
-        stacked[colf+'median'] = np.ma.median(nf, axis=0)
-        # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
-        #jackknife=np.zeros(shape=(len(df), nbins)) # this is how to start
+    # compute the weighted avg
+    weights = nf_u ** -2
+    (stacked[pre+'weightavg'], sumweight) = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
+    stacked[pre+'weightavg_u'] =  sumweight**-0.5
+    nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
+    stacked[pre+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
+    stacked[pre+'clipavg_u'] = sumweight2**-0.5   
+    stacked[pre+'median'] = np.ma.median(nf, axis=0)
+    # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
+    #jackknife=np.zeros(shape=(len(df), nbins)) # this is how to start
     return(stacked)
+
