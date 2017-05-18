@@ -679,9 +679,11 @@ def read_shapley_composite() :
     add_columns_to_litspec(df)
     return(df)
 
-def read_our_COS_stack() :
+def read_our_COS_stack(resoln="full") :
     (specpath, linepath) = getpath("released")
-    infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum.csv"
+    if resoln   == "matched_mage" : infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum_R3500.csv"
+    elif resoln == "full"         : infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum_R2E4.csv"
+    else : raise Exception("resoln must be full or matched_mage")
     df = pandas.read_csv(infile)
     df['rest_fnu'] = df['fweightavg']     # Kludge to make multipanel-stacks.py plot it
     df['rest_fnu_u'] = df['fweightavg_u'] # ditto

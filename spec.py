@@ -183,11 +183,9 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
     if flag_lines :
         flag_near_lines(sp, LL, colv2mask=colv2mask, colwave=colwave)  # lines are masked in sp.linemask
         sp.loc[sp['linemask'], colmask] = True           # add masked lines to the continuum-fitting mask
-    # convolve() needs numpy arrays, and barfs on pandas.Series.  So, temorarily convert.
-    temp_fnu  = np.array(sp[colf].copy(deep=True))
-    temp_mask = np.array(sp[colmask].copy(deep=True))
-    smooth1 = astropy.convolution.convolve(temp_fnu, np.ones((boxcar,))/boxcar, boundary='fill', fill_value=np.nan, mask=temp_mask) # boxcar smooth
-    small_kern = int(util.round_up_to_odd(boxcar/10.))  
+    # astropy.convolve barfs on pandas.Series as input.  Use .as_matrix() to send as np array
+    smooth1 = astropy.convolution.convolve(sp[colf].as_matrix(), np.ones((boxcar,))/boxcar, boundary='fill', fill_value=np.nan, mask=sp[colmask].as_matrix()) # boxcar smooth
+    small_kern = int(util.round_up_to_odd(boxcar/10.))
     smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='fill', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
     sp[colcont].interpolate(method='linear',axis=0, inplace=True)
@@ -235,7 +233,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
         else:         ma_spec = spec
         nf[ii]   = rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True) # fnu/flam rebinned
         nf_u[ii] = rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
-
+        # is this handling the uncertainties correctly?
     stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
     stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
     stacked[pre+'avg']    = np.ma.average(nf, axis=0)
