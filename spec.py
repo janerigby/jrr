@@ -184,13 +184,13 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
         flag_near_lines(sp, LL, colv2mask=colv2mask, colwave=colwave)  # lines are masked in sp.linemask
         sp.loc[sp['linemask'], colmask] = True           # add masked lines to the continuum-fitting mask
     # astropy.convolve barfs on pandas.Series as input.  Use .as_matrix() to send as np array
-    smooth1 = astropy.convolution.convolve(sp[colf].as_matrix(), np.ones((boxcar,))/boxcar, boundary='fill', fill_value=np.nan, mask=sp[colmask].as_matrix()) # boxcar smooth
+    smooth1 = astropy.convolution.convolve(sp[colf].as_matrix(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].as_matrix()) # boxcar smooth
     small_kern = int(util.round_up_to_odd(boxcar/10.))
-    smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='fill', fill_value=np.nan) # Smooth again, to remove nans
+    smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
-    sp[colcont].interpolate(method='linear',axis=0, inplace=True)
-    #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
-    return(0) 
+    sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
+    print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
+    return(smooth1, smooth2) 
 
 ## Normalization methods.  Currently used in mage_stack_redo.py
 
@@ -215,7 +215,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     Any normalization by continuum should be done beforehand.
     Input df{} is a dictionary of pandas data frames that contains the spectra.
     colwave, colf, colfu, colmask, tell where to find the columns for wavelength, flux/flam/fnu, uncertainty, & input mask.
-    stackmask is a column in dataframe of values to mask (True=masked)
+    colmask is a column in dataframe of values to mask (True=masked)
     Output wavelength array will output_wave_array if it is supplied; else 1st spectrum in df{}.
     If straight_sum, output colf is straight sum and errors summed in quadrature.
     If not straight_sum, output colf is weighted average and uncertainty in weighted avg.
@@ -231,6 +231,8 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
         if colmask :  ma_spec = spec.loc[spec[colmask] == False]  # masked version of spectrum
         else:         ma_spec = spec
+        # Problem for COS spectra:  Below rebinning is not robust to big gaps in wavelength coverage w/in a spectrum
+        #***** Need to fix this   ****  COS spectra have big gaps.  preset bad data as nans? 
         nf[ii]   = rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True) # fnu/flam rebinned
         nf_u[ii] = rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
         # is this handling the uncertainties correctly?
