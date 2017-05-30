@@ -229,17 +229,21 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     nf    =   np.ma.zeros(shape=(len(df), nbins))   # temp array that will hold the input spectra
     nf_u  =   np.ma.zeros(shape=(len(df), nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
     for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
-        if colmask :  ma_spec = spec.loc[spec[colmask] == False]  # masked version of spectrum
-        else:         ma_spec = spec
+        ma_spec = spec     # masked version of spectrum
+        if colmask :
+            ma_spec.loc[ma_spec[colmask], colf]  = np.nan    # try setting to nan to solve the gap problem
+            #ma_spec.loc[ma_spec[colmask], colfu] = ma_spec[colf].median() * 1E6  # set this huge
         # Problem for COS spectra:  Below rebinning is not robust to big gaps in wavelength coverage w/in a spectrum
         #***** Need to fix this   ****  COS spectra have big gaps.  preset bad data as nans? 
-        nf[ii]   = rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True) # fnu/flam rebinned
-        nf_u[ii] = rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True)  # uncertainty on above
+        nf[ii]   = np.ma.masked_invalid(rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True)) # fnu/flam rebinned
+        nf_u[ii] = np.ma.masked_invalid(rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True))  # uncertainty on above
+    nf[ :,  0:2].mask = True  # mask the first 2 and last 2 pixels  of each spectrum
+    nf[ :, -2:].mask = True
         # is this handling the uncertainties correctly?
     stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
     stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
     stacked[pre+'avg']    = np.ma.average(nf, axis=0)
-    stacked[pre+'avg_u']  = stacked[pre+'sum_u'] /  np.count_nonzero(nf, axis=0)
+    stacked[pre+'avg_u']  = stacked[pre+'sum_u'] /  np.ma.MaskedArray.count(nf, axis=0)
     weights = nf_u ** -2              # compute the weighted avg
     (stacked[pre+'weightavg'], sumweight) = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
     stacked[pre+'weightavg_u'] =  sumweight**-0.5
@@ -247,9 +251,9 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     stacked[pre+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
     stacked[pre+'clipavg_u'] = sumweight2**-0.5   
     stacked[pre+'median']   = np.ma.median(nf, axis=0)
-    stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.count_nonzero(nf, axis=0) 
-    stacked['Ngal'] = np.ma.count(nf, axis=0)  # How many spectra contribute to each wavelength
+    stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.ma.MaskedArray.count(nf, axis=0) 
+    stacked['Ngal'] = np.ma.MaskedArray.count(nf, axis=0)  # How many spectra contribute to each wavelength
     # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
     #jackknife=np.zeros(shape=(len(df), nbins)) # this is how to start
-    return(stacked)
+    return(stacked, nf, nf_u)
 
