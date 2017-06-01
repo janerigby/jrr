@@ -80,7 +80,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85)) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -116,7 +116,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     for ii, dum in enumerate(line_label) :
         if verbose : print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
-        plt.annotate( line_label[ii], (0.55,0.85), xycoords="axes fraction")
+        plt.annotate( line_label[ii], label_loc, xycoords="axes fraction")
         max_in_window = 0.
         if(vel_plot) :
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
@@ -143,8 +143,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
             plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity
             if drawunity: plt.plot( (line_center[ii] - win, line_center[ii] + win), (1.0,1.0), color=color3)        # plot unity continuum
             plt.xlim(line_center[ii] - win, line_center[ii] + win)
-        ax.locator_params(axis='y', nbins=5)
-        ax.locator_params(axis='x', nbins=5)
+        ax.locator_params(axis='y', nbins=4)
+        ax.locator_params(axis='x', nbins=7)
         if len(ymax)  == 1 :  plt.ylim(0, ymax[0])   # user can over-ride autoscaling
         elif len(ymax) > 1 :  plt.ylim(0, ymax[ii])  # user can over-ride autoscaling 
         else :                plt.ylim(0., max_in_window*1.1)  
@@ -170,15 +170,16 @@ def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2
     restwave = wave / (1.0 + redshift)
     plt.figure(figsize=figsize)
     for ii, dum in enumerate(line_label) :
-        print "Trying to plot ", line_label[ii], " at ", line_center[ii]
+        print ii, "Trying to plot ", line_label[ii], " at ", line_center[ii]
         vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
         in_window = vel.between((vwin1), vwin2)
-        hist, = plt.step(vel[in_window], fnu[in_window], color=mycol[ii])
+        plt.step(vel[in_window], fnu[in_window], color=mycol[ii], label=line_label[ii])
         plt.xlim(vwin1, vwin2)
         plt.ylim(0, 1.4)
         xy = (0.1,  0.26 - float(ii)/len(line_label)*0.3)
         #print "DEBUG, xy is ", xy
-        plt.annotate( line_label[ii], xy, xycoords="axes fraction", color=hist.get_color())
+        #plt.annotate( line_label[ii], xy, xycoords="axes fraction", color=hist.get_color())
+        plt.legend()
         plt.xlabel("rest-frame velocity (km/s)")
     plt.plot( (0.,0.), plt.ylim(),  color=color2, linewidth=2)  # plot tics at zero velocity
     plt.plot( plt.xlim(), (1.0,1.0), color=color2)  # plot unity continuum

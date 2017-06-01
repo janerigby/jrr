@@ -226,8 +226,9 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     else :
         stacked = pandas.DataFrame(data=df[df.keys()[0]][colwave])  # Get output wavelength array from first spectrum
     nbins = stacked.shape[0]  #N of pixels
-    nf    =   np.ma.zeros(shape=(len(df), nbins))   # temp array that will hold the input spectra
-    nf_u  =   np.ma.zeros(shape=(len(df), nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
+    nspectra = len(df)
+    nf    =   np.ma.zeros(shape=(nspectra, nbins))   # temp array that will hold the input spectra
+    nf_u  =   np.ma.zeros(shape=(nspectra, nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
     for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
         ma_spec = spec     # masked version of spectrum
         if colmask :
@@ -253,7 +254,18 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     stacked[pre+'median']   = np.ma.median(nf, axis=0)
     stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.ma.MaskedArray.count(nf, axis=0) 
     stacked['Ngal'] = np.ma.MaskedArray.count(nf, axis=0)  # How many spectra contribute to each wavelength
+    
     # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
-    #jackknife=np.zeros(shape=(len(df), nbins)) # this is how to start
+    jackknife= np.ma.zeros(shape=(nspectra, nbins)) # The goal.
+    jack_var = np.ma.zeros(shape=nbins)
+    for ii in range(0, nspectra) :
+        jnf = nf.copy()
+        #print "DEBUGGING Jackknife, dropping ", ii,  "from the stack"
+        jnf[ii, :].mask = True  # Mask one spectrum
+        jackknife[ii], weight = np.ma.average(jnf, axis=0, weights=weights, returned=True)  # all the work is done here.
+        jack_var = jack_var +  (jackknife[ii] - stacked[pre+'weightavg'])**2
+    jack_var *= ((nspectra -1.0)/float(nspectra))   
+    jack_std = np.sqrt(jack_var)
+    stacked[pre+'jack_std'] = jack_std
     return(stacked, nf, nf_u)
 
