@@ -80,7 +80,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85)) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85)), lw=1 :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -99,8 +99,11 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     vel_plot:        (Optional, Bool) If True, x-axis is velocity.  If False, x-axis is wavelength.
     plot_xaxis:      (Optional, Bool) Plot the xaxis?
     ymax:            (Optional), array of max y values to use in subplots.  Over-rides auto-scaling. Size must == line_center
-    colortab:   (Optional) color table to use, to replace default colortab
-    verbose:          Verbose or terse account of status?
+    colortab:        (Optional) color table to use, to replace default colortab
+    verbose:         (Optional) Verbose or terse account of status?
+    drawunity:       (Optional), draw a line at unity?  Good for spectra that are already continuum-normalized
+    label_loc:       (Optional), where to draw the line label for each boxplot.  By default, upper right
+    lw:              (Optional), scalar or tuple of linewidths.  If scalar, same lw for all
     thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
 
@@ -113,6 +116,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     #print "DEBUGGING ", Nrow, Ncol, len(line_center)
     fig = plt.figure(figsize=figsize)
 
+    if len(lw) == 1 : lw = lw * np.ones(shape=len(thewaves))  # if lw is a scalar, change to an array, same for all
+    elif len(lw) != len(thewaves) : raise Exception('Error, linewidth lw must be scalar (len=1) or tuple with same sizes as thewaves')
     for ii, dum in enumerate(line_label) :
         if verbose : print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
