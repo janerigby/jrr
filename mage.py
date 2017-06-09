@@ -687,5 +687,5 @@ def read_our_COS_stack(resoln="full") :
     df = pandas.read_csv(infile)
     df['rest_fnu'] = df['fweightavg']     # Kludge to make multipanel-stacks.py plot it
     df['rest_fnu_u'] = df['fweightavg_u'] # ditto
-    df['rest_fnu_autocont'] = 1.0        # ditto.  Dummy continuum
+    df['unity'] = 1.0        # ditto.  Dummy continuum
     return(df)

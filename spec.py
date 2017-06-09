@@ -23,7 +23,7 @@ def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
 
-def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linecen, isabs=True) :
+def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linecen, Nredmax=600, isabs=True) :
     # Find the edges of an absorption line, when it crosses the continuumm for the Nover-th time.
     # INPUTS:  df, pandas data frame containing the spectrum
     # colwave, colf, colcont:  names of columns that contain the wavelength, flux/fnu/flam, and continuum
@@ -31,6 +31,7 @@ def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linece
     # isabs (Optional): Is this an absorption line? If false, emission line
     # OUTPUTS:
     # (blue_edge, red_edge) are wavelengths of the extent of the line.  Blue_edge is also vmax as I have defined it in stacked paper
+    A_c = constants.c.to('km/s').value  # speed of light
     if not test_wave_in_spectrum(df, linecen, colwave) : # if line not covered by spectrum
         print "WARNING:", linecen, "is outside spectrum range", get_waverange_spectrum(df, colwave)
         return(np.nan, np.nan)
@@ -38,37 +39,44 @@ def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linece
     else :    comp = operator.lt  # emission line,   edge of line is where flux drops below continuum
     blue_edge = df.loc[ comp((df[colf] - df[colcont]), 0) & (df[colwave] < linecen)].iloc[-1*Nover_blue][colwave]  # blueside
     red_edge  = df.loc[ comp((df[colf] - df[colcont]), 0) & (df[colwave] > linecen)].iloc[Nover_red - 1][colwave]  # blueside
+    #print "&&&&&& ", convert_restwave_to_velocity(red_edge, linecen)
+    if convert_restwave_to_velocity(red_edge, linecen)  > Nredmax :  # If redmax exceeded the boundary
+        red_edge = convert_velocity_to_restwave(Nredmax, linecen)
+        print "******OVERRIDING red_edge to", red_edge
     return(blue_edge, red_edge)
 
-def calc_vmean_vmax(df, colrwave, colf, colcont, Nover_blue, Nover_red, linecen, isabs=True, plotit=False, label=False) :
+def calc_vmean_vmax(df, colrwave, colf, colcont, Nover_blue, Nover_red, linecen, Nredmax=600, scalecont=1.0, isabs=True, plotit=False, label=False) :
     # Calculate the absorption-weighted mean velocity, and the max velocities, of a feature.  Default is an absorption line
     # INPUTS:  df, pandas data frame containing the spectrum.  Should have wavelength in REST frame
     # colrwave, colf, colcont:  names of columns that contain the REST wavelength, flux/fnu/flam, and continuum
     # Nover _blue, _red: Use the Nth pixel that crosses the continuum as the edge on the blue/red side. Sensible values are 1st or 2nd
+    # Nredmax: Don't allow red edge to be >500km/s from center.  
+    # scalecont: scale the continuum by a small amt?  Can see effect of uncertaint continuum
     # isabs (Optional): Is this an absorption line? If false, emission line
     # OUTPUTS:
     if not test_wave_in_spectrum(df, linecen, colrwave) : # if line not covered by spectrum
         print "WARNING:", linecen, "is outside spectrum range", get_waverange_spectrum(df, colrwave)
         return(np.nan, np.nan, np.nan, np.nan)
     df['vel'] = convert_restwave_to_velocity(df[colrwave], linecen)
-    (blue_edge, red_edge) = find_edges_of_line(df, colrwave, colf, colcont, Nover_blue, Nover_red, linecen, isabs=isabs)
+    df['tempcont']  = df[colcont] * scalecont  # temporary scaling of continuum.  Can be used to gauge effect of cont. uncertainty
+    (blue_edge, red_edge) = find_edges_of_line(df, colrwave, colf, 'tempcont', Nover_blue, Nover_red, linecen, Nredmax=Nredmax, isabs=isabs)
 #    print "DEBUGGING", blue_edge, red_edge
     subset = df.loc[df[colrwave].between(blue_edge, red_edge)][1:-1]  # The subset of the spectrum between the edges.  Drop the edge pixels, since MgII emission caused trouble
     subset['dv']   = subset['vel'].diff()
-    subset['fa'] = (subset[colcont] - subset[colf]) / np.sum((subset[colcont] - subset[colf]) * subset['dv'])
+    subset['fa'] = (subset['tempcont'] - subset[colf]) / np.sum((subset['tempcont'] - subset[colf]) * subset['dv'])
     vmean = np.sum((subset['vel'] * subset['fa'] * subset['dv']))
-    vmax_blue  = df['vel'].loc[df[colrwave] == blue_edge].values[0]
-    vmax_red   = df['vel'].loc[df[colrwave] == red_edge].values[0]
+    vmax_blue = convert_restwave_to_velocity(blue_edge, linecen)
+    vmax_red = convert_restwave_to_velocity(red_edge, linecen)
     if plotit:
-        ax = df.plot(x='vel', y=colf, color='b', drawstyle="steps-post")
-        df.plot(x='vel', y=colcont, color='g',  drawstyle="steps-post", ax=ax)
-        plt.xlim(vmax_blue * 5, vmax_red * 5)
+        plt.plot(df['vel'], df[colf], color='b', drawstyle="steps-post")
+        plt.plot(df['vel'], df['tempcont'], color='g',  drawstyle="steps-post")
+        plt.xlim(-3000, 1000)
         plt.ylim(-0.1,1.3)
-        plt.scatter((vmean, vmax_blue, vmax_red), (subset[colf].min(), subset[colcont].median(), subset[colcont].median()))
+        plt.scatter((vmean, vmax_blue, vmax_red), (subset[colf].min(), subset['tempcont'].median(), subset['tempcont'].median()), color='red', s=40)
         plt.xlabel("velocity")
         plt.ylabel("flux")
         if label:  plt.annotate(label, xy=(0.8,0.2), xycoords='axes fraction', fontsize=12)
-    return(vmean, vmax_blue, vmax_red, subset)
+    return(vmean, vmax_blue, vmax_red)
 
 def make_wavearray_constant_resoln(wavelo, wavehi, R, p=2, asSeries=False) :
     # Following Ayan's math, make a wavelength array with
@@ -182,6 +190,11 @@ def convert_restwave_to_velocity(restwave, line_center) :
     vel =  (restwave - line_center)/line_center * A_c      # km/s     
     return(vel) 
 
+def convert_velocity_to_restwave(velocity, line_center) :  # vel in km/s
+    A_c =  constants.c.to('km/s').value
+    restwave =  (1.0 + velocity / A_c) * line_center 
+    return(restwave)
+    
 def get_waverange_spectrum(sp, colwave='wave') :
     # Get the first and last wavelengths of input spectrum sp (assumed to be a pandas data frame).
     # Assumes spectrum is already ordered by wavelength.
