@@ -39,10 +39,8 @@ def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linece
     else :    comp = operator.lt  # emission line,   edge of line is where flux drops below continuum
     blue_edge = df.loc[ comp((df[colf] - df[colcont]), 0) & (df[colwave] < linecen)].iloc[-1*Nover_blue][colwave]  # blueside
     red_edge  = df.loc[ comp((df[colf] - df[colcont]), 0) & (df[colwave] > linecen)].iloc[Nover_red - 1][colwave]  # blueside
-    #print "&&&&&& ", convert_restwave_to_velocity(red_edge, linecen)
     if convert_restwave_to_velocity(red_edge, linecen)  > Nredmax :  # If redmax exceeded the boundary
         red_edge = convert_velocity_to_restwave(Nredmax, linecen)
-        print "******OVERRIDING red_edge to", red_edge
     return(blue_edge, red_edge)
 
 def calc_vmean_vmax(df, colrwave, colf, colcont, Nover_blue, Nover_red, linecen, Nredmax=600, scalecont=1.0, isabs=True, plotit=False, label=False) :

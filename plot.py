@@ -26,7 +26,8 @@ def standard_colors3():
     return(['blue', 'black', 'red'])
 def standard_colors4():
     return([color1, color2, color3])
-        
+
+    
 def onclick(event):  # Setting up interactive clicking.  Right now, just prints location.  Need to add fitting.
     print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
         event.button, event.x, event.y, event.xdata, event.ydata)
@@ -80,7 +81,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85), lw=1) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, spec_label=(), win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85), lw=(1,)) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -90,7 +91,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     thezs:           tuple of arrays of redshifts, to convert to rest-frame
     line_label:      tuple of line labels.  Makes one box per line
     line_center:     np array of rest-frame wavelengths (Angstroms).  Makes one box per line
-    win:             window to use (km/s if vel_plot; if not, wavelength units.)
+    spec_label:      (Optional), labels to name the spectra in a legend
+    win:             window to use (km/s if vel_plot; if not, wavelength units.)  Format can be scalar, interpreted as +-win, or list: (-300, 300)  
     Ncol:            number of columns to plot.  Number of rows set automatically.
     LL:              (Optional) Linelist, a Pandas data frame, read in by jrr.mage.get_linelist(linelist), to mark other lines
     theconts:        (Optional, tuple of continuum fits)
@@ -116,6 +118,14 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     #print "DEBUGGING ", Nrow, Ncol, len(line_center)
     fig = plt.figure(figsize=figsize)
 
+    if len(spec_label) == len(thewaves) :  pass  #print "DEBUGGING, adding spectrum label to legend"
+    else : spec_label = np.repeat('_nolegend_', len(thewaves))  # override the legend
+    
+    if hasattr(win, "__len__") and len(win) == 2:
+        win0 = win[0]  ; win1 = win[1]
+    elif not hasattr(win, "__len__")  :    win0 = -1*win ; win1=win
+    else : raise Exception("ERROR: Window width win must either be a scalar, or a two- element list/tuple/array")
+        
     if len(lw) == 1 : lw = lw * np.ones(shape=len(thewaves))  # if lw is a scalar, change to an array, same for all
     elif len(lw) != len(thewaves) : raise Exception('Error, linewidth lw must be scalar (len=1) or tuple with same sizes as thewaves')
     for ii, dum in enumerate(line_label) :
@@ -127,27 +137,27 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
                 restwave = thewaves[ss] / (1.0 + thezs[ss])
                 vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
-                in_window = vel.between(-1*win, win)
-                plt.step(vel[in_window], thefnus[ss][in_window], color=mycol[ss], linewidth=lw[ss])
+                in_window = vel.between(win0, win1)
+                plt.step(vel[in_window], thefnus[ss][in_window], color=mycol[ss], linewidth=lw[ss], label=spec_label[ss])
                 if len(thedfnus[ss]) :
-                    plt.step(vel[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=lw[ss])  # plot uncertainty
+                    plt.step(vel[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=1, label='_nolegend_')  # plot uncertainty
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
-            if drawunity: plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum
-            plt.xlim(-1*win, win)
+            if drawunity: plt.plot( (win0, win1), (1.0,1.0), color=color3)        # plot unity continuum
+            plt.xlim(win0, win1)
         else :
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
                 restwave = thewaves[ss] / (1.0 + thezs[ss])
-                in_window = restwave.between((line_center[ii] - win), (line_center[ii] + win))
-                plt.step(restwave[in_window], thefnus[ss][in_window], color=mycol[ss], linewidth=lw[ss])
+                in_window = restwave.between((line_center[ii] + win0), (line_center[ii] + win1))
+                plt.step(restwave[in_window], thefnus[ss][in_window], color=mycol[ss], linewidth=lw[ss], label=spec_label[ss])
                 if len(thedfnus[ss]) :
-                    plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=lw[ss])
+                    plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=1, label='_nolegend_')
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity
-            if drawunity: plt.plot( (line_center[ii] - win, line_center[ii] + win), (1.0,1.0), color=color3)        # plot unity continuum
-            plt.xlim(line_center[ii] - win, line_center[ii] + win)
+            if drawunity: plt.plot( (line_center[ii] + win0, line_center[ii] + win1), (1.0,1.0), color=color3,  label='_nolegend_')  # plot unity continuum
+            plt.xlim(line_center[ii] +win0, line_center[ii] + win1)
         ax.locator_params(axis='y', nbins=4)
         ax.locator_params(axis='x', nbins=7)
         if len(ymax)  == 1 :  plt.ylim(0, ymax[0])   # user can over-ride autoscaling
