@@ -367,6 +367,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", c
     boxcar = spec.get_boxcar4autocont(sp)
     #print "DEBUGGING, boxcar is ", boxcar
     fit_autocont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
+    sp['unity'] = 1.0
     return(sp, LL) # return the Pandas DataFrame containing the stacked spectrum
      
 def open_Crowther2016_spectrum() :
@@ -688,4 +689,5 @@ def read_our_COS_stack(resoln="full") :
     df['rest_fnu'] = df['fweightavg']     # Kludge to make multipanel-stacks.py plot it
     df['rest_fnu_u'] = df['fweightavg_u'] # ditto
     df['unity'] = 1.0        # ditto.  Dummy continuum
+#    df['rest_fnu_autocont'] = 1.0
     return(df)

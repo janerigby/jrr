@@ -209,7 +209,7 @@ def annotate_echelle() :
     plt.annotate("Fine structure", xy=(0.4,0.03), color="purple", xycoords="figure fraction")
     plt.annotate("Intervening", xy=(0.55,0.03), color="orange", xycoords="figure fraction")
 
-def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, topfid=(1.1,0.3), annotate=annotate_echelle, verbose=False) :
+def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11,16), outfile="multipanel.pdf", title="", norm_by_cont=False, plot_cont=False, apply_bad=False, waverange=(), colwave='wave', colfnu='fnu', colfnu_u='fnu_u', colcont='fnu_autocont', colortab=False, plotx2=True, ylim=(), topfid=(1.1,0.3), annotate=annotate_echelle, verbose=False) :
     ''' Plot an echelle(ette) spectrum with several pages and many panels for page.  Based on multipanel-spectrum-ids.py,
     but modular. and with more features.  Inputs:
     the_dfs:    an array of dataframes containing spectra, to plot. Usually this is just one dataframe, one spectrum,
@@ -226,6 +226,8 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     waverange:  (Optional) Only plot this wavelength range, rather than full range. Format is (wave_lo, wave_hi).
     colwave, colfnu, colfnu_u, colcont:  columns in the dataframes to use for wave, fnu, fnu_uncert, continuum
     colortab:   (Optional) color table to use, to replace default colortab
+    plotx2:     Plot upper x-axis, the rest-frame wavelength?  Turn off when lower x is already rest-frame
+    ylim:       (Optional), over-ride my auto-sensing of the ylims for each subplot
     topfid:     (Optional) fiddle parameters to adjust tightness of y axis.  first scales the median, second scales the IQR
     annotate:   (Optional) Function that will annotate the first page.  For plot customization.'''
     
@@ -268,21 +270,25 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             if ss == 0 :  # If the first df, set the plot ranges
                 top = (subset[colfnu]/subset['normby']).median()*topfid[0] + util.IQR(subset[colfnu]/subset['normby'])*topfid[1]
                 #print "DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby'])
-        plt.ylim(0, top)  # trying to fix weird autoscaling from bad pixels
+        if len(ylim) == 2:   plt.ylim(ylim[0], ylim[1])
+        else:                plt.ylim(0, top)  # trying to fix weird autoscaling from bad pixels
         plt.xlim(start[kk], end[kk])
         if len(LL) : mage.plot_linelist(LL, the_zzs[0])   # Plot the line IDs.  Use the first redshift for z.
-        upper = subit.twiny()  # make upper x-axis in rest wave (systemic, or of abs lines)
-        upper.set_xlim( start[kk]/(1.0+the_zzs[0]), end[kk]/(1.0+the_zzs[0]))
-        upper.locator_params(axis='x', nbins=5)
-        subit.locator_params(axis='x', nbins=5)
-        subit.xaxis.tick_bottom()  # don't let lower ticks be mirrored  on upper axis
+        if plotx2: 
+            upper = subit.twiny()  # make upper x-axis in rest wave (systemic, or of abs lines)
+            upper.set_xlim( start[kk]/(1.0+the_zzs[0]), end[kk]/(1.0+the_zzs[0]))
+            upper.locator_params(axis='x', nbins=5)
+            subit.locator_params(axis='x', nbins=5)
+            subit.xaxis.tick_bottom()  # don't let lower ticks be mirrored  on upper axis
 
         if  kk % max_per_page == (max_per_page-1) or kk == Npanels-1:   # last plot on this page
-            subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")
+#            subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")  ## COMMENDED OUT FOR nolabels
+            subit.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")  ## TEMP TEMP TEMP go back to previous
             plt.ylabel('fnu') # fnu in cgs units: erg/s/cm^2/Hz
+            #plt.ylabel('relative flux') # **temp for stacked paper
             pp.savefig(bbox_inches='tight')    
             #fig.canvas.draw()
-        if  kk % max_per_page == 0 :  # first plot on the page
+        if  kk % max_per_page == 0 and plotx2 :  # first plot on the page
             upper.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")
             
         if(kk == 0):  # first page
