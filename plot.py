@@ -282,10 +282,10 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             subit.xaxis.tick_bottom()  # don't let lower ticks be mirrored  on upper axis
 
         if  kk % max_per_page == (max_per_page-1) or kk == Npanels-1:   # last plot on this page
-#            subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")  ## COMMENDED OUT FOR nolabels
-            subit.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")  ## TEMP TEMP TEMP go back to previous
-            plt.ylabel('fnu') # fnu in cgs units: erg/s/cm^2/Hz
-            #plt.ylabel('relative flux') # **temp for stacked paper
+            if plotx2 : subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")  ## COMMENDED OUT FOR mage stack paper
+            else:       subit.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")  # Just for mage stack paper
+            #plt.ylabel('fnu') # fnu in cgs units: erg/s/cm^2/Hz
+            plt.ylabel('relative flux') # **temp for stacked paper
             pp.savefig(bbox_inches='tight')    
             #fig.canvas.draw()
         if  kk % max_per_page == 0 and plotx2 :  # first plot on the page

@@ -127,7 +127,10 @@ def convert_spectrum_to_restframe(sp, zz) :
         sp['rest_fnu_cont_u'] = pandas.Series(rest_fnu_cont_u)
         (junk   , rest_flam_cont, rest_flam_cont_u) = spec.convert2restframe(sp.wave, sp.flam_cont, sp.flam_cont_u, zz, 'flam')
         sp['rest_flam_cont']   = pandas.Series(rest_flam_cont)
-        sp['rest_flam_cont_u'] = pandas.Series(rest_flam_cont_u)    
+        sp['rest_flam_cont_u'] = pandas.Series(rest_flam_cont_u)
+    if 'fnu_autocont' in sp :
+        (junk   , rest_fnu_cont, dummy) = spec.convert2restframe(sp.wave, sp.fnu_autocont, sp.fnu_autocont, zz, 'fnu')
+        sp['rest_fnu_autocont']   = pandas.Series(rest_fnu_cont)
     return(0)  # acts directly on sp.  
     
 def open_spectrum(infile, zz, mage_mode) :
@@ -691,3 +694,27 @@ def read_our_COS_stack(resoln="full") :
     df['unity'] = 1.0        # ditto.  Dummy continuum
 #    df['rest_fnu_autocont'] = 1.0
     return(df)
+
+def open_planckarc_sum(zz, vmask1, vmask2, smooth_length=50., option="full") :
+    if   option == "full" : pfile = "psz1550_muse_full_F.fits.txt"
+    elif option == "wtd"  : pfile = "psz1550_muse_full_whtd_F.fits.txt"
+    else : raise Exception("Error: Option is one one of full or wtd")
+    pf = pandas.read_table(pfile, delim_whitespace=True, comment="#", names=('wave', 'flam', 'flam_u'))
+    pf['badmask']  = False
+    pf['contmask'] = False
+    pf['unity'] = 1.0
+    spec.calc_dispersion(pf)
+    pf['fnu']   =  spec.flam2fnu(pf['wave'], pf['flam'])
+    pf['fnu_u'] =  spec.flam2fnu(pf['wave'], pf['flam_u'])
+    (specpath, linepath) = getpath("reduction")
+    linelist_filename = get_linelist_name("planck1.txt", linepath)
+    (LL, dumzz) = get_linelist(linelist_filename)
+    LL['vmask'] = vmask1
+    LL.loc[LL['lab1'] == 'C IV', 'vmask'] =  vmask2
+    LL.loc[LL['lab1'] == 'He II', 'vmask'] =  vmask2
+    convert_spectrum_to_restframe(pf, zz)
+    boxcar = spec.get_boxcar4autocont(pf, smooth_length)    
+    spec.fit_autocont(pf, LL, zz, colv2mask='vmask', boxcar=boxcar, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont')
+    convert_spectrum_to_restframe(pf, zz)  # again, to get contfit
+    return(pf, LL)
+
