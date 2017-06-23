@@ -131,6 +131,9 @@ def convert_spectrum_to_restframe(sp, zz) :
     if 'fnu_autocont' in sp :
         (junk   , rest_fnu_cont, dummy) = spec.convert2restframe(sp.wave, sp.fnu_autocont, sp.fnu_autocont, zz, 'fnu')
         sp['rest_fnu_autocont']   = pandas.Series(rest_fnu_cont)
+        (junk   , rest_flam_cont, dummy) = spec.convert2restframe(sp.wave, sp.flam_autocont, sp.flam_autocont, zz, 'flam')
+        sp['rest_flam_autocont']   = pandas.Series(rest_flam_cont)
+
     return(0)  # acts directly on sp.  
     
 def open_spectrum(infile, zz, mage_mode) :
@@ -715,6 +718,7 @@ def open_planckarc_sum(zz, vmask1, vmask2, smooth_length=50., option="full") :
     convert_spectrum_to_restframe(pf, zz)
     boxcar = spec.get_boxcar4autocont(pf, smooth_length)    
     spec.fit_autocont(pf, LL, zz, colv2mask='vmask', boxcar=boxcar, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont')
+    pf['flam_autocont']   = spec.fnu2flam(pf.wave, pf.fnu_autocont)
     convert_spectrum_to_restframe(pf, zz)  # again, to get contfit
     return(pf, LL)
 
