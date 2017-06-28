@@ -273,7 +273,7 @@ def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_regi
 
 ### Generalized spectral stacking...
 
-def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=False, pre='f', sigmaclip=3) :
+def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], output_wave_array=[], pre='f', sigmaclip=3) :
     ''' General-purpose function to stack spectra.  Rebins wavelength.
     Does not de-redshift spectra.  If you want to stack in rest frame, run jrr.spec.convert2restframe_df(df) beforehand.
     Any normalization by continuum should be done beforehand.
@@ -281,8 +281,6 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     colwave, colf, colfu, colmask, tell where to find the columns for wavelength, flux/flam/fnu, uncertainty, & input mask.
     colmask is a column in dataframe of values to mask (True=masked)
     Output wavelength array will output_wave_array if it is supplied; else 1st spectrum in df{}.
-    If straight_sum, output colf is straight sum and errors summed in quadrature.
-    If not straight_sum, output colf is weighted average and uncertainty in weighted avg.
     '''
     if len(output_wave_array) :
         print "Caution: overriding the default wavelength range and dispersion!"
@@ -298,8 +296,6 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
         if colmask :
             ma_spec.loc[ma_spec[colmask], colf]  = np.nan    # try setting to nan to solve the gap problem
             #ma_spec.loc[ma_spec[colmask], colfu] = ma_spec[colf].median() * 1E6  # set this huge
-        # Problem for COS spectra:  Below rebinning is not robust to big gaps in wavelength coverage w/in a spectrum
-        #***** Need to fix this   ****  COS spectra have big gaps.  preset bad data as nans? 
         nf[ii]   = np.ma.masked_invalid(rebin_spec_new(ma_spec[colwave], ma_spec[colf],  stacked[colwave], return_masked=True)) # fnu/flam rebinned
         nf_u[ii] = np.ma.masked_invalid(rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True))  # uncertainty on above
     nf[ :,  0:2].mask = True  # mask the first 2 and last 2 pixels  of each spectrum
