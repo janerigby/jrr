@@ -232,12 +232,12 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     sp[colmask] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
     return(0)
 
-def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont') : 
+def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont', new_way=False, newfunc='median') : 
     ''' Automatically fits a smooth continuum to a spectrum.  Generalized from mage version
      Inputs:  sp,  a Pandas data frame containing the spectra, 
               LL,  a Pandas data frame containing the linelist, opened by mage.get_linelist(linelist) or similar
               zz,  the systemic redshift. Used to set window threshold around lines to mask
-              colmask,  column containing velocity +- to mask each line,, km/s. 
+              colv2mask,  column containing velocity +- to mask each line,, km/s. 
               boxcar,   size of the boxcar smoothing window, in pixels
               flag_lines (Optional) flag, should the fit mask out known spectral features? Can turn off for debugging
               colwave, colf:  which columns to find wave, flux/flam/fnu
@@ -245,16 +245,26 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
               colcont, column to write the continuum.  The output!
     '''
     if flag_lines :
+        if colmask not in sp : sp[colmask] = False
         flag_near_lines(sp, LL, colv2mask=colv2mask, colwave=colwave)  # lines are masked in sp.linemask
         sp.loc[sp['linemask'], colmask] = True           # add masked lines to the continuum-fitting mask
     # astropy.convolve barfs on pandas.Series as input.  Use .as_matrix() to send as np array
-    smooth1 = astropy.convolution.convolve(sp[colf].as_matrix(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].as_matrix()) # boxcar smooth
-    small_kern = int(util.round_up_to_odd(boxcar/10.))
-    smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
-    sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
-    sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
-    print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
-    return(smooth1, smooth2) 
+    if new_way:  # Experimented with an alternate way, using rolling().  Not great yet.
+        sp['temp'] = sp[colf]   # Since rolling doesn't have masks, make temp var that is nan where linemask=True
+        sp.loc[sp['linemask'], 'temp'] = np.nan        
+        if   newfunc == 'median' : sp[colcont] = sp['temp'].dropna().rolling(window=boxcar,center=True).median().interpolate()
+        elif newfunc == 'mean'   : sp[colcont] = sp['temp'].dropna().rolling(window=boxcar,center=True).mean().interpolate()
+        else : raise Exception("new_way=True, but newfunc is neither median nor mean.")
+        sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
+        return(sp[colcont].as_matrix(), sp[colcont].as_matrix())
+    else:        
+        smooth1 = astropy.convolution.convolve(sp[colf].as_matrix(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].as_matrix()) # boxcar smooth
+        small_kern = int(util.round_up_to_odd(boxcar/10.))
+        smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
+        sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
+        sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
+        print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
+        return(smooth1, smooth2) 
 
 ## Normalization methods.  Currently used in mage_stack_redo.py
 
