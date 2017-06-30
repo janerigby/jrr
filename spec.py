@@ -166,6 +166,10 @@ def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0.) : # G
     fit = onegaus(sp[colwave], *popt)
     return(popt, fit)
 
+def sum_of_gaussian(gauss_pars) :
+    (aa, bb, cc, cont) = gauss_pars
+    return( aa * cc * np.sqrt(2.0 * np.pi))
+
 def rebin_spec_new(wave, specin, new_wave, fill=np.nan, return_masked=False):
     # Rebin spectra (wave, specin) to new wavelength aray new_wave.  Fill values are nan.  If return_masked, then mask the nans
     f = interp1d(wave, specin, bounds_error=False, fill_value=fill)  # With these settings, writes NaN to extrapolated regions
