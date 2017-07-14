@@ -275,7 +275,7 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
 def byspline_norm_func(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
     # Normalization method by the spline fit continuum
     temp_norm_fnu = rest_fnu / rest_cont
-    temp_norm_sig = jrr.util.sigma_adivb(rest_fnu, rest_fnu_u,   rest_cont, rest_cont_u) # propogate uncertainty in continuum fit.
+    temp_norm_sig = util.sigma_adivb(rest_fnu, rest_fnu_u,   rest_cont, rest_cont_u) # propogate uncertainty in continuum fit.
     return(temp_norm_fnu, temp_norm_sig)
 
 def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
@@ -294,7 +294,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     Input df{} is a dictionary of pandas data frames that contains the spectra.
     colwave, colf, colfu, colmask, tell where to find the columns for wavelength, flux/flam/fnu, uncertainty, & input mask.
     colmask is a column in dataframe of values to mask (True=masked)
-    Output wavelength array will output_wave_array if it is supplied; else 1st spectrum in df{}.
+    Output wavelength array will be output_wave_array if it is supplied; else will use 1st spectrum in df{}.
     '''
     if len(output_wave_array) :
         print "Caution: overriding the default wavelength range and dispersion!"
@@ -314,7 +314,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
         nf_u[ii] = np.ma.masked_invalid(rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True))  # uncertainty on above
     nf[ :,  0:2].mask = True  # mask the first 2 and last 2 pixels  of each spectrum
     nf[ :, -2:].mask = True
-        # is this handling the uncertainties correctly?
+        # Is rebinning handling the uncertainties correctly?
     stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
     stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
     stacked[pre+'avg']    = np.ma.average(nf, axis=0)
@@ -329,7 +329,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     stacked[pre+'medianxN'] = np.ma.median(nf, axis=0) * np.ma.MaskedArray.count(nf, axis=0) 
     stacked['Ngal'] = np.ma.MaskedArray.count(nf, axis=0)  # How many spectra contribute to each wavelength
     
-    # Need to compute the jackknife variance.  Adapt from mage_stack_redo.py.  A challenge for another day
+    # compute the jackknife variance.  Adapt from mage_stack_redo.py.
     jackknife= np.ma.zeros(shape=(nspectra, nbins)) # The goal.
     jack_var = np.ma.zeros(shape=nbins)
     for ii in range(0, nspectra) :

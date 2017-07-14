@@ -193,13 +193,13 @@ def open_spectrum(infile, zz, mage_mode) :
     # Masks to be used later, by flag_skylines and flag_near_lines
     sp['badmask']  = False  # Mask: True are BAD pixels.  Sign convention of np.ma
     sp['linemask'] = False  # Mask: True are pixels that may be near a spectral feature
-    sp['fnu_autocont'] = pandas.Series(np.ones_like(sp.wave)*np.nan)  # Will fill this with automatic continuum fit
     flag_skylines(sp)    # Flag the skylines.  This modifies sp.badmask
     sp.replace([np.inf, -np.inf], np.nan, inplace=True) # Replace any inf values with nan
     flag_huge(sp, colfnu='fnu',   thresh_hi=3E4, thresh_lo=-3E4, norm_by_med=True)
     flag_huge(sp, colfnu='fnu_u', thresh_hi=0.5, thresh_lo=-0.5, norm_by_med=False)    
     flag_oldflags(sp)
     convert_spectrum_to_restframe(sp, zz)
+    sp['fnu_autocont'] = pandas.Series(np.ones_like(sp.wave)*np.nan)  # Will fill this with automatic continuum fit
     return(sp, resoln, dresoln)   # Returns the spectrum as a Pandas data frame, the spectral resoln as a float, and its uncertainty
 
 def wrap_open_spectrum(label, mage_mode, addS99=False) :
