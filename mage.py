@@ -51,7 +51,7 @@ def getpath(mage_mode) :
         print "Unrecognized mage_mode " + mage_mode
         return(1)
         
-def getlist(mage_mode, optional_file=False) : 
+def getlist(mage_mode, optional_file=False, zchoice='stars') : 
     ''' Load list of MagE spectra and redshifts.  Loads into a Pandas data frame'''
     if optional_file :  # User wants to supply an optional file.  Now deprecated; better to filter in Pandas
         thelist = optional_file
@@ -65,7 +65,7 @@ def getlist(mage_mode, optional_file=False) :
     #len(pspecs)    # length of pspecs
     # specs holds the filenames and redshifts, for example   specs['filename'], specs['z_stars']
     
-    # z_syst is best estimate of systemic redshift.  From stars if measured, else nebular, else ISM
+    # z_syst is best estimate of systemic redshift.  Default is stars if measured, else nebular, else ISM.  Can also choose nebular if measured, else ISM
     pspecs['fl_st']   = pspecs['fl_st'].astype(np.bool, copy=False)
     pspecs['fl_neb']  = pspecs['fl_neb'].astype(np.bool, copy=False)
     pspecs['fl_ISM']  = pspecs['fl_ISM'].astype(np.bool, copy=False)
@@ -76,36 +76,45 @@ def getlist(mage_mode, optional_file=False) :
     pspecs['z_ISM']   = pspecs['z_ISM'].astype(np.float64)
     pspecs['sig_ISM'] = pspecs['sig_ISM'].astype(np.float64)
     pspecs['z_syst'] = np.float64() # initialize
-    pspecs['z_syst'][~pspecs['fl_st']] = pspecs['z_stars']   # stellar redshift if have it
-    pspecs['z_syst'][(pspecs['fl_st']) & (~pspecs['fl_neb'])] = pspecs['z_neb']  # else, use nebular z
-    pspecs['z_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM'])] = pspecs['z_ISM'] #else ISM
-    pspecs['z_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM'])] = -999  # Should never happen
+    pspecs['dz_syst'] = np.float64()
     # dz_syst is uncertainty in systemic redshift.
     extra_dv = 500. # if using a proxy for systematic redshift, increase its uncertainty
     extra_dz = extra_dv / 2.997E5 * (1.+ pspecs['z_syst'])
-    pspecs['dz_syst'] = np.float64()
-    pspecs['dz_syst'][~pspecs['fl_st']] = pspecs['sig_st']
-    pspecs['dz_syst'][(pspecs['fl_st']) & (~pspecs['fl_neb'])] = np.sqrt(( pspecs['sig_neb']**2 + extra_dz**2).astype(np.float64))
-    pspecs['dz_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM'])] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
-    pspecs['dz_syst'][(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM'])] = -999  
+    if zchoice  == 'stars' :
+        pspecs.loc[~pspecs['fl_st'], 'z_syst'] = pspecs['z_stars']   # stellar redshift if have it
+        pspecs.loc[(pspecs['fl_st']) & (~pspecs['fl_neb']), 'z_syst']                      = pspecs['z_neb']  # else, use nebular z
+        pspecs.loc[(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'z_syst'] = pspecs['z_ISM'] #else ISM
+        pspecs.loc[(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM']), 'z_syst']  = -999  # Should never happen
+        pspecs.loc[~pspecs['fl_st'], 'dz_syst']                        = pspecs['sig_st']
+        pspecs.loc[(pspecs['fl_st']) & (~pspecs['fl_neb']),  'dz_syst'] = np.sqrt(( pspecs['sig_neb']**2 + extra_dz**2).astype(np.float64))
+        pspecs.loc[(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'dz_syst'] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
+        pspecs.loc[(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM']), 'dz_syst'] = -999  # Should never happen
+    elif zchoice == 'neb' :
+        pspecs.loc[~pspecs['fl_neb'], 'z_syst']                        = pspecs['z_neb']  # use nebular z if have it
+        pspecs.loc[(pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'z_syst'] = pspecs['z_ISM'] #else ISM
+        pspecs.loc[(pspecs['fl_neb']) & (pspecs['fl_ISM']), 'z_syst'] = -999  # Should never happen
+        pspecs.loc[~pspecs['fl_neb'], 'dz_syst'] = pspecs['sig_neb']
+        pspecs.loc[(pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'dz_syst'] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
+        pspecs.loc[(pspecs['fl_neb']) & (pspecs['fl_ISM']), 'dz_syst'] = -999  # Should never happen
+    else : raise Exception("Error: zchoice unrecognized, is not neb or stars")
 
     if mage_mode == "reduction" :  # Add the path to the filename, if on satchmo in /SCIENCE/
         pspecs['filename'] = pspecs['origdir'] + pspecs['filename']
     pspecs.set_index("short_label", inplace=True, drop=False)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
     return(pspecs)  # I got rid of Nspectra.  If need it, use len(pspecs)
 
-def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=()) :
+def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=(), zchoice='zstars') :
     ''' Wrapper for getlist above.  Get list of MagE spectra and redshifts, for subsets.'''
     if which_list == "wcont" :      # Get those w continuum fit.
-        pspecs = getlist(mage_mode) 
+        pspecs = getlist(mage_mode, zchoice=zchoice) 
         speclist =   pspecs[pspecs['filename'].str.contains('combwC1')]  # only w continuum
         if drop_s2243 :          # Drop S2243 bc it's an AGN
             #wcont = wcont[~wcont.index.isin("S2243-0935")].reset_index(drop=True)
             speclist = speclist[~speclist.index.isin(("S2243-0935",))]
     elif which_list == "all" :
-        speclist = getlist(mage_mode)
+        speclist = getlist(mage_mode, zchoice=zchoice) 
     elif which_list == "labels" and labels :   # Get speclist for a list of short_labels
-        pspecs = getlist(mage_mode, optional_file) 
+        pspecs = getlist(mage_mode, optional_file, zchoice=zchoice) 
         speclist = pspecs[pspecs.index.isin(labels)]
         speclist['sort_cat'] = pandas.Categorical(speclist['short_label'], categories=labels, ordered=True)  #same order as labels
         speclist.sort_values('sort_cat', inplace=True)
@@ -202,11 +211,11 @@ def open_spectrum(infile, zz, mage_mode) :
     sp['fnu_autocont'] = pandas.Series(np.ones_like(sp.wave)*np.nan)  # Will fill this with automatic continuum fit
     return(sp, resoln, dresoln)   # Returns the spectrum as a Pandas data frame, the spectral resoln as a float, and its uncertainty
 
-def wrap_open_spectrum(label, mage_mode, addS99=False) :
+def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars') :
     '''  Convenience wrapper, open one MagE spectrum in one line.  label is one short_name.
     if addS99, adds Chisholm's S99 continuum fit to the sp dataframe  '''
     (spec_path, line_path) = getpath(mage_mode)
-    specs = wrap_getlist(mage_mode, which_list="labels", labels=[label])
+    specs = wrap_getlist(mage_mode, which_list="labels", labels=[label], zchoice=zchoice)
     zz_syst = specs.z_syst.values[0]
     infile = specs.filename[0]
     (sp, resoln, dresoln) = open_spectrum(infile, zz_syst, mage_mode)
@@ -222,7 +231,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False) :
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
     return(sp, resoln, dresoln, LL, zz_syst)
 
-def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True) :
+def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars') :
     ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
     sp:        dictionary of pandas dataframes containing the spectra
     resoln:    dictionary of resolutions (float)
@@ -233,10 +242,10 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True) :
     print "Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth."
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
-    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels)
+    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice)
     for label in speclist.index :
         if verbose: print "Loading  ", label
-        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True)
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True, zchoice=zchoice)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)
     
 def get_S99_path() :  # Get path for S99
@@ -275,7 +284,7 @@ def redo_open_S99_spectrum(rootname, denorm=True, altfile=None) :
         elif rootname == "Stack-A" :
             (orig_sp, dummyLL) = open_stacked_spectrum("released", which_stack="Stack-A")
         else:
-            (orig_sp, orig_resoln, orig_dresoln, orig_LL, orig_zz_syst)  =  wrap_open_spectrum(rootname, "released")
+            (orig_sp, orig_resoln, orig_dresoln, orig_LL, orig_zz_syst)  =  wrap_open_spectrum(rootname, "released", zchoice='stars')
         norm_region = Chisholm_norm_regionA() 
         norm1 = orig_sp['rest_flam'][orig_sp['rest_wave'].between(*norm_region)].median() #norm for orig spectrum
         norm2 = sp['rest_flam_data_norm'][sp['rest_wave'].between(*norm_region)].median() #norm for JC's fit.  should be ~1
@@ -519,12 +528,9 @@ def mage2D_iswave(filename, wave) :
         return(xx)
     else :
         return(False)
-
-                    
-def flag_skylines(sp) :
-    # Mask skylines [O I] 5577\AA\ and [O I]~6300\AA,
-    skyline = (5577., 6300.)
-    skywidth = 17.0  # flag spectrum +- skywidth of the skyline
+              
+def flag_skylines(sp, skywidth=17.0, skyline=(5577., 6300.)) :
+    # Mask skylines [O I] 5577\AA\ and [O I]~6300\AA,  flag spectrum +- skywidth of the skyline
     for thisline in skyline :
         sp.badmask.loc[sp['wave'].between(thisline-skywidth, thisline+skywidth)] = True 
     return(0)  # This function works directly on sp
