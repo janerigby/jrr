@@ -13,6 +13,7 @@ import glob
 from subprocess import check_output   # Used for grepping from files
 from   astropy.io import fits
 import astropy.convolution
+import extinction
 from astropy.wcs import WCS
 
 color1 = 'k'     # color for spectra
@@ -60,11 +61,8 @@ def getlist(mage_mode, optional_file=False, zchoice='stars') :
         (spec_path, line_path) = getpath(mage_mode)
         thelist = spec_path + "spectra-filenames-redshifts.txt"
     pspecs = pandas.read_table(thelist, delim_whitespace=True, comment="#")
-    #pspecs.info()  # tell me about this pandas data frame
-    #pspecs.keys()  # tell me column names
-    #len(pspecs)    # length of pspecs
-    # specs holds the filenames and redshifts, for example   specs['filename'], specs['z_stars']
-    
+    # specs holds the filenames and redshifts, for example   specs['filename'], specs['z_stars'] 
+   
     # z_syst is best estimate of systemic redshift.  Default is stars if measured, else nebular, else ISM.  Can also choose nebular if measured, else ISM
     pspecs['fl_st']   = pspecs['fl_st'].astype(np.bool, copy=False)
     pspecs['fl_neb']  = pspecs['fl_neb'].astype(np.bool, copy=False)
@@ -103,7 +101,7 @@ def getlist(mage_mode, optional_file=False, zchoice='stars') :
     pspecs.set_index("short_label", inplace=True, drop=False)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
     return(pspecs)  # I got rid of Nspectra.  If need it, use len(pspecs)
 
-def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=(), zchoice='zstars') :
+def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=(), zchoice='stars') :
     ''' Wrapper for getlist above.  Get list of MagE spectra and redshifts, for subsets.'''
     if which_list == "wcont" :      # Get those w continuum fit.
         pspecs = getlist(mage_mode, zchoice=zchoice) 
@@ -231,7 +229,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars') :
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
     return(sp, resoln, dresoln, LL, zz_syst)
 
-def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars') :
+def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars', addS99=True) :
     ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
     sp:        dictionary of pandas dataframes containing the spectra
     resoln:    dictionary of resolutions (float)
@@ -245,7 +243,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice)
     for label in speclist.index :
         if verbose: print "Loading  ", label
-        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=True, zchoice=zchoice)
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)
     
 def get_S99_path() :  # Get path for S99
@@ -327,9 +325,9 @@ def dict_of_stacked_spectra(mage_mode) :
     ''' Returns:  a) main directory of stacked spectra,  b) a list of all the stacked spectra.'''
     (spec_path, line_path)  = getpath(mage_mode)
     if mage_mode == "reduction" :
-        indir = spec_path + "../Analysis/Stacked_spectra/"
+        indir = spec_path + "../Analysis/Stacked_spectra_MWderedden/"
     elif mage_mode == "released" :
-        indir = spec_path + "../Stacked/"
+        indir = spec_path + "../Stacked_spectra_MWderedden/"
     files = glob.glob(indir+"*spectrum.txt")
     justfiles = [re.sub(indir, "", file) for file in files]         # list comprehension
     short_stackname = [re.sub("magestack_", "", file) for file in justfiles]         # list comprehension
@@ -584,6 +582,26 @@ def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deriv
         sp['flam_autocont']     = spec.fnu2flam(sp[colwave], sp.fnu_autocont)
         (dum, rest_flam, dum)  = spec.convert2restframe(sp[colwave], sp.flam_autocont,  sp.flam_u,  zz, 'flam')    
         sp['rest_flam_autocont'] = pandas.Series(rest_flam)
+    return(0)
+
+def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :
+    #print "Dereddening Milky Way extinction"
+    Rv = 3.1
+    Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
+    sp[colf]     = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colf].astype('float64').as_matrix()))
+    sp[colfu]    = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colfu].astype('float64').as_matrix()))
+    if colcont in sp.keys() :
+        sp[colcont]  = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colcont].astype('float64').as_matrix()))
+        sp[colcontu] = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colcontu].astype('float64').as_matrix()))
+    return(0)
+
+def deredden_internal_extinction(sp, this_ebv, colcont) :  # Removing internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti
+    Rv = 4.05
+    Av = -1 * Rv * this_ebv  # stupidity w .Series and .as_matrix() is bc extinction package barfs on pandas. pandas->np->pandas
+    rest_fnu    = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp['rest_fnu'].astype('float64').as_matrix()))
+    rest_fnu_u  = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp['rest_fnu_u'].astype('float64').as_matrix()))
+    rest_cont   = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp[colcont].astype('float64').as_matrix()))
+    rest_cont_u = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp[colcont + '_u'].astype('float64').as_matrix()))        
     return(0)
 
 

@@ -1,7 +1,7 @@
 ''' General-purpose utilities.  jrigby May 2016'''
 
 import numpy as np
-from   re import split, sub
+from   re import split, sub, search
 import fileinput
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
@@ -80,6 +80,15 @@ def put_header_on_file(infile, header_text, outfile) :
     with open(tmp, "w") as myfile:  myfile.write(header_text)
     subprocess.check_output("cat " + tmp + " " + infile + " > " + outfile, shell=True)
     return(0)
+
+def read_header_from_file(infile, comment="#") :
+    ''' Pandas DataFrame.read_table(), read_csv() discards the explanatory header.  Save it.'''
+    head = ''
+    with open(infile) as origin_file:
+        for line in origin_file:
+            if bool(search(comment, line)) :
+                head += line
+    return(head)
 
 #####  Basic Astronomy  #####
 
