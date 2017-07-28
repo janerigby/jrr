@@ -90,6 +90,11 @@ def read_header_from_file(infile, comment="#") :
                 head += line
     return(head)
 
+def check_df_for_Object(df) :
+    for thiscol in df.keys():
+        if df[thiscol].dtype == 'O' : print "\n ***WARNING found dtype Object", thiscol, "\n"
+    return(0)
+
 #####  Basic Astronomy  #####
 
 def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
