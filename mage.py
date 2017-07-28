@@ -52,7 +52,7 @@ def getpath(mage_mode) :
         print "Unrecognized mage_mode " + mage_mode
         return(1)
         
-def getlist(mage_mode, optional_file=False, zchoice='stars') : 
+def getlist(mage_mode, optional_file=False, zchoice='stars', MWdr=False) : 
     ''' Load list of MagE spectra and redshifts.  Loads into a Pandas data frame'''
     if optional_file :  # User wants to supply an optional file.  Now deprecated; better to filter in Pandas
         thelist = optional_file
@@ -61,6 +61,7 @@ def getlist(mage_mode, optional_file=False, zchoice='stars') :
         (spec_path, line_path) = getpath(mage_mode)
         thelist = spec_path + "spectra-filenames-redshifts.txt"
     pspecs = pandas.read_table(thelist, delim_whitespace=True, comment="#")
+    if MWdr : pspecs['filename'] = pspecs['filename'].str.replace('.txt', '_MWdr.txt')
     # specs holds the filenames and redshifts, for example   specs['filename'], specs['z_stars'] 
    
     # z_syst is best estimate of systemic redshift.  Default is stars if measured, else nebular, else ISM.  Can also choose nebular if measured, else ISM
@@ -98,21 +99,21 @@ def getlist(mage_mode, optional_file=False, zchoice='stars') :
 
     if mage_mode == "reduction" :  # Add the path to the filename, if on satchmo in /SCIENCE/
         pspecs['filename'] = pspecs['origdir'] + pspecs['filename']
-    pspecs.set_index("short_label", inplace=True, drop=False)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
+    pspecs.set_index("short_label", inplace=True, drop=False)  # Index by short_label.
     return(pspecs)  # I got rid of Nspectra.  If need it, use len(pspecs)
 
-def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=(), zchoice='stars') :
+def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=(), zchoice='stars', MWdr=False) :
     ''' Wrapper for getlist above.  Get list of MagE spectra and redshifts, for subsets.'''
     if which_list == "wcont" :      # Get those w continuum fit.
-        pspecs = getlist(mage_mode, zchoice=zchoice) 
+        pspecs = getlist(mage_mode, zchoice=zchoice, MWdr=MWdr) 
         speclist =   pspecs[pspecs['filename'].str.contains('combwC1')]  # only w continuum
         if drop_s2243 :          # Drop S2243 bc it's an AGN
             #wcont = wcont[~wcont.index.isin("S2243-0935")].reset_index(drop=True)
             speclist = speclist[~speclist.index.isin(("S2243-0935",))]
     elif which_list == "all" :
-        speclist = getlist(mage_mode, zchoice=zchoice) 
+        speclist = getlist(mage_mode, zchoice=zchoice, MWdr=MWdr) 
     elif which_list == "labels" and labels :   # Get speclist for a list of short_labels
-        pspecs = getlist(mage_mode, optional_file, zchoice=zchoice) 
+        pspecs = getlist(mage_mode, optional_file, zchoice=zchoice, MWdr=MWdr) 
         speclist = pspecs[pspecs.index.isin(labels)]
         speclist['sort_cat'] = pandas.Categorical(speclist['short_label'], categories=labels, ordered=True)  #same order as labels
         speclist.sort_values('sort_cat', inplace=True)
@@ -178,7 +179,7 @@ def open_spectrum(infile, zz, mage_mode) :
     if search("wC1", infile) :  hascont = True # The continuum exists        
     else :  hascont=False   # file lacks continuum, e.g. *comb1.txt
 
-    sp =  pandas.read_table(specdir+infile, delim_whitespace=True, comment="#", header=0)#, names=names)
+    sp =  pandas.read_table(specdir+infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)#, names=names)
     sp.rename(columns= {'noise'  : 'fnu_u'}, inplace=True)
     sp.rename(columns= {'avgsky' : 'fnu_sky'}, inplace=True)
     sp.rename(columns= {'obswave' : 'wave_sky'}, inplace=True)
@@ -209,11 +210,11 @@ def open_spectrum(infile, zz, mage_mode) :
     sp['fnu_autocont'] = pandas.Series(np.ones_like(sp.wave)*np.nan)  # Will fill this with automatic continuum fit
     return(sp, resoln, dresoln)   # Returns the spectrum as a Pandas data frame, the spectral resoln as a float, and its uncertainty
 
-def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars') :
+def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars', MWdr=False) :
     '''  Convenience wrapper, open one MagE spectrum in one line.  label is one short_name.
     if addS99, adds Chisholm's S99 continuum fit to the sp dataframe  '''
     (spec_path, line_path) = getpath(mage_mode)
-    specs = wrap_getlist(mage_mode, which_list="labels", labels=[label], zchoice=zchoice)
+    specs = wrap_getlist(mage_mode, which_list="labels", labels=[label], zchoice=zchoice, MWdr=MWdr)
     zz_syst = specs.z_syst.values[0]
     infile = specs.filename[0]
     (sp, resoln, dresoln) = open_spectrum(infile, zz_syst, mage_mode)
@@ -229,7 +230,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars') :
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
     return(sp, resoln, dresoln, LL, zz_syst)
 
-def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars', addS99=True) :
+def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars', addS99=True, MWdr=False) :
     ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
     sp:        dictionary of pandas dataframes containing the spectra
     resoln:    dictionary of resolutions (float)
@@ -240,10 +241,10 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     print "Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth."
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
-    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice)
+    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice, MWdr=MWdr)
     for label in speclist.index :
         if verbose: print "Loading  ", label
-        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice)
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice, MWdr=MWdr)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)
     
 def get_S99_path() :  # Get path for S99
@@ -452,7 +453,10 @@ def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="
 
 def get_linelist_name(filename, line_path) :
     ''' Given a spectrum filename, guess what its associated linelist should be.  A convenience function.'''
-    linelist = line_path + sub(".txt", ".linelist", (split("/", filename)[-1]))
+    if '_MWdr.txt' in filename :
+        linelist = line_path + sub("_MWdr.txt", ".linelist", (split("/", filename)[-1]))  #backward compatibility, and still handle MW-dereddened spectra
+    else :
+        linelist = line_path + sub(".txt", ".linelist", (split("/", filename)[-1]))
     return(linelist)
         
 def get_linelist(linelist) :  
@@ -588,11 +592,15 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     #print "Dereddening Milky Way extinction"
     Rv = 3.1
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
-    sp[colf]     = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colf].astype('float64').as_matrix()))
-    sp[colfu]    = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colfu].astype('float64').as_matrix()))
+    print "DEBUG  Av  EBV_MW", Av, EBV_MW
+    #sp['oldfnu'] = sp[colf]  # Debugging
+    MW_extinction = extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv)
+    sp['MWredcor'] = 10**(-0.4 * MW_extinction)
+    sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').as_matrix()))
+    sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').as_matrix()))
     if colcont in sp.keys() :
-        sp[colcont]  = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colcont].astype('float64').as_matrix()))
-        sp[colcontu] = pandas.Series(extinction.apply(extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv), sp[colcontu].astype('float64').as_matrix()))
+        sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
+        sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
     return(0)
 
 def deredden_internal_extinction(sp, this_ebv, colcont) :  # Removing internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti
