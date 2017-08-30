@@ -326,9 +326,9 @@ def dict_of_stacked_spectra(mage_mode) :
     ''' Returns:  a) main directory of stacked spectra,  b) a list of all the stacked spectra.'''
     (spec_path, line_path)  = getpath(mage_mode)
     if mage_mode == "reduction" :
-        indir = spec_path + "../Analysis/Stacked_spectra_MWderedden/"
+        indir = spec_path + "../Analysis/Stacked_spectra_MWdr/"
     elif mage_mode == "released" :
-        indir = spec_path + "../Stacked_spectra_MWderedden/"
+        indir = spec_path + "../Stacked_spectra_MWdr/"
     files = glob.glob(indir+"*spectrum.txt")
     justfiles = [re.sub(indir, "", file) for file in files]         # list comprehension
     short_stackname = [re.sub("magestack_", "", file) for file in justfiles]         # list comprehension
@@ -336,29 +336,27 @@ def dict_of_stacked_spectra(mage_mode) :
     stack_dict =  dict(zip(short_stackname, justfiles))
     return(indir, stack_dict)
 
-def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", colfnu='X_avg', colfnuu='X_sigma', addS99=False) :
+def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", colfnu='fweightavg', colfnuu='fjack_std', addS99=False) :
     ''' Open a stacked MagE spectrum. 
     Rewritten 8/2016 to make stacked spectrum look like a normal spectrum, so can re-use tools.
     Optional arguments are:
      - alt_infile: alternative stacked spectrum to grab (just the file, path from indir).  Over-rides which_stack
      - which_stack: easy selection of default spectra.  Current choices are "standard", "Stack-A"
-     - colfnu:     which column to use as fnu (choose from X_avg, X_median, X_clipavg, or X_median)
-     - colfnuu:    which column to use for fnu_u (choose from X_sigma or X_jack_std) '''
+     - colfnu:     which column to use as fnu (choose from favg (straight avg) fmedian (median), fweightavg (weighted average)
+     - colfnuu:    which column to use for fnu_u '''
     (spec_path, line_path) = getpath(mage_mode)
     (indir, stack_dict) = dict_of_stacked_spectra(mage_mode)
     if alt_infile :
         print "  Caution, I am using ", alt_infile, "instead of the default stacked spectrum."
         infile = indir + alt_infile
     else :
-        if   which_stack == "standard" :  stackfile = "magestack_bystars_standard_spectrum.txt"
+        if   which_stack == "standard" :  stackfile = "magestack_byneb_standard_spectrum.txt"
         elif which_stack == "Stack-A"  :  stackfile = "magestack_byneb_ChisholmstackA_spectrum.txt"
-        elif which_stack == "divbys99" :  stackfile = "magestack_bystars_divbyS99_spectrum.txt"
+        elif which_stack == "divbys99" :  stackfile = "magestack_byneb_divbyS99_spectrum.txt"
         else : raise Exception("I do not recognize which_stack as one of the choices: standard, Stack-A, or divbys99")
         infile = indir + stackfile
-    if not (any(colfnu in s for s in ('X_avg','X_clipavg','X_median')) and any(colfnuu in tt for tt in ('X_sigma', 'X_jack_std'))):
-        raise Exception('ERROR: User selection of colfnu or colfnuu is invald.', colfnu, colfnuu)                
     sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)
-    sp.rename(columns = {'restwave' : 'rest_wave'}, inplace=True)
+    if 'restwave' in sp.keys() :   sp.rename(columns = {'restwave' : 'rest_wave'}, inplace=True)
     if which_stack == "Stack-A" :
         sp['rest_wave'] = sp['rest_wave'] / (1 + 0.0000400)  # correct slight redshift offset, from 12 km/s measured by Chisholm
     sp['wave'] = sp['rest_wave']
