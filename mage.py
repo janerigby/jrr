@@ -468,7 +468,7 @@ def get_linelist(linelist) :
     L.insert(7, 'obswav', L.restwav * (1.0 + L.zz))  # observed wavelength for this line
     L.insert(8, 'fake_v',   0)  # need this for plot_linelist if velplot
     L.insert(8, 'fake_wav', 0)  # need this for Mage_plot if restframe
-
+    L['vmask'] = 500.0 # default window to mask the line 
     # Grab the systemic redshift, too
     command = "grep SYSTEMIC " + linelist
     z_systemic = float(check_output(command, shell=True).split()[3])
