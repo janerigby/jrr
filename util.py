@@ -18,11 +18,14 @@ def bootstrap_val_confint(df, statfunction, alpha=0.05) :
     Returns the value, and the -,+ uncertainties'''
     result = statfunction(df)
     CI = bootstrap.ci(data=df, statfunction=statfunction, alpha=alpha)
-    return( result,  CI[0] - result,  CI[1] - result) 
+    return( result,  np.abs(CI[0] - result),  CI[1] - result) 
 
 def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and siga, sigb are uncerts in a,b
     return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
 
+def sigma_adivb_df(df, cola, colsiga, colb, colsigb) :  # convenience function for a dataframe
+    return(sigma_adivb(df[cola], df[colsiga], df[colb], df[colsigb]))
+    
 def add_in_quad(array, axis=0) :
     # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
     quad_sum = np.sqrt( np.sum((array**2), axis=axis))

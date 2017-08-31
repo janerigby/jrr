@@ -230,7 +230,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars', MWdr=Fal
         sp['rest_fnu_s99data']  = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave']) # used for debugging
     return(sp, resoln, dresoln, LL, zz_syst)
 
-def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars', addS99=True, MWdr=False) :
+def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars', addS99=True, MWdr=False, silent=False) :
     ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
     sp:        dictionary of pandas dataframes containing the spectra
     resoln:    dictionary of resolutions (float)
@@ -238,7 +238,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     LL:        dictionary of pandas dataframes of linelists
     zz_syst:   dictionary of systemic redshifts (float)
     speclist:  pandas dataframe describing the spectra (from getlist or variants)'''
-    print "Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth."
+    if not silent: print("Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth.")
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
     speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice, MWdr=MWdr)
