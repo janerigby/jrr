@@ -596,9 +596,8 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     sp['MWredcor'] = 10**(-0.4 * MW_extinction)
     sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').as_matrix()))
     sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').as_matrix()))
-    if colcont in sp.keys() :
-        sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
-        sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
+    if colcont in sp.keys() :  sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
+    if colcontu in sp.keys() : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
     return(0)
 
 def deredden_internal_extinction(sp, this_ebv, colcont) :  # Removing internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti

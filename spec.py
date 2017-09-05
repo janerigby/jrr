@@ -164,10 +164,17 @@ def onegaus(x, aa, bb, cc, cont): # Define a Gaussian with linear continuum
     #y = np.zeros_like(x)
     y = (aa * np.exp((x - bb)**2/(-2*cc**2))  + cont)
     return y
-    
+
 def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line.  Uses Pandas
     # guess_pars are the initial guess at the Gaussian.
     popt, pcov = curve_fit(onegaus, sp[colwave], sp[colf], p0=guess_pars)
+    fit = onegaus(sp[colwave], *popt)
+    return(popt, fit)
+
+def fit_gaussian_fixedcont(sp, guess_pars, contlevel=0.0, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line, continuum fixed.
+    popt, pcov = curve_fit((lambda x, aa, bb, cc: onegaus(x, aa, bb, cc, contlevel)), sp[colwave], sp[colf], p0=guess_pars)
+    print "DEBUGGING", popt
+    popt = np.append(popt, contlevel)
     fit = onegaus(sp[colwave], *popt)
     return(popt, fit)
 
