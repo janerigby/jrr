@@ -23,6 +23,11 @@ def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
 
+def smooth_the_noise(sp, win=21, colwave='wave', colf='flam_cor', colfu='flam_u_cor', outcol='flam_u_col_smooth') :
+    # Applies a boxcar window, and then takes the median within the boxcar.  May want to generalize to other funcs
+    sp[outcol] =  sp[colfu].rolling(window=win, center=True).median()
+    return(0)
+
 def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linecen, Nredmax=600, isabs=True) :
     # Find the edges of an absorption line, when it crosses the continuumm for the Nover-th time.
     # INPUTS:  df, pandas data frame containing the spectrum
