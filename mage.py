@@ -590,7 +590,7 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     #print "Dereddening Milky Way extinction"
     Rv = 3.1
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
-    print "DEBUG  Av  EBV_MW", Av, EBV_MW
+    print "jrr.mage.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW
     #sp['oldfnu'] = sp[colf]  # Debugging
     MW_extinction = extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv)
     sp['MWredcor'] = 10**(-0.4 * MW_extinction)
