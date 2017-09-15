@@ -17,6 +17,12 @@ color1 = 'k'     # color for spectra
 color2 = '0.65'  # color for uncertainty spectra
 color3 = '0.5'   # color for continuum
 
+def annotate_from_dataframe(df, xcol='x', ycol='y', text='label') :
+    # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: feed it a dataframe.
+    for row in df.itertuples():
+        plt.annotate(row.text, xy=(row.xcol, row.ycol), xycoords='data', xytext=(4,3), textcoords="offset points")
+    return(0)
+
 def standard_colors1():
     return(['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan'])
 def standard_colors2():

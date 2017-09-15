@@ -23,11 +23,11 @@ def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
 
-def boxcar_smooth(sp, win=21, colwave='wave', colf='flam_cor', colfu='flam_u_cor', outcol='flam_u_col_smooth', func='median') :
+def boxcar_smooth(sp, win=21, colwave='wave', colf='flam', outcol='flam_smooth', func='median') :
     # Applies a boxcar window, and then takes the median within the boxcar.  May want to generalize to other funcs
-    if func == 'median' :   sp[outcol] =  sp[colfu].rolling(window=win, center=True).median()
-    elif func == 'mean' :   sp[outcol] =  sp[colfu].rolling(window=win, center=True).mean()
-    elif func == 'sum'  :   sp[outcol] =  sp[colfu].rolling(window=win, center=True).sum()
+    if func == 'median' :   sp[outcol] =  sp[colf].rolling(window=win, center=True).median()
+    elif func == 'mean' :   sp[outcol] =  sp[colf].rolling(window=win, center=True).mean()
+    elif func == 'sum'  :   sp[outcol] =  sp[colf].rolling(window=win, center=True).sum()
     else : raise Exception("ERROR in boxcar_smooth: func not recognized (should be median, mean, or sum")
     return(0)
 
