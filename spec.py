@@ -28,7 +28,7 @@ def boxcar_smooth(sp, win=21, colwave='wave', colf='flam_cor', colfu='flam_u_cor
     if func == 'median' :   sp[outcol] =  sp[colfu].rolling(window=win, center=True).median()
     elif func == 'mean' :   sp[outcol] =  sp[colfu].rolling(window=win, center=True).mean()
     elif func == 'sum'  :   sp[outcol] =  sp[colfu].rolling(window=win, center=True).sum()
-    else raise Exception("ERROR in boxcar_smooth: func not recognized (should be median, mean, or sum")
+    else : raise Exception("ERROR in boxcar_smooth: func not recognized (should be median, mean, or sum")
     return(0)
 
 def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linecen, Nredmax=600, isabs=True) :
