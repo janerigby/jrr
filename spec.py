@@ -25,11 +25,27 @@ def calc_dispersion(sp, colwave='wave', coldisp='disp') :
 
 def boxcar_smooth(sp, win=21, colwave='wave', colf='flam', outcol='flam_smooth', func='median') :
     # Applies a boxcar window, and then takes the median within the boxcar.  May want to generalize to other funcs
+    # Calculates a value for every pixel; does not boxcar
     if func == 'median' :   sp[outcol] =  sp[colf].rolling(window=win, center=True).median()
     elif func == 'mean' :   sp[outcol] =  sp[colf].rolling(window=win, center=True).mean()
     elif func == 'sum'  :   sp[outcol] =  sp[colf].rolling(window=win, center=True).sum()
     else : raise Exception("ERROR in boxcar_smooth: func not recognized (should be median, mean, or sum")
     return(0)
+
+def bin_boxcar(df, bins, bincol='wave', fcol='flam', func='mean') :  #Makes a new df, bc bining made it smaller
+    df['binned'] = pandas.cut(df[bincol], bins)
+    if   func=='mean'   : newdf = df.groupby(['binned'],)[bincol, fcol].mean()
+    elif func=='median' : newdf = df.groupby(['binned'],)[bincol, fcol].median()
+    # Should probably treat the uncertainty column too, but I haven't done that yet.  
+    return(newdf)
+
+def bin_boxcar_better(df, bins, how_to_comb, bincol='wave') :
+    # Bin the data, binning bincol by bins, and then doing math to the other columns following the how_to_comb dict
+    # https://stackoverflow.com/questions/33217702/groupby-in-pandas-with-different-functions-for-different-columns
+    newdf = df.groupby(pandas.cut(df[bincol], bins)).agg(how_to_comb)  # This seems to be onto something...
+    # where how_to_comb = {'flam' : 'mean', 'flam_u' : 'sum', 'wave' : 'mean'}
+    newdf.set_index(bincol, inplace=True, drop=False)
+    return(newdf)
 
 def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linecen, Nredmax=600, isabs=True) :
     # Find the edges of an absorption line, when it crosses the continuumm for the Nover-th time.
