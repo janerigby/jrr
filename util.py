@@ -28,9 +28,11 @@ def sigma_adivb_df(df, cola, colsiga, colb, colsigb) :  # convenience function f
     
 def add_in_quad(array, axis=0) :
     # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
-    quad_sum = np.sqrt( np.sum((array**2), axis=axis))
-    return (quad_sum)
-    
+    return( np.sqrt( np.sum((array**2), axis=axis)) )
+
+def convenience1(df) : # uncertainties get smaller when binning
+    return( df.median() / np.sqrt(np.count_nonzero(df)) )  # Still working on this. **
+
 def mad(data):
     return median_absolute_deviation(data)
 
