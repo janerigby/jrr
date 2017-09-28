@@ -282,7 +282,7 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
         smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
         sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
         sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
-        print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
+        #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
         return(smooth1, smooth2) 
 
 ## Normalization methods.  Currently used in mage_stack_redo.py
