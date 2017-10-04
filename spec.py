@@ -301,7 +301,7 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
         print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
         return(smooth1, smooth2) 
 
-## Normalization methods.  Currently used in mage_stack_redo.py
+## Normalization methods.
 
 def byspline_norm_func(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
     # Normalization method by the spline fit continuum
