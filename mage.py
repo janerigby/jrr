@@ -31,7 +31,13 @@ def longnames(mage_mode) :
     longnames['longname'] = longnames['longname'].str.replace("_", " ")
     longnames.set_index("short_label", inplace=True, drop=True)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
     return(longnames)
-             
+
+def prettylabel_from_shortlabel(short_label) :  # For making plots
+    temp = re.sub('Horseshoe', 'Cosmic Horseshoe SE', re.sub('-fnt', ' faint tail', re.sub('~',' ', short_label)))
+    temp2 = re.sub("rcs0327-", "RCS0327 Knot ", ( re.sub("rcs0327-counterarc", "RCS0327 counterarc", temp)))
+    temp3 = re.sub("^S", "SGAS J",    re.sub("-bright", "bright", temp2))
+    return ( re.sub("-", r'$-$', temp3))
+
 def getpath(mage_mode) : 
     ''' Haqndle paths for python MagE scripts.  Two use cases:
     A) I am on satchmo, & want to use spectra in  /Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/
@@ -237,7 +243,8 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     dresoln:   dictionary of uncertainty in resolutions (float)
     LL:        dictionary of pandas dataframes of linelists
     zz_syst:   dictionary of systemic redshifts (float)
-    speclist:  pandas dataframe describing the spectra (from getlist or variants)'''
+    speclist:  pandas dataframe describing the spectra (from getlist or variants)
+    MWdr:      use the Milky Way dereddened spectra?  YES YOU WANT THIS.  Default=False for backward compatability'''
     if not silent: print("Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth.")
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
@@ -717,8 +724,8 @@ def read_shapley_composite() :
 
 def read_our_COS_stack(resoln="full") :
     (specpath, linepath) = getpath("released")
-    if resoln   == "matched_mage" : infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum_R3500.csv"
-    elif resoln == "full"         : infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum_R2E4.csv"
+    if resoln   == "matched_mage" : infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum_R3300.csv"
+    elif resoln == "full"         : infile = specpath + "../Contrib/Chisholm16/raw/stacked_COS_spectrum_R1.4E4.csv"
     else : raise Exception("resoln must be full or matched_mage")
     df = pandas.read_csv(infile)
     df['rest_fnu'] = df['fweightavg']     # Kludge to make multipanel-stacks.py plot it
