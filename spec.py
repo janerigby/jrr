@@ -345,6 +345,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
         nf_u[ii] = np.ma.masked_invalid(rebin_spec_new(ma_spec[colwave], ma_spec[colfu], stacked[colwave], return_masked=True))  # uncertainty on above
     nf[ :,  0:2].mask = True  # mask the first 2 and last 2 pixels  of each spectrum
     nf[ :, -2:].mask = True
+    ## NEED TO HAVE IT USE THE COLMASK, IF DEFINED.
         # Is rebinning handling the uncertainties correctly?
     stacked[pre+'sum']    = np.ma.sum(nf, axis=0)
     stacked[pre+'sum_u']  = util.add_in_quad(nf_u, axis=0)
