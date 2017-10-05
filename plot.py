@@ -244,8 +244,8 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     # Set up the wavelength ranges.  Each panel has same # of pixels, not same dlambda, since dispersion may change.
     if not len(waverange) in (0, 2) : raise Exception("Error: len(waverange) must be 0 or 2")
     if len(waverange) :  # If user selected wavelength range, modify index, but keep same # of pixels per panel
-        first_index = the_dfs[0][the_dfs[0]['wave'].between(waverange[0], waverange[0]*1.01)]['wave'].index[0]
-        last_index  = the_dfs[0][the_dfs[0]['wave'].between(waverange[1], waverange[1]*1.01)]['wave'].index[-1]
+        first_index = the_dfs[0][the_dfs[0][colwave].between(waverange[0], waverange[0]*1.01)][colwave].index[0]
+        last_index  = the_dfs[0][the_dfs[0][colwave].between(waverange[1], waverange[1]*1.01)][colwave].index[-1]
     else : 
         first_index = 0
         last_index  = len(the_dfs[0][colwave])-1

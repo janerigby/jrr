@@ -408,7 +408,7 @@ def plot_1line_manyspectra(line_cen, line_label, win, vel_plot=True, mage_mode="
     suptitle:     (optional) plot line label as super title?
 '''    
     if len(specs) == 0 :
-        (specs) = getlist_wcont(mage_mode)  # Default grabs all MagE spectra w continuum fits
+        specs = wrap_getlist(mage_mode, which_list="wcont", MWdr=True)
     Nspectra = len(specs)
     Ncol = 1
     Nrow = np.ceil(Nspectra / Ncol)  # Calculate how many rows to generate
