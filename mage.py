@@ -256,8 +256,8 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     
 def get_S99_path(MWdr=True) :  # Get path for S99
     (spec_path, line_path) = getpath("released")
-     if MWdr :      S99path = spec_path + "../Contrib/S99/MW_Corrected/"
-     else    :      S99path = spec_path + "../Contrib/S99/New_right_flam/"
+    if MWdr :      S99path = spec_path + "../Contrib/S99/MW_Corrected/"
+    else    :      S99path = spec_path + "../Contrib/S99/New_right_flam/"
     return(S99path)
     
 def getfullname_S99_spectrum(rootname, MWdr=True) : # Check whether a S99 spectrum exists
