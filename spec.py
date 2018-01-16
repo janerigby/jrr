@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     '''Calculate the dispersion for a pandas dataframe
     Inputs: spectrum dataframe, column to write dispersion, column to read wavelength'''
-    sp[coldisp] = sp[colwave].diff()  # dispersion, in Angstroms
+    sp[coldisp] = sp[colwave].diff().abs()  # dispersion, in Angstroms
     sp[coldisp].iloc[0] = sp[coldisp][1] # first value will be nan
     return(0)
 
