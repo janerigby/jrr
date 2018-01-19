@@ -2,6 +2,7 @@
 instrument-specific should go here.  jrigby, May 2016'''
 
 import operator  # Needed to get absorption/emission signs right for find_edges_of_line()
+import warnings
 from jrr import util
 from astropy.wcs import WCS
 from astropy.io import fits
@@ -15,6 +16,29 @@ from astropy.stats import sigma_clip
 from astropy import constants
 import astropy.convolution
 from matplotlib import pyplot as plt
+
+def calz_unred(wave, flux, ebv, R_V=4.05):    # pythonified version of idlutil calz_unred
+    # rest wave units are Angstroms.  ebv is for the stars, following note in idutil calz_unred, which implements Calzetti 2000 attenuation
+    w1 = np.where((wave >= 6300.) * (wave <= 22000.))[0]
+    w2 = np.where((wave >= 912.) * (wave < 6300.))[0]
+    x = 10000.0/wave # Wavelength in inverse microns
+    print "DEBUGGING", len(w1), len(w2), len(wave), len(w1)+len(w2)
+    if len(w1) + len(w2) != len(wave):
+        warnings.warn('Warning - some elements of wavelength vector outside valid domain')
+        print('Warning - some elements of wavelength vector outside valid domain')
+    flux[(wave < 912) + (wave > 22000)] = np.NaN
+    klam = flux*0.0
+    if len(w1) > 0:   klam[w1] = 2.659*(-1.857 + 1.040*x[w1]) + R_V
+    if len(w2) > 0:   klam[w2] = 2.659 * np.poly1d([-2.156, 1.509, -0.198, 0.011][::-1])(x[w2]) + R_V
+    funred = flux * 10.0**(0.4 * klam * ebv)
+    return(funred)
+
+def calz_unred_df(sp, ebv, R_V=4.05, colwave='rest_wave', colf='rest_fnu', coldered='') :  #pandas wrapper for calz_unred
+    funred = calz_unred(sp[colwave], sp[colf], ebv, R_V)
+    if len(coldered)==0 : coldered=colf + "_dered"
+    sp[coldered] = funred
+    return(0)
+    
 
 def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     '''Calculate the dispersion for a pandas dataframe

@@ -609,15 +609,17 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     if colcontu in sp.keys() : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
     return(0)
 
-def deredden_internal_extinction(sp, this_ebv, colcont) :  # Removing internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti 
+def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, colwave='rest_wave') :
+    # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti
+    sp_filt = sp.loc[sp[colwave].between(1200,20000)]
     Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
     Av = -1 * Rv * this_ebv  # stupidity w .Series and .as_matrix() is bc extinction package barfs on pandas. pandas->np->pandas
-    sp['rest_fnu_dered']    = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp['rest_fnu'].astype('float64').as_matrix()))
-    sp['rest_fnu_u_dered']  = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp['rest_fnu_u'].astype('float64').as_matrix()))
-    sp['rest_cont_dered']   = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp[colcont].astype('float64').as_matrix()))
-    sp['rest_cont_u_dered'] = pandas.Series(extinction.apply(extinction.calzetti00(sp['rest_wave'].astype('float64').as_matrix(), Av, Rv), sp[colcont + '_u'].astype('float64').as_matrix()))        
-    return(0)  # This routine needs testing
-
+    colfout = colf + "_dered"
+    coluout = colu + "_dered"
+    sp[colfout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').as_matrix(), Av, Rv, unit='aa'), sp[colf].astype('float64').as_matrix()))
+    if deredden_uncert :
+        sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').as_matrix(), Av, Rv, unit='aa'), sp[colu].astype('float64').as_matrix()))
+    return(0) 
 
 # Routines to read in spectra from the literature
 

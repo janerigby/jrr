@@ -19,8 +19,10 @@ color3 = '0.5'   # color for continuum
 
 def annotate_from_dataframe(df, xcol='x', ycol='y', text='label') :
     # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: feed it a dataframe.
-    for row in df.itertuples():
-        plt.annotate(row.text, xy=(row.xcol, row.ycol), xycoords='data', xytext=(4,3), textcoords="offset points")
+#    for row in df.itertuples():
+#        plt.annotate(row.text, xy=(row.xcol, row.ycol), xycoords='data', xytext=(4,3), textcoords="offset points")
+    for index, row in df.iterrows():
+         plt.annotate(row[text], xy=(row[xcol], row[ycol]), xycoords='data', xytext=(4,3), textcoords="offset points")
     return(0)
 
 def standard_colors1():
