@@ -35,7 +35,8 @@ def longnames(mage_mode) :
 def prettylabel_from_shortlabel(short_label) :  # For making plots
     temp = re.sub('Horseshoe', 'Cosmic Horseshoe SE', re.sub('-fnt', ' faint tail', re.sub('~',' ', short_label)))
     temp2 = re.sub("rcs0327-", "RCS0327 Knot ", ( re.sub("rcs0327-counterarc", "RCS0327 counterarc", temp)))
-    temp3 = re.sub("^S", "SGAS J",    re.sub("-bright", "bright", temp2))
+    if re.match("SPT", temp2) :  temp3 = temp2
+    else :    temp3 = re.sub("^S", "SGAS J",    re.sub("-bright", "bright", temp2))
     return ( re.sub("-", r'$-$', temp3))
 
 def getpath(mage_mode) : 
@@ -110,7 +111,7 @@ def getlist(mage_mode, optional_file=False, zchoice='stars', MWdr=True) :
 
 def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=False, labels=(), zchoice='stars', MWdr=True) :
     ''' Wrapper for getlist above.  Get list of MagE spectra and redshifts, for subsets.'''
-    if which_list == "wcont" :      # Get those w continuum fit.
+    if which_list == "wcont" :      # Get those w jane's bespoke continuum fit.
         pspecs = getlist(mage_mode, zchoice=zchoice, MWdr=MWdr) 
         speclist =   pspecs[pspecs['filename'].str.contains('combwC1')]  # only w continuum
         if drop_s2243 :          # Drop S2243 bc it's an AGN
