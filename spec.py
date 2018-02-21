@@ -210,8 +210,10 @@ def onegaus(x, aa, bb, cc, cont): # Define a Gaussian with linear continuum
 
 def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line.  Uses Pandas
     # guess_pars are the initial guess at the Gaussian.
-    popt, pcov = curve_fit(onegaus, sp[colwave], sp[colf], p0=guess_pars)
-    fit = onegaus(sp[colwave], *popt)
+    if colwave == "index" : xvar = sp.index
+    else                  : xvar = sp[colwave]
+    popt, pcov = curve_fit(onegaus, xvar, sp[colf], p0=guess_pars)
+    fit = onegaus(xvar, *popt)
     return(popt, fit)
 
 def fit_gaussian_fixedcont(sp, guess_pars, contlevel=0.0, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line, continuum fixed.
