@@ -6,3 +6,4 @@ import plot
 import peakdet
 import barycen
 import query_argonaut
+import bpass
