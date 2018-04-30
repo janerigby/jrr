@@ -253,7 +253,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     for label in speclist.index :
         if verbose: print "Loading  ", label
         (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice, MWdr=MWdr)
-    return(sp, resoln, dresoln, LL, zz_sys, speclist)
+    return(sp, resoln, dresoln, LL, zz_sys, speclist)  # returns dictionaries for first 5 things, and the speclist
     
 def get_S99_path(MWdr=True) :  # Get path for S99
     (spec_path, line_path) = getpath("released")

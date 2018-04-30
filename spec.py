@@ -137,6 +137,14 @@ def make_wavearray_constant_resoln(wavelo, wavehi, R, p=2, asSeries=False) :
     if asSeries: return pandas.Series(wave)
     else :       return(wave)
 
+def freq2wave(freq, units='micron/s') : # convert frequency in Hz to wavelength, by default in micron
+     A_c = constants.c.to(units).value
+     return ( A_c / freq)
+ 
+def wave2freq(wave, units='micron/s') : # convert wavelength (default in micron) to frequency in Hz
+     A_c = constants.c.to(units).value
+     return ( A_c / wave)
+
 def fnu2flam(wave, fnu) :
     '''Convert fnu (in erg/s/cm^2/Hz) to flambda (in erg/s/cm^2/A). Assumes wave in Angstroms.'''
     A_c = constants.c.to('cm/s').value
@@ -267,7 +275,7 @@ def test_wave_in_spectrum(sp, linecen, colwave='wave') : # Is given wavelength l
 # Below are functions to automatically fit a smooth continuum to a spectrum.  Generalized from jrr.mage
 
 def get_boxcar4autocont(sp, smooth_length=100.) :
-    # Helper function for fit_autocont().  For the given input spectrum, finds of pixels that
+    # Helper function for fit_autocont().  For the given input spectrum, finds the number of pixels that
     # corresponds to smooth_length in rest-frame Angstroms.  This will be the boxcar smoothing length.
     # target is in rest-frame Angstroms.  Default is 100 A, which works well for MagE spectra.
     return(np.int(util.round_up_to_odd(smooth_length / sp.rest_disp.median())))  # in pixels
