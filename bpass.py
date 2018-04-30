@@ -24,7 +24,7 @@ def load_spectra(filename) :  # Loads spectra for all ages.  1st col is waveleng
     df_bpass = pandas.read_table(bpassdir + filename, header=None, delim_whitespace=True, names=['wave'] + df_age['colname'].tolist())
     return(df_bpass) 
 
-def load_1spectrum(filename, age_to_find) : #Streamline version of above, just loads 1 age.  Faster.  Uses filename
+def load_1spectrum(filename, age_to_find) : #Streamline version of above, just loads 1 age (units=yr)  Faster.  Uses filename
     bpassdir = model_dir()
     closest_age = find_closest_age(age_to_find)
     #print "DEBUG, closest age was", closest_age
@@ -33,12 +33,12 @@ def load_1spectrum(filename, age_to_find) : #Streamline version of above, just l
     df_bpass = pandas.read_table(bpassdir + filename, header=None, delim_whitespace=True, usecols=usecols, names=names)
     return(df_bpass)
     
-def wrap_load_1spectrum(Z, age, style, IMFdir='BPASSv2.1_imf135_100/') :  #uses parameters rather than filenames
+def wrap_load_1spectrum(Z, age, style, IMFdir='BPASSv2.1_imf135_100/') :  #uses parameters rather than filenames. Units of age are years.
     # filename should look like 'BPASSv2.1_imf135_100/spectra.z020.dat.gz'
     if 'binary' in style   : fileroot = 'spectra-bin'
     elif 'single' in style : fileroot = 'spectra'
     else : raise Exception("Misparsed style")
     filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
-    print "    DEBUGGING filename in bpass.py, filename", filename
+    #print "    DEBUGGING filename in bpass.py, filename", filename
     df_bpass2 = load_1spectrum(filename, age)
     return(df_bpass2)  # call as wrap_load_1spectrum('020', 1E6, -2.0, "BPASS_single")
