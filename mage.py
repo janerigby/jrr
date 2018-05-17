@@ -13,7 +13,6 @@ import glob
 from subprocess import check_output   # Used for grepping from files
 from   astropy.io import fits
 import astropy.convolution
-import extinction
 from astropy.wcs import WCS
 
 color1 = 'k'     # color for spectra
@@ -596,31 +595,6 @@ def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deriv
         sp['rest_flam_autocont'] = pandas.Series(rest_flam)
     return(0)
 
-def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :
-    #print "Dereddening Milky Way extinction"
-    Rv = 3.1
-    Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
-    print "jrr.mage.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW
-    #sp['oldfnu'] = sp[colf]  # Debugging
-    MW_extinction = extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv)
-    sp['MWredcor'] = 10**(-0.4 * MW_extinction)
-    sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').as_matrix()))
-    sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').as_matrix()))
-    if colcont in sp.keys() :  sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
-    if colcontu in sp.keys() : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
-    return(0)
-
-def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, colwave='rest_wave') :
-    # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti
-    sp_filt = sp.loc[sp[colwave].between(1200,20000)]
-    Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
-    Av = -1 * Rv * this_ebv  # stupidity w .Series and .as_matrix() is bc extinction package barfs on pandas. pandas->np->pandas
-    colfout = colf + "_dered"
-    coluout = colu + "_dered"
-    sp[colfout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').as_matrix(), Av, Rv, unit='aa'), sp[colf].astype('float64').as_matrix()))
-    if deredden_uncert :
-        sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').as_matrix(), Av, Rv, unit='aa'), sp[colu].astype('float64').as_matrix()))
-    return(0) 
 
 # Routines to read in spectra from the literature
 
