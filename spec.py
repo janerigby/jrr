@@ -302,6 +302,7 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     return(0)
 
 # When most of the spectrum is contaminated, and only a few regions have good continuum, define good cont regions directly, rather than by flagging lines
+# Nothing uses this yet.  Wrote it for grism, but then decided to fit continuum manually using XIDL's x_continuum 
 def flag_good_contregions(sp, good_lo, good_hi, colwave='wave', colmask='contmask') :
     temp_wave = np.array(sp[colwave])
     temp_mask = np.ones_like(temp_wave).astype(np.bool)     # By default, spectrum is flagged as not suitable for fitting continuum
