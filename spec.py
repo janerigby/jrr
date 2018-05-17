@@ -301,10 +301,19 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     sp[colmask] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
     return(0)
 
-def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont', newfunc='median') : 
+# When most of the spectrum is contaminated, and only a few regions have good continuum, define good cont regions directly, rather than by flagging lines
+def flag_good_contregions(sp, good_lo, good_hi, colwave='wave', colmask='contmask') :
+    temp_wave = np.array(sp[colwave])
+    temp_mask = np.ones_like(temp_wave).astype(np.bool)     # By default, spectrum is flagged as not suitable for fitting continuum
+    for ii in range(0, len(good_lo)) :    
+        temp_mask[np.where( (temp_wave > good_lo[ii]) & (temp_wave < good_hi[ii]))] = False   # Remove flag. These parts of spectra can be fit w cont
+    sp[colmask] = temp_mask  # Using temp numpy arrays is much faster than writing repeatedly to the pandas data frame
+    return(0)
+
+def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, colwave='wave', colf='fnu', colmask='contmask', colcont='fnu_autocont') : 
     ''' Automatically fits a smooth continuum to a spectrum.  Generalized from mage version
      Inputs:  sp,  a Pandas data frame containing the spectra, 
-              LL,  a Pandas data frame containing the linelist, opened by mage.get_linelist(linelist) or similar
+              LL,  a Pandas data frame containing the linelist to mask, opened by mage.get_linelist(linelist) or similar
               zz,  the systemic redshift. Used to set window threshold around lines to mask
               colv2mask,  column containing velocity +- to mask each line,, km/s. 
               boxcar,   size of the boxcar smoothing window, in pixels
@@ -325,6 +334,7 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
     sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
     #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
     return(smooth1, smooth2) 
+
 
 ## Normalization methods.
 
