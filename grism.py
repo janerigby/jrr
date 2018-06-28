@@ -48,3 +48,12 @@ def get_MWreddening_S1723(internet=True) :
         val2return = EBV_Green2015.values()[0]
     else: val2return = 0.03415 # Stashed EBV -- temp solution while no internet on train
     return(val2return)
+
+
+def get_grism_info(which_grism) :
+    # R is FWHM, for a pt source.  For extended source will be morphologically broadened
+    # wave_unc is relative wavelength uncertainty, in Angstroms, from wfc3 data handbook, S9.4.8
+    if   which_grism == 'G141' :   grism_info = {'R':130., 'x1':11000., 'x2':16600., 'wave_unc':9.}
+    elif which_grism == 'G102' :   grism_info = {'R':210., 'x1': 8000., 'x2':11500., 'wave_unc':6. }
+    else : error_unknown_grism(which_grism)
+    return(grism_info)
