@@ -9,15 +9,16 @@ from matplotlib import pyplot as plt
 import pandas
 
 
-def wrap_fit_continuum(sp, LL, zz, boxcar, colwave='wave', colf='flam_cor', colfu='flam_u_cor', colcont='flamcor_autocont', label="") :
+def wrap_fit_continuum(sp, LL, zz, boxcar, colwave='wave', colf='flam_cor', colfu='flam_u_cor', colcont='flamcor_autocont', label="", makeplot=True) :
     (smooth1, smooth2) =  spec.fit_autocont(sp, LL, zz, boxcar=boxcar, colf=colf,  colcont=colcont)
     notmasked = sp[~sp['contmask']]
-    plt.plot(sp[colwave],  sp[colf],    color='green', label=label)
-    plt.plot(notmasked[colwave],  notmasked[colfu],   color='lightgreen')
-    plt.plot(sp[colwave],  sp['contmask']*sp[colf].median(),   color='orange', label='masked')
-    plt.plot(sp[colwave],  sp[colcont], color='k', label='Auto continuum fit')
-    plt.ylim(sp[colf].median() * -0.1, sp[colf].median() * 5)
-    plt.legend()
+    if makeplot: 
+        plt.plot(sp[colwave],  sp[colf],    color='green', label=label)
+        plt.plot(notmasked[colwave],  notmasked[colfu],   color='lightgreen')
+        plt.plot(sp[colwave],  sp['contmask']*sp[colf].median(),   color='orange', label='masked')
+        plt.plot(sp[colwave],  sp[colcont], color='k', label='Auto continuum fit')
+        plt.ylim(sp[colf].median() * -0.1, sp[colf].median() * 5)
+        plt.legend()
     return(smooth1, smooth2)
 
 def load_linelists(linelistdir, zz, vmask=500.) :
@@ -25,7 +26,7 @@ def load_linelists(linelistdir, zz, vmask=500.) :
     LL_opt = pandas.read_table(linelistdir + "rest_optical_emission_linelist_short.txt", delim_whitespace=True, comment="#")
     (spec_path, line_path) = mage.getpath('released')
     (LL_temp, zz_notused) =  mage.get_linelist(line_path + 's1723.linelist')
-    LL_uvabs = LL_temp.loc[LL_temp['type'].eq("ISM")]  # This already has redshift from .linelist.  may be out of synch****
+    LL_uvabs = LL_temp.loc[LL_temp['type'].eq("ISM")].copy(deep=True)  # This already has redshift from .linelist.  may be out of synch****
     LL_uv['zz']  = zz  ;   LL_opt['zz'] = zz   # Load the redshift
     LL_uv.sort_values( by='restwav', inplace=True)
     LL_opt.sort_values(by='restwav', inplace=True)

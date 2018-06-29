@@ -227,7 +227,6 @@ def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0.) : # G
 
 def fit_gaussian_fixedcont(sp, guess_pars, contlevel=0.0, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line, continuum fixed.
     popt, pcov = curve_fit((lambda x, aa, bb, cc: onegaus(x, aa, bb, cc, contlevel)), sp[colwave], sp[colf], p0=guess_pars)
-    print "DEBUGGING", popt
     popt = np.append(popt, contlevel)
     fit = onegaus(sp[colwave], *popt)
     return(popt, fit)
