@@ -40,8 +40,8 @@ def load_1spectrum(filename, age_to_find, ver='2.1') : #Streamline version of ab
 def wrap_load_1spectrum(Z, age, style, ver='2.1') :  #uses parameters rather than filenames. Units of age are years.
     if 'binary' in style   : fileroot = 'spectra-bin'
     elif 'single' in style :
-        if      ver=='2.1' : fileroot = 'spectra'
-        elif if ver=='2.2' : fileroot = 'spectra-sin'
+        if    ver=='2.1' : fileroot = 'spectra'
+        elif  ver=='2.2' : fileroot = 'spectra-sin'
     else : raise Exception("Misparsed style")
     IMFdir = default_filenames(ver=ver)[0]
     filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
