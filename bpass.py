@@ -5,9 +5,15 @@ def model_dir(ver='2.1') : # Set this to where your models are
     if    ver=='2.1' :   return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.1/')
     elif  ver=='2.2' :   return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.2/')
 
-def default_filenames(ver='2.1') : # Default directory, model rootnames.  Default models, also what John wants for consistency w S99.
-    if    ver=='2.1' :   return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst')  # dir, model_rootname
-    elif  ver=='2.2' :   return ('BPASSv2.2_bin-imf135_100/', 'BPASSv2p2_imf135_100_burst')  # NOT TESTED YET
+def default_filenames(ver='2.1', style='binary') : # Default directory, model rootnames.  Default models, also what John wants for consistency w S99.
+    if ver=='2.1' and 'binary' in style :
+        return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst_binary')  # dir, model_rootname
+    if ver=='2.1' and 'single' in style :
+        return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst_single')  # dir, model_rootname
+    if ver=='2.2' and 'binary' in style :
+        return ('BPASSv2.2_bin-imf135_100/', 'BPASSv2p2_bin-imf135_100_burst_binary')  # NOT TESTED YET
+    if ver=='2.2' and 'single' in style :
+        return ('BPASSv2.2_sin-imf135_100/', 'BPASSv2p2_sin-imf135_100_burst_single')  # NOT TESTED YET
 
 def ages_setup() :  # Create a pandas dataframe of ages and column names ('coln'), as in BPASS v2.1 manual.  Same for v2.2
     df_age = pandas.DataFrame([ 10**(6+0.1*(n-2)) for n in range(2,52+1)], columns=('age',))
