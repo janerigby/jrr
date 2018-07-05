@@ -49,8 +49,10 @@ def wrap_load_1spectrum(Z, age, style, ver='2.1') :  #uses parameters rather tha
         if    ver=='2.1' : fileroot = 'spectra'
         elif  ver=='2.2' : fileroot = 'spectra-sin'
     else : raise Exception("Misparsed style")
-    IMFdir = default_filenames(ver=ver)[0]
-    filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
+    IMFdir = default_filenames(ver=ver, style=style)[0]
+    middlebit_v22 = '-imf135_100'
+    if   ver=='2.1' :  filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
+    elif ver=='2.2' :  filename = IMFdir + fileroot + middlebit_v22 + '.z' + Z + '.dat.gz'
     #print "    DEBUGGING filename in bpass.py, filename", filename
-    df_bpass2 = load_1spectrum(filename, age)
+    df_bpass2 = load_1spectrum(filename, age, ver=ver)
     return(df_bpass2)  # call as wrap_load_1spectrum('020', 1E6, -2.0, "BPASS_single")
