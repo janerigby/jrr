@@ -3,6 +3,7 @@
 from jrr import spec
 from jrr import mage
 from jrr import query_argonaut
+from re import search
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from matplotlib import pyplot as plt
@@ -58,3 +59,8 @@ def get_grism_info(which_grism) :
     elif which_grism == 'G102' :   grism_info = {'R':210., 'x1': 8000., 'x2':11500., 'wave_unc':6. }
     else : error_unknown_grism(which_grism)
     return(grism_info)
+
+def parse_filename(grism_filename) :
+    m = search('(\S+)_(\S+)_(\S+)_(\S+)_(\S+)', grism_filename)
+    mydict = { 'gname': m.group(1), 'descrip': m.group(2), 'roll': m.group(3),  'grating': m.group(4), 'suffix': m.group(5)}
+    return(mydict)
