@@ -6,6 +6,7 @@ from jrr import query_argonaut
 from re import search
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+from numpy import sqrt
 from matplotlib import pyplot as plt
 import pandas
 
@@ -64,3 +65,11 @@ def parse_filename(grism_filename) :
     m = search('(\S+)_(\S+)_(\S+)_(\S+)_(\S+)', grism_filename)
     mydict = { 'gname': m.group(1), 'descrip': m.group(2), 'roll': m.group(3),  'grating': m.group(4), 'suffix': m.group(5)}
     return(mydict)
+
+def half_the_flux(sp, colf='flam', colfu='flam_u', colcont='cont') :
+    # Michael's "bothrolls" 1D extractions for S1723 have flux x2 too high bc summed over both rolls.
+    #So, divide by 2, propogate errors.
+    sp[colf]    /= 2.
+    sp[colcont] /= 2.    
+    sp[colfu]   /= sqrt(2)
+    return(0)
