@@ -2,6 +2,7 @@
 # Used by S1723_working.py, grism_fitcont.py, grism_fit_spectra_v4.py
 from jrr import spec
 from jrr import mage
+from jrr import util
 from jrr import query_argonaut
 from re import search
 from astropy.coordinates import SkyCoord
@@ -70,4 +71,12 @@ def half_the_flux(sp, colf='flam', colfu='flam_u', colcont='cont') :
     sp[colf]    /= 2.
     sp[colcont] /= 2.    
     sp[colfu]   /= sqrt(2)
+    return(0)
+
+def measure_linerats(fitfiles, fitdir, line1, line2, verbose=False) :  # given a list of fits files, return line ratios
+    for fitfile in fitfiles :
+        df = pandas.read_csv(fitdir + fitfile, comment="#")
+        (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df, line1, line2)
+        if verbose:  print fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2
+        else :       print fitfile, fluxrat, dfluxrat    
     return(0)

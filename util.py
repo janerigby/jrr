@@ -141,3 +141,23 @@ def convert_RADEC_GalEclip_df(df, colra='RA', coldec='DEC') :
     df['Ecl_lon'] = templon
     df['Ecl_lat'] = templat
     return(0)  # acts on the dataframe
+
+
+### Basic pandas list handling
+
+def getval_or_nan(expression, place=0) :   # convenience function, better error handling 
+    # Returns value if series is nonzzero, present, else return NaN
+    if len(expression) : return expression.values[place]
+    else               : return np.nan
+
+def linerat_from_df(df, linename1, linename2, colname='linename', colf='flux', colfu='flux_u') :
+    # Given a data frame of fluxes calculate flux ratio.  linename1 may be 'Hbeta'
+    flux1  = getval_or_nan(df.loc[df[colname].eq(linename1)][colf])
+    flux2  = getval_or_nan(df.loc[df[colname].eq(linename2)][colf])
+    dflux1 = getval_or_nan(df.loc[df[colname].eq(linename1)][colfu])
+    dflux2 = getval_or_nan(df.loc[df[colname].eq(linename2)][colfu])
+    fluxrat  = flux1/flux2
+    dfluxrat = sigma_adivb(flux1, dflux1, flux2, dflux2)
+    return(flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat)
+
+        
