@@ -1,5 +1,5 @@
 # Useful functions for dealing w HST grism spectra.  Started for S1723
-# Used by S1723_working.py, grism_fitcont.py.
+# Used by S1723_working.py, grism_fitcont.py, grism_fit_spectra_v4.py
 from jrr import spec
 from jrr import mage
 from jrr import query_argonaut
@@ -9,7 +9,6 @@ from astropy import units as u
 from numpy import sqrt
 from matplotlib import pyplot as plt
 import pandas
-
 
 def wrap_fit_continuum(sp, LL, zz, boxcar, colwave='wave', colf='flam_cor', colfu='flam_u_cor', colcont='flamcor_autocont', label="", makeplot=True) :
     (smooth1, smooth2) =  spec.fit_autocont(sp, LL, zz, boxcar=boxcar, colf=colf,  colcont=colcont)
@@ -52,7 +51,6 @@ def get_MWreddening_S1723(internet=True) :
     else: val2return = 0.03415 # Stashed EBV -- temp solution while no internet on train
     return(val2return)
 
-
 def get_grism_info(which_grism) :
     # R is FWHM, for a pt source.  For extended source will be morphologically broadened
     # wave_unc is relative wavelength uncertainty, in Angstroms, from wfc3 data handbook, S9.4.8
@@ -68,7 +66,7 @@ def parse_filename(grism_filename) :
 
 def half_the_flux(sp, colf='flam', colfu='flam_u', colcont='cont') :
     # Michael's "bothrolls" 1D extractions for S1723 have flux x2 too high bc summed over both rolls.
-    #So, divide by 2, propogate errors.
+    #So, divide flux by 2, and drop uncertainties by root-2.
     sp[colf]    /= 2.
     sp[colcont] /= 2.    
     sp[colfu]   /= sqrt(2)
