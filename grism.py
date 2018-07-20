@@ -4,12 +4,14 @@ from jrr import spec
 from jrr import mage
 from jrr import util
 from jrr import query_argonaut
-from re import search
+from re import search, sub
+from os.path import exists
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from numpy import sqrt
 from matplotlib import pyplot as plt
 import pandas
+
 
 def wrap_fit_continuum(sp, LL, zz, boxcar, colwave='wave', colf='flam_cor', colfu='flam_u_cor', colcont='flamcor_autocont', label="", makeplot=True) :
     (smooth1, smooth2) =  spec.fit_autocont(sp, LL, zz, boxcar=boxcar, colf=colf,  colcont=colcont)
@@ -73,10 +75,29 @@ def half_the_flux(sp, colf='flam', colfu='flam_u', colcont='cont') :
     sp[colfu]   /= sqrt(2)
     return(0)
 
-def measure_linerats(fitfiles, fitdir, line1, line2, verbose=False) :  # given a list of fits files, return line ratios
+def measure_linerats_fromfiles(fitfiles, fitdir, line1, line2, verbose=False) :  # given a list of fits files, return line ratios
     for fitfile in fitfiles :
         df = pandas.read_csv(fitdir + fitfile, comment="#")
         (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df, line1, line2)
         if verbose:  print fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2
         else :       print fitfile, fluxrat, dfluxrat    
+    return(0)
+
+def measure_linerats_usebothgrisms(G102fitfiles, fitdir, line1='Halpha_G141', line2='Hbeta_G102', verbose=False) : #As above, but use both grisms
+    for G102fitfile in G102fitfiles :
+        temp2 = sub("G102", "G141", G102fitfile)
+        temp1 = sub('2.fitdf', '1.fitdf', temp2)
+        if exists(fitdir + temp2)   : G141fitfile = temp2
+        elif exists(fitdir + temp1) : G141fitfile = temp1
+        else : raise Exception("ERROR, I cannot find a file like", temp2, temp1)
+        df1 = pandas.read_csv(fitdir + G102fitfile, comment="#")
+        df2 = pandas.read_csv(fitdir + G141fitfile, comment="#")
+        df1['linename_grism'] = df1['linename'] + '_G102'
+        df2['linename_grism'] = df2['linename'] + '_G141'
+        df1.set_index('linename_grism', inplace=True, drop=False) ;   df2.set_index('linename_grism', inplace=True, drop=False)
+        df_all = pandas.concat((df1, df2))
+        (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df_all, line1, line2, colname='linename_grism')
+        if verbose:  print G102fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2
+        else :       print G102fitfile, fluxrat, dfluxrat
+    #return(df_all) # as an example
     return(0)
