@@ -11,7 +11,7 @@ from astropy import units as u
 from numpy import sqrt
 from matplotlib import pyplot as plt
 import pandas
-
+from numpy import round 
 
 def wrap_fit_continuum(sp, LL, zz, boxcar, colwave='wave', colf='flam_cor', colfu='flam_u_cor', colcont='flamcor_autocont', label="", makeplot=True) :
     (smooth1, smooth2) =  spec.fit_autocont(sp, LL, zz, boxcar=boxcar, colf=colf,  colcont=colcont)
@@ -83,21 +83,31 @@ def measure_linerats_fromfiles(fitfiles, fitdir, line1, line2, verbose=False) : 
         else :       print fitfile, fluxrat, dfluxrat    
     return(0)
 
-def measure_linerats_usebothgrisms(G102fitfiles, fitdir, line1='Halpha_G141', line2='Hbeta_G102', verbose=False) : #As above, but use both grisms
-    for G102fitfile in G102fitfiles :
+def measure_linerats_usebothgrisms(G102fitfiles, fitdir, outfilename, line1='Halpha_G141', line2='Hbeta_G102', verbose=False) : #As above, but use both grisms
+    outfile = open(outfilename, 'a')
+    outfile.write('  '.join(("# ratio of lines: ", line1, line2, 'verbose='+str(verbose)+'\n')))
+    if verbose:  outfile.write('counter, file, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2\n')
+    else :       outfile.write('file, fluxrat, dfluxrat\n')
+    for ii, G102fitfile in enumerate(G102fitfiles) :
         temp2 = sub("G102", "G141", G102fitfile)
         temp1 = sub('2.fitdf', '1.fitdf', temp2)
-        if exists(fitdir + temp2)   : G141fitfile = temp2
-        elif exists(fitdir + temp1) : G141fitfile = temp1
-        else : raise Exception("ERROR, I cannot find a file like", temp2, temp1)
-        df1 = pandas.read_csv(fitdir + G102fitfile, comment="#")
-        df2 = pandas.read_csv(fitdir + G141fitfile, comment="#")
-        df1['linename_grism'] = df1['linename'] + '_G102'
-        df2['linename_grism'] = df2['linename'] + '_G141'
-        df1.set_index('linename_grism', inplace=True, drop=False) ;   df2.set_index('linename_grism', inplace=True, drop=False)
-        df_all = pandas.concat((df1, df2))
-        (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df_all, line1, line2, colname='linename_grism')
-        if verbose:  print G102fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2
-        else :       print G102fitfile, fluxrat, dfluxrat
+        if exists(fitdir + G102fitfile) and (exists(fitdir + temp2) or exists(fitdir + temp1)) :  # if files exist:
+            if exists(fitdir + temp2)   : G141fitfile = temp2
+            elif exists(fitdir + temp1) : G141fitfile = temp1
+            else :  outfile.write("WARNING, I cannot find a file like" + temp2 + temp1 + '\n')
+            df1 = pandas.read_csv(fitdir + G102fitfile, comment="#")
+            df2 = pandas.read_csv(fitdir + G141fitfile, comment="#")
+            df1['linename_grism'] = df1['linename'] + '_G102'
+            df2['linename_grism'] = df2['linename'] + '_G141'
+            df1.set_index('linename_grism', inplace=True, drop=False) ;   df2.set_index('linename_grism', inplace=True, drop=False)
+            df_all = pandas.concat((df1, df2))
+            (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df_all, line1, line2, colname='linename_grism')
+            (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = [round(x, 5) for x in (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat)]
+            if verbose:  outfile.write( '  '.join(str(x) for x in (ii, G102fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2, '\n')))
+            else :       outfile.write('   '.join(str(x) for x in (G102fitfile, fluxrat, dfluxrat, '\n')))
+        else :
+            if verbose : outfile.write("#Files do not exist:  " + ' '.join(str(x) for x in (temp1, temp2, '\n')))
     #return(df_all) # as an example
     return(0)
+
+# header gets written 3x  Needd to make it get written only once.  Also, ii needs to be unique; it's not.
