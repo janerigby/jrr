@@ -11,9 +11,9 @@ def default_filenames(ver='2.1', style='binary') : # Default directory, model ro
         return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst_binary')  # dir, model_rootname
     if ver=='2.1' and 'single' in style :
         return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst_single')  # dir, model_rootname
-    if ver=='2.2' and 'binary' in style :
+    if '2.2' in ver and 'binary' in style :
         return ('BPASSv2.2_bin-imf135_100/', 'BPASSv2p2_bin-imf135_100_burst_binary')  # NOT TESTED YET
-    if ver=='2.2' and 'single' in style :
+    if '2.2' in ver and 'single' in style :
         return ('BPASSv2.2_sin-imf135_100/', 'BPASSv2p2_sin-imf135_100_burst_single')  # NOT TESTED YET
 
 def ages_setup() :  # Create a pandas dataframe of ages and column names ('coln'), as in BPASS v2.1 manual.  Same for v2.2
