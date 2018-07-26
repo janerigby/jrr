@@ -2,8 +2,9 @@
 import pandas
 
 def model_dir(ver='2.1') : # Set this to where your models are
-    if    ver=='2.1' :   return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.1/')
-    elif  ver=='2.2' :   return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.2/')
+    if    ver=='2.1'   :  return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.1/')
+    elif  ver=='2.2'   :  return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.2/')
+    elif  ver=='2.2.1' :  return('/Volumes/Apps_and_Docs/JRR_Utils/BPASS_v2.2.1/')
 
 def default_filenames(ver='2.1', style='binary') : # Default directory, model rootnames.  Default models, also what John wants for consistency w S99.
     if ver=='2.1' and 'binary' in style :

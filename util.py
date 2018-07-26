@@ -61,7 +61,7 @@ def mask_nans(data) :  # return a numpy masked array, with nans masked
 
 def appendfile_if_exists_elseopenit(filename):  # If a file exists, open it as append. If it does not exist, open it for writing
     if exists(filename) :  handle = open(filename, 'a')
-        else            :  handle = open(filename, 'w')
+    else                :  handle = open(filename, 'w')
     return(handle)
 
 def split_grab(line, place) :

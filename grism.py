@@ -4,7 +4,7 @@ from jrr import spec
 from jrr import mage
 from jrr import util
 from jrr import query_argonaut
-from re import search, sub
+from re import search, sub, split
 from os.path import exists, basename
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -63,8 +63,10 @@ def get_grism_info(which_grism) :
     return(grism_info)
 
 def parse_filename(grism_filename) :
-    m = search('(\S+)_(\S+)_(\S+)_(\S+)_(\S+)(_\S+)?', grism_filename)
-    mydict = { 'gname': m.group(1), 'descrip': m.group(2), 'roll': m.group(3),  'grating': m.group(4), 'suffix': m.group(5)}
+    foo = split('_', grism_filename)
+    mydict = { 'gname': foo[0], 'descrip': foo[1], 'roll': foo[2],  'grating': foo[3]}
+    if len(foo) > 4 :  mydict['suffix']  = foo[4]
+    if len(foo) == 6:  mydict['suffix2'] = foo[5]
     return(mydict)
 
 def half_the_flux(sp, colf='flam', colfu='flam_u', colcont='cont') :
@@ -104,7 +106,9 @@ def measure_linerats_usebothgrisms(G102fitfiles, outfilename, line1='Halpha_G141
             (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df_all, line1, line2, colname='linename_grism')
             (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = [round(x, 5) for x in (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat)]
             shortname = sub("_wcontMWdr_meth2.fitdf", "", basename(G102fitfile))
-            if verbose:  outfile.write( '  '.join(str(x) for x in (ii, shortname, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2, '\n')))
+            namedict = parse_filename(shortname)
+            label = namedict['descrip'] + '-' + namedict['roll']
+            if verbose:  outfile.write( '  '.join(str(x) for x in (ii, shortname, label, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2, '\n')))
             else :       outfile.write('   '.join(str(x) for x in (shortname, fluxrat, dfluxrat, '\n')))
         else :
             if verbose : print "#Files do not exist:  " + ' '.join(str(x) for x in (basename(temp1), basename(temp2)))
