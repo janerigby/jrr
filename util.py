@@ -1,14 +1,15 @@
 ''' General-purpose utilities.  jrigby May 2016'''
 
 import numpy as np
-from   re import split, sub, search
+import subprocess
+from os.path import exists, basename
 import fileinput
+from   re import split, sub, search
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
 from astropy import units
 import scipy  
 import scikits.bootstrap as bootstrap  
-import subprocess
 
 #####  Math  #####
 
@@ -57,6 +58,11 @@ def mask_nans(data) :  # return a numpy masked array, with nans masked
     return(np.ma.masked_array(data,np.isnan(data)))
 
 #####  Handle files  #####
+
+def appendfile_if_exists_elseopenit(filename):  # If a file exists, open it as append. If it does not exist, open it for writing
+    if exists(filename) :  handle = open(filename, 'a')
+        else            :  handle = open(filename, 'w')
+    return(handle)
 
 def split_grab(line, place) :
     splitted = line.split()
