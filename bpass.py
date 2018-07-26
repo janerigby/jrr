@@ -11,10 +11,14 @@ def default_filenames(ver='2.1', style='binary') : # Default directory, model ro
         return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst_binary')  # dir, model_rootname
     if ver=='2.1' and 'single' in style :
         return ('BPASSv2.1_imf135_100/',     'BPASSv2p1_imf135_100_burst_single')  # dir, model_rootname
-    if '2.2' in ver and 'binary' in style :
-        return ('BPASSv2.2_bin-imf135_100/', 'BPASSv2p2_bin-imf135_100_burst_binary')  # NOT TESTED YET
-    if '2.2' in ver and 'single' in style :
-        return ('BPASSv2.2_sin-imf135_100/', 'BPASSv2p2_sin-imf135_100_burst_single')  # NOT TESTED YET
+    if ver=='2.2' and 'binary' in style :
+        return ('BPASSv2.2_bin-imf135_100/', 'BPASSv2p2_bin-imf135_100_burst_binary')
+    if ver=='2.2' and 'single' in style :
+        return ('BPASSv2.2_sin-imf135_100/', 'BPASSv2p2_sin-imf135_100_burst_single')
+    if ver=='2.2.1' and 'binary' in style :
+        return ('BPASSv2.2.1_bin-imf135_100/', 'BPASSv2p2p1_bin-imf135_100_burst_binary')
+    if ver=='2.2.1' and 'single' in style :
+        return ('BPASSv2.2.1_sin-imf135_100/', 'BPASSv2p2p1_sin-imf135_100_burst_single')  
 
 def ages_setup() :  # Create a pandas dataframe of ages and column names ('coln'), as in BPASS v2.1 manual.  Same for v2.2
     df_age = pandas.DataFrame([ 10**(6+0.1*(n-2)) for n in range(2,52+1)], columns=('age',))
@@ -47,13 +51,13 @@ def load_1spectrum(filename, age_to_find, ver='2.1') : #Streamline version of ab
 def wrap_load_1spectrum(Z, age, style, ver='2.1') :  #uses parameters rather than filenames. Units of age are years.
     if 'binary' in style   : fileroot = 'spectra-bin'
     elif 'single' in style :
-        if    ver=='2.1' : fileroot = 'spectra'
-        elif  ver=='2.2' : fileroot = 'spectra-sin'
+        if    ver=='2.1'   : fileroot = 'spectra'
+        elif  '2.2' in ver : fileroot = 'spectra-sin'
     else : raise Exception("Misparsed style")
     IMFdir = default_filenames(ver=ver, style=style)[0]
     middlebit_v22 = '-imf135_100'
-    if   ver=='2.1' :  filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
-    elif ver=='2.2' :  filename = IMFdir + fileroot + middlebit_v22 + '.z' + Z + '.dat.gz'
+    if   ver=='2.1'   :  filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
+    elif '2.2' in ver :  filename = IMFdir + fileroot + middlebit_v22 + '.z' + Z + '.dat.gz'
     #print "    DEBUGGING filename in bpass.py, filename", filename
     df_bpass2 = load_1spectrum(filename, age, ver=ver)
     return(df_bpass2)  # call as wrap_load_1spectrum('020', 1E6, -2.0, "BPASS_single")
