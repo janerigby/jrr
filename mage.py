@@ -23,6 +23,17 @@ color4 = 'b'     # color for 2nd spectrum, for comparison
 def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
     return(1267.0, 1276.0)  # These are rest wavelengths, in Angstroms
 
+def organize_labels(group) :
+    # Batch1 is what is published in Rigby et al. 2018.  Batch2 is what was processed by Feb 2018.  Batch 3 was processed Dec 2018
+    batch1  = ('rcs0327-B', 'rcs0327-E', 'rcs0327-G', 'rcs0327-U', 'rcs0327-counterarc', 'S0004-0103', 'S0033+0242', 'S0108+0624', 'S0900+2234')
+    batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
+    batch2 = ('planckarc_pos1', 'planckarc_slit4a', 'planckarc_slit4bc', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
+    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
+    if group   == 'batch1' : return(batch1)
+    elif group == 'batch2' : return(batch2)
+    elif group == 'batch3' : return(batch3)
+    else : raise Exception("Error: label group unrecognized, not batch1, batch2, batch3.")
+
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
     thefile = spec_path + "dict_longnames.txt"
@@ -117,8 +128,9 @@ def wrap_getlist(mage_mode, which_list="wcont", drop_s2243=True, optional_file=F
             #wcont = wcont[~wcont.index.isin("S2243-0935")].reset_index(drop=True)
             speclist = speclist[~speclist.index.isin(("S2243-0935",))]
     elif which_list == "all" :
-        speclist = getlist(mage_mode, zchoice=zchoice, MWdr=MWdr) 
-    elif which_list == "labels" and labels :   # Get speclist for a list of short_labels
+        speclist = getlist(mage_mode, zchoice=zchoice, MWdr=MWdr)
+    elif (which_list == "labels" and labels) or 'batch' in which_list :   # Get speclist for a list of short_labels
+        if 'batch' in which_list:  labels =  organize_labels(which_list)  # should enable batch1, batch2, batch3
         pspecs = getlist(mage_mode, optional_file, zchoice=zchoice, MWdr=MWdr) 
         speclist = pspecs[pspecs.index.isin(labels)]
         speclist['sort_cat'] = pandas.Categorical(speclist['short_label'], categories=labels, ordered=True)  #same order as labels
