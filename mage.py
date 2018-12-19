@@ -28,7 +28,7 @@ def organize_labels(group) :
     batch1  = ('rcs0327-B', 'rcs0327-E', 'rcs0327-G', 'rcs0327-U', 'rcs0327-counterarc', 'S0004-0103', 'S0033+0242', 'S0108+0624', 'S0900+2234')
     batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
     batch2 = ('planckarc_pos1', 'planckarc_slit4a', 'planckarc_slit4bc', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
-    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
+    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
     elif group == 'batch3' : return(batch3)
