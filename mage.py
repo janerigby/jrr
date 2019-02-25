@@ -32,6 +32,7 @@ def organize_labels(group) :
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
     elif group == 'batch3' : return(batch3)
+    elif group == 'batch123' : return(batch1 + batch2 + batch3)
     else : raise Exception("Error: label group unrecognized, not batch1, batch2, batch3.")
 
 def longnames(mage_mode) :
