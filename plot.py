@@ -38,7 +38,7 @@ def onclick(event):  # Setting up interactive clicking.  Right now, just prints 
     print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
         event.button, event.x, event.y, event.xdata, event.ydata)
     
-def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Ncol, spec_label="",figsize=(8,8), vel_plot=True) :
+def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Ncol, spec_label="",figsize=(8,8), vel_plot=True, verbose=True) :
     '''Make a plot of flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines, in a
     [Nrow x Ncol] box.
     Inputs are:
@@ -59,7 +59,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
     restwave = wave / (1.0 + redshift)
 
     for ii, dum in enumerate(line_label) :
-        print "    Plotting ", line_label[ii], " at ", line_center[ii]
+        if verbose : print "    Plotting ", line_label[ii], " at ", line_center[ii]
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
         plt.annotate( line_label[ii], (0.3,0.9), xycoords="axes fraction")
         if(vel_plot) :

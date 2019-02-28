@@ -234,6 +234,7 @@ def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars', MWdr=Tru
     if addS99, adds Chisholm's S99 continuum fit to the sp dataframe  '''
     (spec_path, line_path) = getpath(mage_mode)
     specs = wrap_getlist(mage_mode, which_list="labels", labels=[label], zchoice=zchoice, MWdr=MWdr)
+    if specs.size == 0 : raise Exception("DF of spectral info has zero size.  Invalid label?")
     zz_syst = specs.z_syst.values[0]
     infile = specs.filename[0]
     (sp, resoln, dresoln) = open_spectrum(infile, zz_syst, mage_mode)
