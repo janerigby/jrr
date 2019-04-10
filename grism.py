@@ -81,8 +81,8 @@ def measure_linerats_fromfiles(fitfiles, fitdir, line1, line2, verbose=False) : 
     for fitfile in fitfiles :
         df = pandas.read_csv(fitdir + fitfile, comment="#")
         (flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat) = util.linerat_from_df(df, line1, line2)
-        if verbose:  print fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2
-        else :       print fitfile, fluxrat, dfluxrat    
+        if verbose:  print(fitfile, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2)
+        else :       print(fitfile, fluxrat, dfluxrat)
     return(0)
 
 def measure_linerats_usebothgrisms(G102fitfiles, outfilename, line1='Halpha_G141', line2='Hbeta_G102', verbose=False) : #As above, but use both grisms
@@ -111,7 +111,7 @@ def measure_linerats_usebothgrisms(G102fitfiles, outfilename, line1='Halpha_G141
             if verbose:  outfile.write( '  '.join(str(x) for x in (ii, shortname, label, fluxrat, dfluxrat, flux1, dflux1, flux2, dflux2, '\n')))
             else :       outfile.write('   '.join(str(x) for x in (shortname, fluxrat, dfluxrat, '\n')))
         else :
-            if verbose : print "#Files do not exist:  " + ' '.join(str(x) for x in (basename(temp1), basename(temp2)))
+            if verbose : print("#Files do not exist:  " + ' '.join(str(x) for x in (basename(temp1), basename(temp2))))
     #return(df_all) # as an example
     return(0)
 

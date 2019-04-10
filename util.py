@@ -103,7 +103,7 @@ def read_header_from_file(infile, comment="#") :
 
 def check_df_for_Object(df) :
     for thiscol in df.keys():
-        if df[thiscol].dtype == 'O' : print "\n ***WARNING found dtype Object", thiscol, "\n"
+        if df[thiscol].dtype == 'O' : print("\n ***WARNING found dtype Object", thiscol, "\n")
     return(0)
 
 #####  Basic Astronomy  #####

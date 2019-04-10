@@ -23,7 +23,7 @@ def calz_unred(wave, flux, ebv, R_V=4.05):    # pythonified version of idlutil c
     w1 = np.where((wave >= 6300.) * (wave <= 22000.))[0]
     w2 = np.where((wave >= 912.) * (wave < 6300.))[0]
     x = 10000.0/wave # Wavelength in inverse microns
-    print "DEBUGGING", len(w1), len(w2), len(wave), len(w1)+len(w2)
+    print("DEBUGGING", len(w1), len(w2), len(wave), len(w1)+len(w2))
     if len(w1) + len(w2) != len(wave):
         warnings.warn('Warning - some elements of wavelength vector outside valid domain')
         print('Warning - some elements of wavelength vector outside valid domain')
@@ -82,7 +82,7 @@ def find_edges_of_line(df, colwave, colf, colcont, Nover_blue, Nover_red, linece
     # (blue_edge, red_edge) are wavelengths of the extent of the line.  Blue_edge is also vmax as I have defined it in stacked paper
     A_c = constants.c.to('km/s').value  # speed of light
     if not test_wave_in_spectrum(df, linecen, colwave) : # if line not covered by spectrum
-        print "WARNING:", linecen, "is outside spectrum range", get_waverange_spectrum(df, colwave)
+        print("WARNING:", linecen, "is outside spectrum range", get_waverange_spectrum(df, colwave))
         return(np.nan, np.nan)
     if isabs: comp = operator.gt  # absorption line, edge of line is where flux exceeds continuum
     else :    comp = operator.lt  # emission line,   edge of line is where flux drops below continuum
@@ -102,12 +102,12 @@ def calc_vmean_vmax(df, colrwave, colf, colcont, Nover_blue, Nover_red, linecen,
     # isabs (Optional): Is this an absorption line? If false, emission line
     # OUTPUTS:
     if not test_wave_in_spectrum(df, linecen, colrwave) : # if line not covered by spectrum
-        print "WARNING:", linecen, "is outside spectrum range", get_waverange_spectrum(df, colrwave)
+        print("WARNING:", linecen, "is outside spectrum range", get_waverange_spectrum(df, colrwave))
         return(np.nan, np.nan, np.nan, np.nan)
     df['vel'] = convert_restwave_to_velocity(df[colrwave], linecen)
     df['tempcont']  = df[colcont] * scalecont  # temporary scaling of continuum.  Can be used to gauge effect of cont. uncertainty
     (blue_edge, red_edge) = find_edges_of_line(df, colrwave, colf, 'tempcont', Nover_blue, Nover_red, linecen, Nredmax=Nredmax, isabs=isabs)
-#    print "DEBUGGING", blue_edge, red_edge
+#    print("DEBUGGING", blue_edge, red_edge)
     subset = df.loc[df[colrwave].between(blue_edge, red_edge)][1:-1]  # The subset of the spectrum between the edges.  Drop the edge pixels, since MgII emission caused trouble
     subset['dv']   = subset['vel'].diff()
     subset['fa'] = (subset['tempcont'] - subset[colf]) / np.sum((subset['tempcont'] - subset[colf]) * subset['dv'])
@@ -289,7 +289,7 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     #           colwave   column to find the wavelength in sp
     #           linetype  list of types of lines to mask.  by default, mask all types of lines.  Example: linetype=('INTERVE')
     # Outputs:  None.  It acts directly on sp.linemask
-    #print "Flagging regions near lines."
+    #print("Flagging regions near lines.")
     if linetype == 'all' :  subset = LL
     else :                  subset = LL[LL['type'].isin(linetype)]
     line_lo = np.array(subset['restwav'] * (1. - subset[colv2mask]/2.997E5) * (1. + subset['zz']))
@@ -333,7 +333,7 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
     smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
     sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
-    #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
+    #print("DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum())
     return(smooth1, smooth2) 
 
 
@@ -348,7 +348,7 @@ def byspline_norm_func(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_
 def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
     '''Normalize by the median within a spectral range norm_region.  Assumes Pandas.'''
     normalization = np.median(rest_fnu[wave.between(*norm_region)])
-    #print "normalization was", normalization, type(normalization)
+    #print("normalization was", normalization, type(normalization))
     return(rest_fnu / normalization,  rest_fnu_u / normalization)
             
 
@@ -364,7 +364,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     Output wavelength array will be output_wave_array if it is supplied; else will use 1st spectrum in df{}.
     '''
     if len(output_wave_array) :
-        print "Caution: overriding the default wavelength range and dispersion!"
+        print("Caution: overriding the default wavelength range and dispersion!")
         stacked = pandas.DataFrame(data=output_wave_array, columns=(colwave,))
     else :
         stacked = pandas.DataFrame(data=df[df.keys()[0]][colwave])  # Get output wavelength array from first spectrum
@@ -402,7 +402,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     jack_var = np.ma.zeros(shape=nbins)
     for ii in range(0, nspectra) :
         jnf = nf.copy()
-        #print "DEBUGGING Jackknife, dropping ", ii,  "from the stack"
+        #print("DEBUGGING Jackknife, dropping ", ii,  "from the stack")
         jnf[ii, :].mask = True  # Mask one spectrum
         jackknife[ii], weight = np.ma.average(jnf, axis=0, weights=weights, returned=True)  # all the work is done here.
         jack_var = jack_var +  (jackknife[ii] - stacked[pre+'weightavg'])**2
@@ -414,10 +414,10 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
 
 ### Extinction routines below
 def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :
-    #print "Dereddening Milky Way extinction"
+    #print("Dereddening Milky Way extinction")
     Rv = 3.1
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
-    print "jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW
+    print("jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW)
     #sp['oldfnu'] = sp[colf]  # Debugging
     MW_extinction = extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv)
     sp['MWredcor'] = 10**(-0.4 * MW_extinction)

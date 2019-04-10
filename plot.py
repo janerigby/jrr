@@ -33,11 +33,7 @@ def standard_colors3():
 def standard_colors4():
     return([color1, color2, color3])
 
-    
-def onclick(event):  # Setting up interactive clicking.  Right now, just prints location.  Need to add fitting.
-    print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
-        event.button, event.x, event.y, event.xdata, event.ydata)
-    
+        
 def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Ncol, spec_label="",figsize=(8,8), vel_plot=True, verbose=True) :
     '''Make a plot of flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines, in a
     [Nrow x Ncol] box.
@@ -59,7 +55,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
     restwave = wave / (1.0 + redshift)
 
     for ii, dum in enumerate(line_label) :
-        if verbose : print "    Plotting ", line_label[ii], " at ", line_center[ii]
+        if verbose : print("    Plotting ", line_label[ii], " at ", line_center[ii])
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
         plt.annotate( line_label[ii], (0.3,0.9), xycoords="axes fraction")
         if(vel_plot) :
@@ -121,10 +117,10 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles))) 
     
     Nrow = int(np.ceil( float(len(line_center)) / Ncol))  # Calculate how many rows to generate
-    #print "DEBUGGING ", Nrow, Ncol, len(line_center)
+    #print("DEBUGGING ", Nrow, Ncol, len(line_center))
     fig = plt.figure(figsize=figsize)
 
-    if len(spec_label) == len(thewaves) :  pass  #print "DEBUGGING, adding spectrum label to legend"
+    if len(spec_label) == len(thewaves) :  pass  #print("DEBUGGING, adding spectrum label to legend")
     else : spec_label = np.repeat('_nolegend_', len(thewaves))  # override the legend
     
     if hasattr(win, "__len__") and len(win) == 2:
@@ -135,7 +131,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     if len(lw) == 1 : lw = lw * np.ones(shape=len(thewaves))  # if lw is a scalar, change to an array, same for all
     elif len(lw) != len(thewaves) : raise Exception('Error, linewidth lw must be scalar (len=1) or tuple with same sizes as thewaves')
     for ii, dum in enumerate(line_label) :
-        if verbose : print "    Plotting ", line_label[ii], " at ", line_center[ii]
+        if verbose : print("    Plotting ", line_label[ii], " at ", line_center[ii])
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
         plt.annotate( line_label[ii], label_loc, xycoords="axes fraction")
         max_in_window = 0.
@@ -191,14 +187,14 @@ def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2
     restwave = wave / (1.0 + redshift)
     plt.figure(figsize=figsize)
     for ii, dum in enumerate(line_label) :
-        print ii, "Trying to plot ", line_label[ii], " at ", line_center[ii]
+        print(ii, "Trying to plot ", line_label[ii], " at ", line_center[ii])
         vel = spec.convert_restwave_to_velocity(restwave, line_center[ii])   # velocity in km/s
         in_window = vel.between((vwin1), vwin2)
         plt.step(vel[in_window], fnu[in_window], color=mycol[ii], label=line_label[ii])
         plt.xlim(vwin1, vwin2)
         plt.ylim(0, 1.4)
         xy = (0.1,  0.26 - float(ii)/len(line_label)*0.3)
-        #print "DEBUG, xy is ", xy
+        #print("DEBUG, xy is ", xy)
         #plt.annotate( line_label[ii], xy, xycoords="axes fraction", color=hist.get_color())
         plt.legend()
         plt.xlabel("rest-frame velocity (km/s)")
@@ -262,10 +258,10 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     for kk in range(0, Npanels) :
         if kk % max_per_page == 0 :   # Start a new page
             current_page = kk /  max_per_page + 1  # should be int division
-            print "Starting page", current_page, "of", Npages
+            print("Starting page", current_page, "of", Npages)
             fig    = plt.figure(figsize=plotsize)
         subit = host_subplot(the_format + kk % max_per_page)
-        if verbose : print "Plotting panel", kk, "for wavelengths", start[kk], "to",end[kk]
+        if verbose : print("Plotting panel", kk, "for wavelengths", start[kk], "to",end[kk])
         for ss, df in enumerate(the_dfs) :
             if apply_bad : subset = df[df[colwave].between(start[kk], end[kk]) & ~df['badmask']]
             else:          subset = df[df[colwave].between(start[kk], end[kk])]
@@ -275,7 +271,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             if plot_cont :  plt.plot(subset[colwave], subset[colcont].astype(np.float)/subset['normby'], contcolor, linestyle='steps', zorder=1, linewidth=1) # plot the continuum
             if ss == 0 :  # If the first df, set the plot ranges
                 top = (subset[colfnu]/subset['normby']).median()*topfid[0] + util.IQR(subset[colfnu]/subset['normby'])*topfid[1]
-                #print "DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby'])
+                #print("DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby']))
         if len(ylim) == 2:   plt.ylim(ylim[0], ylim[1])
         else:                plt.ylim(0, top)  # trying to fix weird autoscaling from bad pixels
         plt.xlim(start[kk], end[kk])
@@ -301,5 +297,5 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             if callable(annotate) : annotate()
             plt.suptitle(title)  # global title
     pp.close()
-    print "   Generated PDF:  ", outfile
+    print("   Generated PDF:  ", outfile)
     return(0)

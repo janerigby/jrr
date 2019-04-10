@@ -70,14 +70,14 @@ def getpath(mage_mode) :
         line_path = homedir + "/Dropbox/MagE_atlas/Linelists/"
         return(spec_path, line_path)
     else :
-        print "Unrecognized mage_mode " + mage_mode
+        print("Unrecognized mage_mode " + mage_mode)
         return(1)
         
 def getlist(mage_mode, optional_file=False, zchoice='stars', MWdr=True) : 
     ''' Load list of MagE spectra and redshifts.  Loads into a Pandas data frame'''
     if optional_file :  # User wants to supply an optional file.  Now deprecated; better to filter in Pandas
         thelist = optional_file
-        print "WARNING! Using alternate file ", optional_file, "ONLY DO SO FOR TESTING!"
+        print("WARNING! Using alternate file ", optional_file, "ONLY DO SO FOR TESTING!")
     else :
         (spec_path, line_path) = getpath(mage_mode)
         thelist = spec_path + "spectra-filenames-redshifts.txt"
@@ -218,7 +218,7 @@ def open_spectrum(infile, zz, mage_mode) :
     if(hascont) : 
         sp['flam_cont']   = spec.fnu2flam(sp.wave, sp.fnu_cont)
         sp['flam_cont_u'] = spec.fnu2flam(sp.wave, sp.fnu_cont_u)
-    #if 'does_this_column_appear' in sp.columns  : print "Yes it does"  # way to check if continuum appears
+    #if 'does_this_column_appear' in sp.columns  : print("Yes it does")  # way to check if continuum appears
     
     # Masks to be used later, by flag_skylines and flag_near_lines
     sp['badmask']  = False  # Mask: True are BAD pixels.  Sign convention of np.ma
@@ -267,7 +267,7 @@ def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zc
     LL = {}; zz_sys = {}; boxcar  = {}
     speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice, MWdr=MWdr)
     for label in speclist.index :
-        if verbose: print "Loading  ", label
+        if verbose: print("Loading  ", label)
         (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice, MWdr=MWdr)
     return(sp, resoln, dresoln, LL, zz_sys, speclist)  # returns dictionaries for first 5 things, and the speclist
     
@@ -298,7 +298,7 @@ def open_S99_spectrum(rootname, denorm=True, altfile=None, MWdr=True, debug=Fals
     (spec_path, line_path) = getpath("released")
     if altfile :  S99file = altfile # manual override for path & filename
     else :        S99file =  getfullname_S99_spectrum(rootname, MWdr=MWdr)
-    if debug : print "DEBUGGING open_S99_spectrum, file was", S99file
+    if debug : print("DEBUGGING open_S99_spectrum, file was", S99file)
     sp =  pandas.read_table(S99file, delim_whitespace=True, comment="#", names=('rest_wave', 'rest_flam_data_norm', 'rest_flam_data_u_norm', 'rest_flam_s99_norm'))
     sp['rest_flam_s99_u'] = np.nan
     sp['badmask']  = False
@@ -315,7 +315,7 @@ def open_S99_spectrum(rootname, denorm=True, altfile=None, MWdr=True, debug=Fals
         norm2 = sp['rest_flam_data_norm'][sp['rest_wave'].between(*norm_region)].median() #norm for JC's fit.  should be ~1
     else :
         norm1 = 1.0  ; norm2 = 1.0  # Don't renormalize.  Good choice for Chuck's spectrum, possibly the stack
-    #print "DEBUGGING, norm1, norm2 were", norm1, norm2
+    #print("DEBUGGING, norm1, norm2 were", norm1, norm2)
     sp['rest_flam_data']   = sp['rest_flam_data_norm']   * norm1 / norm2 # Un-do the normalization that JC applied.
     sp['rest_flam_data_u'] = sp['rest_flam_data_u_norm'] * norm1 / norm2
     sp['rest_flam_s99']    = sp['rest_flam_s99_norm']    * norm1 / norm2
@@ -344,7 +344,7 @@ def open_all_S99_spectra(MWdr=True) :
     one for spectra, pone for linelists'''
     S99 = {} ;  LL = {}
     for rootname in list_S99_rootnames() :
-        print "Loading S99 ", rootname
+        print("Loading S99 ", rootname)
         (S99[rootname], LL[rootname]) = open_S99_spectrum(rootname, MWdr=MWdr)
     return(S99, LL)
            
@@ -373,7 +373,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
     (spec_path, line_path) = getpath(mage_mode)
     (indir, stack_dict) = dict_of_stacked_spectra(mage_mode)
     if alt_infile :
-        print "  Caution, I am using ", alt_infile, "instead of the default stacked spectrum."
+        print("  Caution, I am using ", alt_infile, "instead of the default stacked spectrum.")
         infile = indir + alt_infile
     else :
         if   which_stack == "standard" :  stackfile = "magestack_" + zchoice + "_standard_spectrum.txt"
@@ -392,7 +392,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
     sp['flam_u']    = spec.fnu2flam(sp['wave'], sp['fnu_u'])
     if addS99 and which_stack == "Stack-A" and getfullname_S99_spectrum(which_stack) :
         (S99, ignore_linelist) = open_S99_spectrum(which_stack, denorm=True, MWdr=True, debug=True)
-        #print "DEBUGGING", sp.keys(), "\n\n", S99.keys()
+        #print("DEBUGGING", sp.keys(), "\n\n", S99.keys())
         sp['fnu_s99model']      = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_s99'], sp['wave'])
         sp['fnu_s99data']       = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['wave'])  # used for debugging
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
@@ -403,13 +403,13 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
     sp['linemask'] = False
     convert_spectrum_to_restframe(sp, 0.0)  # z=0
     boxcar = spec.get_boxcar4autocont(sp)
-    #print "DEBUGGING, boxcar is ", boxcar
+    #print("DEBUGGING, boxcar is ", boxcar)
     fit_autocont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
     sp['unity'] = 1.0
     return(sp, LL) # return the Pandas DataFrame containing the stacked spectrum
      
 def open_Crowther2016_spectrum() :
-    print "STATUS:  making velocity plots of the stacked Crowther et al. 2016 spectrum"
+    print("STATUS:  making velocity plots of the stacked Crowther et al. 2016 spectrum")
     infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Crowther2016/r136_stis_all.txt" # on satchmo
     sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)  # cols are wave, flam
     sp['fnu'] = spec.fnu2flam(sp['wave'], sp['flam'])
@@ -496,7 +496,7 @@ def get_linelist(linelist) :
     # Grab the systemic redshift, too
     command = "grep SYSTEMIC " + linelist
     z_systemic = float(check_output(command, shell=True).split()[3])
-    #print "Loaded linelist ", linelist, " with systemic redshift of ", z_systemic
+    #print("Loaded linelist ", linelist, " with systemic redshift of ", z_systemic)
     return(L, z_systemic)  # Returning a pandas data frame of the linelist.  Key cols are restwav, obswav, zz, lab1 (the label)
 
 def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line_center=np.nan, alt_ypos=False) :  
@@ -652,7 +652,7 @@ def convert_chuck_UVspec(infile="KBSS-LM1.uv.fnu.fits", uncert_file="KBSS-LM1.uv
     else : fnu_u = np.zeros_like(fnu)
     # Make a pandas data frame                                                    
     foo = np.array((wavelength, fnu, fnu_u))
-    print "DEBUG", foo.shape, wavelength.shape, fnu.shape, fnu_u.shape
+    print("DEBUG", foo.shape, wavelength.shape, fnu.shape, fnu_u.shape)
     df = pandas.DataFrame(foo.T, columns=("wave", "fnu", "fnu_u"))
     add_columns_to_litspec(df)
     if not outfile :
@@ -676,7 +676,7 @@ def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
     if addS99 and getfullname_S99_spectrum("chuck") :
         sp['rest_wave'] = sp['rest_wave'] / (1 + 0.00013013)
         (S99, ignore_linelist) = open_S99_spectrum("chuck", denorm=True)
-        #print "DEBUGGING", sp.keys(), "\n\n", S99.keys()
+        #print("DEBUGGING", sp.keys(), "\n\n", S99.keys())
         sp['fnu_s99model']      = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_s99'], sp['rest_wave'])
         sp['fnu_s99data']       = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave'])  # used for debugging
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
@@ -701,7 +701,7 @@ def convert_chuck_mosfire(infile, outfile=None) :
     (flam, flam_u) = sp[0].data
     # Make a pandas data frame
     foo = np.array((wavelength, flam, flam_u))
-    print "DEBUG", foo.shape, wavelength.shape, flam.shape, flam_u.shape
+    print("DEBUG", foo.shape, wavelength.shape, flam.shape, flam_u.shape)
     df = pandas.DataFrame(foo.T, columns=("wave", "flam", "flam_u"))
     if not outfile :
         outfile = sub(".fits", ".p", infile)
@@ -763,7 +763,7 @@ def recover_1shortname(gal, pointing) : # JRRedit tables don't have a column of 
     else :
         shortname = string.replace(gal + '_' + pointing, "_knot", "-")
         shortname = string.replace(shortname, '_faint', '-fnt')
-    print shortname, gal, row
+    print(shortname, gal, row)
     return(shortname)
 
 def recover_all_shortnames(df, colgal='gal', colpointing='pointing') :  # same as above, but for the dataframe
@@ -784,6 +784,6 @@ def load_doublet_df(batch) :  # Load a dataframe containing the intervening doub
     elif batch == ('batch123') :
         doublet_df1 = pandas.read_table(doubletfiles['batch1'], delim_whitespace=True, comment="#")
         doublet_df2 = pandas.read_table(doubletfiles['batch23'], delim_whitespace=True, comment="#")
-        doublet_df = pandas.concat([doublet_df1, doublet_df2], sort=False)
+        doublet_df = pandas.concat([doublet_df1, doublet_df2])#, sort=False)
     recover_all_shortnames(doublet_df)
     return(doublet_df)
