@@ -29,11 +29,14 @@ def organize_labels(group) :
     batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
     batch2 = ('planckarc_pos1', 'planckarc_slit4a', 'planckarc_slit4bc', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
     batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
+    metabatch = ('planckarc_nonleak', 'planckarc_leak', 'rcs0327-all')
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
     elif group == 'batch3' : return(batch3)
+    elif group == 'batch23' : return(batch2 + batch3)
     elif group == 'batch123' : return(batch1 + batch2 + batch3)
-    else : raise Exception("Error: label group unrecognized, not batch1, batch2, batch3.")
+    elif group == 'metabatch' : return(metabatch)
+    else : raise Exception("Error: label group unrecognized, not one of these: batch1, batch2, batch3, batch123, metabatch.")
 
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
@@ -496,12 +499,12 @@ def get_linelist(linelist) :
     #print "Loaded linelist ", linelist, " with systemic redshift of ", z_systemic
     return(L, z_systemic)  # Returning a pandas data frame of the linelist.  Key cols are restwav, obswav, zz, lab1 (the label)
 
-def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line_center=np.nan) :  
+def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line_center=np.nan, alt_ypos=False) :  
     '''Plot ticks and line labels for lines from a linelist, loaded by get_linelist.
     Can do either rest-frame or observed frame, x-axis wavelength or velocity
     '''
-    #temp = plt.ylim()[1] * 0.93  # previous
-    temp = (plt.ylim()[1] - plt.ylim()[0]) * 0.15    #trying moving ticks to bottom
+    #ypos = plt.ylim()[1] * 0.93  # previous
+    ypos = (plt.ylim()[1] - plt.ylim()[0]) * 0.15    #trying moving ticks to bottom
     if (not restframe) and (not velplot) :
         L = L_all[L_all.obswav.between(plt.xlim()[0], plt.xlim()[1])].reset_index()
         wav2plot = L.obswav  # which col of wave to plot? 
@@ -523,7 +526,7 @@ def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line
         raise Exception('ERROR: If x-axis is velocity, then restframe must be True')        
         
     for i in range(0, L.index.size):  # Loop through the lines, and plot the ones on the current subplot
-        plt.annotate(L.lab1[i], xy=(wav2plot[i], temp*3), xytext=(wav2plot[i], temp), color=L.color[i], rotation=90, ha='center', va='center', arrowprops=dict(color=L.color[i], shrink=0.2,width=0.5, headwidth=0))
+        plt.annotate(L.lab1[i], xy=(wav2plot[i], ypos*3), xytext=(wav2plot[i], ypos), color=L.color[i], rotation=90, ha='center', va='center', arrowprops=dict(color=L.color[i], shrink=0.2,width=0.5, headwidth=0))
     L = []
     L_all = []
     return(0)
