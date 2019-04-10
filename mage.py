@@ -32,8 +32,9 @@ def organize_labels(group) :
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
     elif group == 'batch3' : return(batch3)
+    elif group == 'batch23' : return(batch2 + batch3)
     elif group == 'batch123' : return(batch1 + batch2 + batch3)
-    else : raise Exception("Error: label group unrecognized, not batch1, batch2, batch3.")
+    else : raise Exception("Error: label group unrecognized, not batch1, batch2, batch3, or combos of those.")
 
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
@@ -751,3 +752,36 @@ def open_planckarc_sum(zz, vmask1, vmask2, smooth_length=50., option="full") :
     convert_spectrum_to_restframe(pf, zz)  # again, to get contfit
     return(pf, LL)
 
+
+#### Below are functions that are useful for intervening absorbers in megasaura
+
+def recover_1shortname(gal, pointing) : # JRRedit tables don't have a column of shortname. So, reconstruct it
+    shortname = ""
+    if pointing == 'main' : shortname = gal
+    else :
+        shortname = string.replace(gal + '_' + pointing, "_knot", "-")
+        shortname = string.replace(shortname, '_faint', '-fnt')
+    print shortname, gal, row
+    return(shortname)
+
+def recover_all_shortnames(df, colgal='gal', colpointing='pointing') :  # same as above, but for the dataframe
+    df['shortname'] = df[colgal] + "_" + df[colpointing]
+    df['shortname'] = df['shortname'].str.replace('_faint', '-fnt')
+    df['shortname'] = df['shortname'].str.replace('_knot', '-')
+    df['shortname'] = df['shortname'].str.replace('_main', '')
+    return(0) # acts on df
+
+def load_doublet_df(batch) :  # Load a dataframe containing the intervening doublets.
+    # batch should be one of 'batch1' (in Rigby et al 2018), 'batch23' (2017, 2018 data), or 'batch123' (everything)
+    if batch not in ('batch1', 'batch23', 'batch123') : raise Exception("Error: batch must be batch1, batch23, or batch123")
+    doubletfiles = {}
+    doubletfiles['batch1']  = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/Results_16Feb2018/found_doublets_SNR4_JRRedit.txt"
+    doubletfiles['batch23'] = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/Results_21Feb2019/found_doublets_batch3_SNR4_JRRedit.txt"
+    if batch in ('batch1', 'batch23') :
+        doublet_df = pandas.read_table(doubletfiles[batch], delim_whitespace=True, comment="#")
+    elif batch == ('batch123') :
+        doublet_df1 = pandas.read_table(doubletfiles['batch1'], delim_whitespace=True, comment="#")
+        doublet_df2 = pandas.read_table(doubletfiles['batch23'], delim_whitespace=True, comment="#")
+        doublet_df = pandas.concat([doublet_df1, doublet_df2], sort=False)
+    recover_all_shortnames(doublet_df)
+    return(doublet_df)
