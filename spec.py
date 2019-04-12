@@ -1,6 +1,8 @@
 ''' General-purpose functions to convert and deal with spectra.  Nothing
 instrument-specific should go here.  jrigby, May 2016'''
+from __future__ import print_function
 
+from builtins import range
 import operator  # Needed to get absorption/emission signs right for find_edges_of_line()
 import warnings
 from jrr import util
@@ -107,7 +109,7 @@ def calc_vmean_vmax(df, colrwave, colf, colcont, Nover_blue, Nover_red, linecen,
     df['vel'] = convert_restwave_to_velocity(df[colrwave], linecen)
     df['tempcont']  = df[colcont] * scalecont  # temporary scaling of continuum.  Can be used to gauge effect of cont. uncertainty
     (blue_edge, red_edge) = find_edges_of_line(df, colrwave, colf, 'tempcont', Nover_blue, Nover_red, linecen, Nredmax=Nredmax, isabs=isabs)
-#    print("DEBUGGING", blue_edge, red_edge)
+#    print "DEBUGGING", blue_edge, red_edge
     subset = df.loc[df[colrwave].between(blue_edge, red_edge)][1:-1]  # The subset of the spectrum between the edges.  Drop the edge pixels, since MgII emission caused trouble
     subset['dv']   = subset['vel'].diff()
     subset['fa'] = (subset['tempcont'] - subset[colf]) / np.sum((subset['tempcont'] - subset[colf]) * subset['dv'])
@@ -289,7 +291,7 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     #           colwave   column to find the wavelength in sp
     #           linetype  list of types of lines to mask.  by default, mask all types of lines.  Example: linetype=('INTERVE')
     # Outputs:  None.  It acts directly on sp.linemask
-    #print("Flagging regions near lines.")
+    #print "Flagging regions near lines."
     if linetype == 'all' :  subset = LL
     else :                  subset = LL[LL['type'].isin(linetype)]
     line_lo = np.array(subset['restwav'] * (1. - subset[colv2mask]/2.997E5) * (1. + subset['zz']))
@@ -333,7 +335,7 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
     smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
     sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
-    #print("DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum())
+    #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
     return(smooth1, smooth2) 
 
 
@@ -348,7 +350,7 @@ def byspline_norm_func(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_
 def norm_by_median(wave, rest_fnu, rest_fnu_u, rest_cont, rest_cont_u, norm_region) :
     '''Normalize by the median within a spectral range norm_region.  Assumes Pandas.'''
     normalization = np.median(rest_fnu[wave.between(*norm_region)])
-    #print("normalization was", normalization, type(normalization))
+    #print "normalization was", normalization, type(normalization)
     return(rest_fnu / normalization,  rest_fnu_u / normalization)
             
 
@@ -367,12 +369,12 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
         print("Caution: overriding the default wavelength range and dispersion!")
         stacked = pandas.DataFrame(data=output_wave_array, columns=(colwave,))
     else :
-        stacked = pandas.DataFrame(data=df[df.keys()[0]][colwave])  # Get output wavelength array from first spectrum
+        stacked = pandas.DataFrame(data=df[list(df.keys())[0]][colwave])  # Get output wavelength array from first spectrum
     nbins = stacked.shape[0]  #N of pixels
     nspectra = len(df)
     nf    =   np.ma.zeros(shape=(nspectra, nbins))   # temp array that will hold the input spectra
     nf_u  =   np.ma.zeros(shape=(nspectra, nbins))   # using numpy masked arrays so can ignore nans from rebin_spec_new
-    for ii, spec in enumerate(df.itervalues()):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
+    for ii, spec in enumerate(iter(df.values())):   # Rebin each spectrum (spec), and load all spectra into big fat arrays.
         ma_spec = spec     # masked version of spectrum
         if colmask :
             ma_spec.loc[ma_spec[colmask], colf]  = np.nan    # try setting to nan to solve the gap problem
@@ -402,7 +404,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     jack_var = np.ma.zeros(shape=nbins)
     for ii in range(0, nspectra) :
         jnf = nf.copy()
-        #print("DEBUGGING Jackknife, dropping ", ii,  "from the stack")
+        #print "DEBUGGING Jackknife, dropping ", ii,  "from the stack"
         jnf[ii, :].mask = True  # Mask one spectrum
         jackknife[ii], weight = np.ma.average(jnf, axis=0, weights=weights, returned=True)  # all the work is done here.
         jack_var = jack_var +  (jackknife[ii] - stacked[pre+'weightavg'])**2
@@ -414,7 +416,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
 
 ### Extinction routines below
 def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :
-    #print("Dereddening Milky Way extinction")
+    #print "Dereddening Milky Way extinction"
     Rv = 3.1
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
     print("jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW)
@@ -423,8 +425,8 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     sp['MWredcor'] = 10**(-0.4 * MW_extinction)
     sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').as_matrix()))
     sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').as_matrix()))
-    if colcont in sp.keys() :  sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
-    if colcontu in sp.keys() : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
+    if colcont in list(sp.keys()) :  sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
+    if colcontu in list(sp.keys()) : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
     return(0)
 
 def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, colwave='rest_wave') :

@@ -1,6 +1,10 @@
 ''' Scripts to read and analyze MagE/Magellan spectra.  
     jrigby, begun Oct 2015.  Updates March--Dec 2016
 '''
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
 from jrr import spec
 from jrr import util
 import numpy as np
@@ -218,7 +222,7 @@ def open_spectrum(infile, zz, mage_mode) :
     if(hascont) : 
         sp['flam_cont']   = spec.fnu2flam(sp.wave, sp.fnu_cont)
         sp['flam_cont_u'] = spec.fnu2flam(sp.wave, sp.fnu_cont_u)
-    #if 'does_this_column_appear' in sp.columns  : print("Yes it does")  # way to check if continuum appears
+    #if 'does_this_column_appear' in sp.columns  : print "Yes it does"  # way to check if continuum appears
     
     # Masks to be used later, by flag_skylines and flag_near_lines
     sp['badmask']  = False  # Mask: True are BAD pixels.  Sign convention of np.ma
@@ -315,7 +319,7 @@ def open_S99_spectrum(rootname, denorm=True, altfile=None, MWdr=True, debug=Fals
         norm2 = sp['rest_flam_data_norm'][sp['rest_wave'].between(*norm_region)].median() #norm for JC's fit.  should be ~1
     else :
         norm1 = 1.0  ; norm2 = 1.0  # Don't renormalize.  Good choice for Chuck's spectrum, possibly the stack
-    #print("DEBUGGING, norm1, norm2 were", norm1, norm2)
+    #print "DEBUGGING, norm1, norm2 were", norm1, norm2
     sp['rest_flam_data']   = sp['rest_flam_data_norm']   * norm1 / norm2 # Un-do the normalization that JC applied.
     sp['rest_flam_data_u'] = sp['rest_flam_data_u_norm'] * norm1 / norm2
     sp['rest_flam_s99']    = sp['rest_flam_s99_norm']    * norm1 / norm2
@@ -344,7 +348,7 @@ def open_all_S99_spectra(MWdr=True) :
     one for spectra, pone for linelists'''
     S99 = {} ;  LL = {}
     for rootname in list_S99_rootnames() :
-        print("Loading S99 ", rootname)
+        print("Loading S99 ", rootname) 
         (S99[rootname], LL[rootname]) = open_S99_spectrum(rootname, MWdr=MWdr)
     return(S99, LL)
            
@@ -359,7 +363,7 @@ def dict_of_stacked_spectra(mage_mode) :
     justfiles = [re.sub(indir, "", file) for file in files]         # list comprehension
     short_stackname = [re.sub("magestack_", "", file) for file in justfiles]         # list comprehension
     short_stackname = [re.sub("_spectrum.txt", "", file) for file in short_stackname]         # list comprehension
-    stack_dict =  dict(zip(short_stackname, justfiles))
+    stack_dict =  dict(list(zip(short_stackname, justfiles)))
     return(indir, stack_dict)
 
 def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", zchoice='byneb', colfnu='fweightavg', colfnuu='fjack_std', addS99=False) :
@@ -382,7 +386,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
         else : raise Exception("I do not recognize which_stack as one of the choices: standard, Stack-A, or divbys99")
         infile = indir + stackfile
     sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)
-    if 'restwave' in sp.keys() :   sp.rename(columns = {'restwave' : 'rest_wave'}, inplace=True)
+    if 'restwave' in list(sp.keys()) :   sp.rename(columns = {'restwave' : 'rest_wave'}, inplace=True)
     if which_stack == "Stack-A" :
         sp['rest_wave'] = sp['rest_wave'] / (1 + 0.0000400)  # correct slight redshift offset, from 12 km/s measured by Chisholm
     sp['wave'] = sp['rest_wave']
@@ -392,7 +396,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
     sp['flam_u']    = spec.fnu2flam(sp['wave'], sp['fnu_u'])
     if addS99 and which_stack == "Stack-A" and getfullname_S99_spectrum(which_stack) :
         (S99, ignore_linelist) = open_S99_spectrum(which_stack, denorm=True, MWdr=True, debug=True)
-        #print("DEBUGGING", sp.keys(), "\n\n", S99.keys())
+        #print "DEBUGGING", sp.keys(), "\n\n", S99.keys()
         sp['fnu_s99model']      = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_s99'], sp['wave'])
         sp['fnu_s99data']       = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['wave'])  # used for debugging
         sp['rest_fnu_s99model'] = sp['fnu_s99model']
@@ -403,7 +407,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
     sp['linemask'] = False
     convert_spectrum_to_restframe(sp, 0.0)  # z=0
     boxcar = spec.get_boxcar4autocont(sp)
-    #print("DEBUGGING, boxcar is ", boxcar)
+    #print "DEBUGGING, boxcar is ", boxcar
     fit_autocont(sp, LL, zz=0.0, vmask=1000, boxcar=3001)
     sp['unity'] = 1.0
     return(sp, LL) # return the Pandas DataFrame containing the stacked spectrum
@@ -496,7 +500,7 @@ def get_linelist(linelist) :
     # Grab the systemic redshift, too
     command = "grep SYSTEMIC " + linelist
     z_systemic = float(check_output(command, shell=True).split()[3])
-    #print("Loaded linelist ", linelist, " with systemic redshift of ", z_systemic)
+    #print "Loaded linelist ", linelist, " with systemic redshift of ", z_systemic
     return(L, z_systemic)  # Returning a pandas data frame of the linelist.  Key cols are restwav, obswav, zz, lab1 (the label)
 
 def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line_center=np.nan, alt_ypos=False) :  
@@ -676,7 +680,7 @@ def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
     if addS99 and getfullname_S99_spectrum("chuck") :
         sp['rest_wave'] = sp['rest_wave'] / (1 + 0.00013013)
         (S99, ignore_linelist) = open_S99_spectrum("chuck", denorm=True)
-        #print("DEBUGGING", sp.keys(), "\n\n", S99.keys())
+        #print "DEBUGGING", sp.keys(), "\n\n", S99.keys()
         sp['fnu_s99model']      = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_s99'], sp['rest_wave'])
         sp['fnu_s99data']       = spec.rebin_spec_new(S99['rest_wave'], S99['rest_fnu_data'], sp['rest_wave'])  # used for debugging
         sp['rest_fnu_s99model'] = sp['fnu_s99model']

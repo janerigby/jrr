@@ -1,4 +1,6 @@
 #  Simple routines to read in BPASS2 spectra into pandas dataframes.  jrigby, Apr 2018
+from builtins import str
+from builtins import range
 import pandas
 
 def model_dir(ver='2.1') : # Set this to where your models are
@@ -42,7 +44,7 @@ def load_1spectrum(filename, age_to_find, ver='2.1') : #Streamline version of ab
     # Uses filename, which should look like 'BPASSv2.1_imf135_100/spectra.z020.dat.gz'
     bpassdir = model_dir(ver=ver)
     closest_age = find_closest_age(age_to_find)
-    #print("DEBUG, closest age was", closest_age)
+    #print "DEBUG, closest age was", closest_age
     usecols = [0, closest_age.index.values[0] + 1] 
     names = ['wave', 'flam']
     df_bpass = pandas.read_table(bpassdir + filename, header=None, delim_whitespace=True, usecols=usecols, names=names)
@@ -58,6 +60,6 @@ def wrap_load_1spectrum(Z, age, style, ver='2.1') :  #uses parameters rather tha
     middlebit_v22 = '-imf135_100'
     if   ver=='2.1'   :  filename = IMFdir + fileroot + '.z' + Z + '.dat.gz'
     elif '2.2' in ver :  filename = IMFdir + fileroot + middlebit_v22 + '.z' + Z + '.dat.gz'
-    #print("    DEBUGGING filename in bpass.py, filename", filename)
+    #print "    DEBUGGING filename in bpass.py, filename", filename
     df_bpass2 = load_1spectrum(filename, age, ver=ver)
     return(df_bpass2)  # call as wrap_load_1spectrum('020', 1E6, -2.0, "BPASS_single")

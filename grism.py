@@ -1,5 +1,7 @@
+from __future__ import print_function
 # Useful functions for dealing w HST grism spectra.  Started for S1723
 # Used by S1723_working.py, grism_fitcont.py, grism_fit_spectra_v4.py
+from builtins import str
 from jrr import spec
 from jrr import mage
 from jrr import util
@@ -50,7 +52,7 @@ def get_MWreddening_S1723(internet=True) :
     coords = SkyCoord(ra=260.9006916667, dec=34.199825, unit=(u.deg, u.deg))
     if internet:
         EBV_Green2015 = query_argonaut.query(coords.ra.value, coords.dec.value, coordsys='equ', mode='sfd')  #
-        val2return = EBV_Green2015.values()[0]
+        val2return = list(EBV_Green2015.values())[0]
     else: val2return = 0.03415 # Stashed EBV -- temp solution while no internet on train
     return(val2return)
 

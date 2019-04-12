@@ -1,4 +1,5 @@
 ''' General-purpose utilities.  jrigby May 2016'''
+from __future__ import print_function
 
 import numpy as np
 import subprocess
@@ -102,7 +103,7 @@ def read_header_from_file(infile, comment="#") :
     return(head)
 
 def check_df_for_Object(df) :
-    for thiscol in df.keys():
+    for thiscol in list(df.keys()):
         if df[thiscol].dtype == 'O' : print("\n ***WARNING found dtype Object", thiscol, "\n")
     return(0)
 

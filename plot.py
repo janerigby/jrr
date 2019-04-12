@@ -1,6 +1,8 @@
 ''' Functions to make plots.  At present, just plotting spectra.
 jrigby, may 2016 '''
+from __future__ import print_function
 
+from builtins import range
 from jrr import spec
 from jrr import mage
 from jrr import util
@@ -117,10 +119,10 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles))) 
     
     Nrow = int(np.ceil( float(len(line_center)) / Ncol))  # Calculate how many rows to generate
-    #print("DEBUGGING ", Nrow, Ncol, len(line_center))
+    #print "DEBUGGING ", Nrow, Ncol, len(line_center)
     fig = plt.figure(figsize=figsize)
 
-    if len(spec_label) == len(thewaves) :  pass  #print("DEBUGGING, adding spectrum label to legend")
+    if len(spec_label) == len(thewaves) :  pass  #print "DEBUGGING, adding spectrum label to legend"
     else : spec_label = np.repeat('_nolegend_', len(thewaves))  # override the legend
     
     if hasattr(win, "__len__") and len(win) == 2:
@@ -194,7 +196,7 @@ def velocity_overplot(wave, fnu, line_label, line_center, redshift, vwin1, vwin2
         plt.xlim(vwin1, vwin2)
         plt.ylim(0, 1.4)
         xy = (0.1,  0.26 - float(ii)/len(line_label)*0.3)
-        #print("DEBUG, xy is ", xy)
+        #print "DEBUG, xy is ", xy
         #plt.annotate( line_label[ii], xy, xycoords="axes fraction", color=hist.get_color())
         plt.legend()
         plt.xlabel("rest-frame velocity (km/s)")
@@ -271,7 +273,7 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             if plot_cont :  plt.plot(subset[colwave], subset[colcont].astype(np.float)/subset['normby'], contcolor, linestyle='steps', zorder=1, linewidth=1) # plot the continuum
             if ss == 0 :  # If the first df, set the plot ranges
                 top = (subset[colfnu]/subset['normby']).median()*topfid[0] + util.IQR(subset[colfnu]/subset['normby'])*topfid[1]
-                #print("DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby']))
+                #print "DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby'])
         if len(ylim) == 2:   plt.ylim(ylim[0], ylim[1])
         else:                plt.ylim(0, top)  # trying to fix weird autoscaling from bad pixels
         plt.xlim(start[kk], end[kk])
@@ -284,14 +286,14 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             subit.xaxis.tick_bottom()  # don't let lower ticks be mirrored  on upper axis
 
         if  kk % max_per_page == (max_per_page-1) or kk == Npanels-1:   # last plot on this page
-            if plotx2 : subit.set_xlabel(ur"observed-frame vacuum wavelength (\u00c5)")  ## COMMENDED OUT FOR mage stack paper
-            else:       subit.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")  # Just for mage stack paper
+            if plotx2 : subit.set_xlabel(r"observed-frame vacuum wavelength ($\AA$)")  ## COMMENDED OUT FOR mage stack paper
+            else:       subit.set_xlabel(r"rest-frame vacuum wavelength ($\AA$)")  # Just for mage stack paper
             #plt.ylabel('fnu') # fnu in cgs units: erg/s/cm^2/Hz
             plt.ylabel('relative flux') # **temp for stacked paper
             pp.savefig(bbox_inches='tight')    
             #fig.canvas.draw()
         if  kk % max_per_page == 0 and plotx2 :  # first plot on the page
-            upper.set_xlabel(ur"rest-frame vacuum wavelength (\u00c5)")
+            upper.set_xlabel(u"rest-frame vacuum wavelength ($\AA$)")
             
         if(kk == 0):  # first page
             if callable(annotate) : annotate()

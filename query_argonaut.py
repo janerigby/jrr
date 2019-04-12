@@ -1,3 +1,4 @@
+from __future__ import print_function
 ## Reads the Galactic dust maps of Green, Schlafly, Finkbeiner et al. 2015, ApJ, 810, 25G,
 ##     http://adsabs.harvard.edu/abs/2015ApJ...810...25G
 ## Code downloaded from https://gist.github.com/gregreen/20291d238bc398d9df84 on 14 July 2017
