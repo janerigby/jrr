@@ -52,7 +52,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
     figsize:     (Optional) Figure size in inches.
     vel_plot:    (Optional, Boolean):  If True, x-axis is velocity.  If False, x-axis is wavelength.
     '''
-    Nrow = ceil(line_center.size / Ncol)  # Calculate how many rows to generate
+    Nrow = ceil(len(line_center) / Ncol)  # Calculate how many rows to generate
     fig = plt.figure(figsize=figsize)
     restwave = wave / (1.0 + redshift)
 
@@ -67,7 +67,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             plt.step(vel[in_window], dfnu[in_window], color=color2)  # plot uncertainty
             plt.plot( (-1*win, win), (1.0,1.0), color=color3)        # plot unity continuum
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
-            plt.ylim(0.0, 1.5)  # May need to change these limits
+            #plt.ylim(0.0, 1.5)  # May need to change these limits
             plt.xlim(-1*win, win)
         else :
             in_window = restwave.between((line_center[ii] - win), (line_center[ii] + win))
@@ -117,8 +117,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     else : mycol = standard_colors1()
     linestyles = ['solid'] #, 'dashed', 'dotted']#, 'dashdot']
     plt.rc('axes', prop_cycle=(cycler('color', mycol) * cycler('linestyle', linestyles))) 
-    
-    Nrow = int(np.ceil( float(len(line_center)) / Ncol))  # Calculate how many rows to generate
+    if type(line_center) == np.float64 :  Nrow=1
+    else :  Nrow = int(np.ceil( float(len(line_center)) / Ncol))  # Calculate how many rows to generate
     #print "DEBUGGING ", Nrow, Ncol, len(line_center)
     fig = plt.figure(figsize=figsize)
 
@@ -144,7 +144,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 in_window = vel.between(win0, win1)
                 plt.step(vel[in_window], thefnus[ss][in_window], color=mycol[ss], linewidth=lw[ss], label=spec_label[ss])
                 if len(thedfnus[ss]) :
-                    plt.step(vel[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=1, label='_nolegend_')  # plot uncertainty
+                    #plt.step(vel[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=1, label='_nolegend_')  # plot uncertainty
+                    plt.step(vel[in_window], thedfnus[ss][in_window], color='grey', linewidth=1, label='_nolegend_')  # plot uncertainty in grey
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
@@ -156,7 +157,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                 in_window = restwave.between((line_center[ii] + win0), (line_center[ii] + win1))
                 plt.step(restwave[in_window], thefnus[ss][in_window], color=mycol[ss], linewidth=lw[ss], label=spec_label[ss])
                 if len(thedfnus[ss]) :
-                    plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=1, label='_nolegend_')
+                    #plt.step(restwave[in_window], thedfnus[ss][in_window], color=mycol[ss], linewidth=1, label='_nolegend_')
+                    plt.step(restwave[in_window], thedfnus[ss][in_window], color='grey', linewidth=1, label='_nolegend_')
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
             plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity

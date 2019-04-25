@@ -154,11 +154,21 @@ def fnu2flam(wave, fnu) :
     flam = fnu *  A_c/(wave * 1E-8 ) / wave
     return(flam)
 
+def fnu2flam_df(df, colwave='wave', colf='fnu', colf_u='fnu_u') : # same, for a data frame
+    df['flam']   = pandas.Series(fnu2flam(df[colwave], df[colf]))
+    df['flam_u'] = pandas.Series(fnu2flam(df[colwave], df[colf_u]))
+    return(0)  # acts on df
+
 def flam2fnu(wave, flam) :
     '''Convert from flambda (in erg/s/cm^2/A) to fnu (in erg/s/cm^2/Hz).  Assumes wave in Angstroms.'''
     A_c = constants.c.to('cm/s').value
     fnu = flam * (wave * 1E-8 ) * wave / A_c;
     return(fnu)
+
+def flam2fnu_df(df, colwave='wave', colf='flam', colf_u='flam_u') : # same, for a data frame
+    df['fnu']   = pandas.Series(flam2fnu(df[colwave], df[colf]))
+    df['fnu_u'] = pandas.Series(flam2fnu(df[colwave], df[colf_u]))
+    return(0)  # acts on df
 
 def convert2restframe(wave, f, f_u, zz, units) :
     if units == 'flam' :
