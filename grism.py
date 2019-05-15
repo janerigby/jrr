@@ -5,7 +5,7 @@ from builtins import str
 from jrr import spec
 from jrr import mage
 from jrr import util
-from jrr import query_argonaut
+from jrr import  MW_EBV
 from re import search, sub, split
 from os.path import exists, basename
 from astropy.coordinates import SkyCoord
@@ -51,7 +51,7 @@ def get_MWreddening_S1723(internet=True) :
     # Get MW reddening E(B-V) from Green et al. 2015, using their API query_argonaut
     coords = SkyCoord(ra=260.9006916667, dec=34.199825, unit=(u.deg, u.deg))
     if internet:
-        EBV_Green2015 = query_argonaut.query(coords.ra.value, coords.dec.value, coordsys='equ', mode='sfd')  #
+        EBV_Green2015 =  MW_EBV.query(coords.ra.value, coords.dec.value, coordsys='equ', mode='sfd')  #
         val2return = list(EBV_Green2015.values())[0]
     else: val2return = 0.03415 # Stashed EBV -- temp solution while no internet on train
     return(val2return)

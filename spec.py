@@ -402,7 +402,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     weights = nf_u ** -2              # compute the weighted avg
     (stacked[pre+'weightavg'], sumweight) = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
     stacked[pre+'weightavg_u'] =  sumweight**-0.5
-    nf_clip  = sigma_clip(nf, sig=sigmaclip, iters=None, axis=0)
+    nf_clip  = sigma_clip(nf, sigma=sigmaclip, iters=None, axis=0)
     stacked[pre+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
     stacked[pre+'clipavg_u'] = sumweight2**-0.5   
     stacked[pre+'median']   = np.ma.median(nf, axis=0)
@@ -423,6 +423,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     stacked[pre+'jack_std'] = jack_std
     return(stacked, nf, nf_u)
 
+# Can get MW extinction for a given RA, DEC from jrr.MW_EBV.get_MW_EBV
 
 ### Extinction routines below
 def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :

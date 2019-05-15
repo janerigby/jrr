@@ -6,6 +6,6 @@ from . import fire
 from . import plot
 from . import peakdet
 from . import barycen
-from . import query_argonaut
+from . import MW_EBV
 from . import bpass
 from . import grism

@@ -5,6 +5,15 @@ from __future__ import print_function
 
 import json, requests
 
+def get_MW_EBV(RA, DEC) :
+    # Janes wrapper.  Get MW reddening E(B-V) from Green et al. 2015, using
+    # their API query_argonaut.  Requires RA, DEC to be in DECIMAL.
+    # returns E(B-V) from Milky Way
+    coords = SkyCoord(ra=RA, dec=DEC, unit=(u.deg, u.deg))
+    EBV_Green2015 = query(coords.ra.value, coords.dec.value, coordsys='equ', mode='sfd')  #
+    return(list(EBV_Green2015.values())[0]) #  EBV value from MW dust
+
+
 def query(lon, lat, coordsys='gal', mode='full'):
     '''
     Send a line-of-sight reddening query to the Argonaut web server.
@@ -59,3 +68,5 @@ def query(lon, lat, coordsys='gal', mode='full'):
         raise e
     
     return json.loads(r.text)
+
+
