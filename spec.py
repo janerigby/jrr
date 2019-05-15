@@ -423,7 +423,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     stacked[pre+'jack_std'] = jack_std
     return(stacked, nf, nf_u)
 
-# Can get MW extinction for a given RA, DEC from jrr.MW_EBV.get_MW_EBV
+# NB: Can get MW extinction for a given RA, DEC from jrr.MW_EBV.get_MW_EBV
 
 ### Extinction routines below
 def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :

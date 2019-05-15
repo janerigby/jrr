@@ -4,6 +4,8 @@ from __future__ import print_function
 ## Code downloaded from https://gist.github.com/gregreen/20291d238bc398d9df84 on 14 July 2017
 
 import json, requests
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 
 def get_MW_EBV(RA, DEC) :
     # Janes wrapper.  Get MW reddening E(B-V) from Green et al. 2015, using
