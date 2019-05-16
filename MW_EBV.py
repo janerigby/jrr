@@ -3,9 +3,21 @@ from __future__ import print_function
 ##     http://adsabs.harvard.edu/abs/2015ApJ...810...25G
 ## Code downloaded from https://gist.github.com/gregreen/20291d238bc398d9df84 on 14 July 2017
 
+from os.path import expanduser
 import json, requests
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+import pandas
+
+def get_MW_extinctions() :  # helper function to read a list of target, RA, DEC, and calculate MW EBV
+    coordfile = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/ESI_spectra/coords_for_EBV.txt"  #ESI and Grism targets
+    coords_df = pandas.read_table(coordfile, delim_whitespace=True, comment="#")
+    coords_df['EBV'] =  coords_df.apply(calc_EBV_onerow, axis=1)
+    coords_df.set_index('target', inplace=True)   
+    return(coords_df) # returns a dataframe of MW E(B-V)
+
+def calc_EBV_onerow(row):  # helper function to appl get_MW_EBV to a dataframe
+    return get_MW_EBV(row['RA'], row['DEC'])
 
 def get_MW_EBV(RA, DEC) :
     # Janes wrapper.  Get MW reddening E(B-V) from Green et al. 2015, using
