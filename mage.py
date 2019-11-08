@@ -31,7 +31,7 @@ def organize_labels(group) :
     # Batch1 is what is published in Rigby et al. 2018.  Batch2 is what was processed by Feb 2018.  Batch 3 was processed Dec 2018
     batch1  = ('rcs0327-B', 'rcs0327-E', 'rcs0327-G', 'rcs0327-U', 'rcs0327-counterarc', 'S0004-0103', 'S0033+0242', 'S0108+0624', 'S0900+2234')
     batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
-    batch2 = ('planckarc_pos1', 'planckarc_slit4a', 'planckarc_slit4bc', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
+    batch2 = ('planckarc_pos1', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
     batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
     metabatch = ('planckarc_nonleak', 'planckarc_leak', 'rcs0327-all')
     if group   == 'batch1' : return(batch1)
@@ -59,14 +59,14 @@ def prettylabel_from_shortlabel(short_label) :  # For making plots
 
 def getpath(mage_mode) : 
     ''' Haqndle paths for python MagE scripts.  Two use cases:
-    A) I am on satchmo, & want to use spectra in  /Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/
+    A) I am on satchmo, & want to use spectra in  /Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/
        mage_mode = "reduction"
     B) I am on Milk, or a collaborator, using the "released" version of the MagE data, ~/Dropbox/MagE_atlas/
        mage_mode = "released"
        This is how to analyze the mage Data, same as the other collaborators.'''
     if mage_mode == "reduction" :
-        spec_path = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/"
-        line_path = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Analysis/Plot-all/Lines/"
+        spec_path = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Combined-spectra/"
+        line_path = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Analysis/Plot-all/Lines/"
         return(spec_path, line_path)
     elif mage_mode == "released" :
         homedir = expanduser('~')
@@ -414,7 +414,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
      
 def open_Crowther2016_spectrum() :
     print("STATUS:  making velocity plots of the stacked Crowther et al. 2016 spectrum")
-    infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Crowther2016/r136_stis_all.txt" # on satchmo
+    infile = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Crowther2016/r136_stis_all.txt" # on satchmo
     sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)  # cols are wave, flam
     sp['fnu'] = spec.fnu2flam(sp['wave'], sp['flam'])
     return(sp)
@@ -537,7 +537,7 @@ def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line
     
 def open_Leitherer_2011_stack() :
     # call:  (restwave, avg_flux, median_flux) = open_Leitherer_2011_stack() :
-    infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Leitherer_2011/fos_ghrs_composite.txt"
+    infile = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Leitherer_2011/fos_ghrs_composite.txt"
     leith =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)
     return(leith)
 
@@ -713,7 +713,7 @@ def convert_chuck_mosfire(infile, outfile=None) :
     return(df)
 
 def read_shapley_composite() :
-    infile = "/Volumes/Apps_and_Docs/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/LBGs/composite-LBG-shapley.dat"
+    infile = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/LBGs/composite-LBG-shapley.dat"
     df = pandas.read_table(infile, delim_whitespace=True, comment="#")
     df['fnu_u'] = 0.0
     df['flam']     = spec.fnu2flam(df.wave, df.fnu)          # convert fnu to flambda
