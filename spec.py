@@ -426,7 +426,7 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
 # NB: Can get MW extinction for a given RA, DEC from jrr.MW_EBV.get_MW_EBV
 
 ### Extinction routines below
-def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u') :
+def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u', colmed='median') :
     #print "Dereddening Milky Way extinction"
     Rv = 3.1
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
@@ -436,8 +436,9 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     sp['MWredcor'] = 10**(-0.4 * MW_extinction)
     sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').as_matrix()))
     sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').as_matrix()))
-    if colcont in list(sp.keys()) :  sp[colcont]  = pandas.Series(extinction.apply(MW_extinction, sp[colcont].astype('float64').as_matrix()))
+    if colcont  in list(sp.keys()) :  sp[colcont] = pandas.Series(extinction.apply(MW_extinction,  sp[colcont].astype('float64').as_matrix()))
     if colcontu in list(sp.keys()) : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
+    if colmed   in list(sp.keys()) :   sp[colmed] = pandas.Series(extinction.apply(MW_extinction,   sp[colmed].astype('float64').as_matrix()))
     return(0)
 
 def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, colwave='rest_wave') :
