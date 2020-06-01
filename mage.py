@@ -32,7 +32,7 @@ def organize_labels(group) :
     batch1  = ('rcs0327-B', 'rcs0327-E', 'rcs0327-G', 'rcs0327-U', 'rcs0327-counterarc', 'S0004-0103', 'S0033+0242', 'S0108+0624', 'S0900+2234')
     batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
     batch2 = ('planckarc_pos1', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
-    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
+    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_h6', 'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
     metabatch = ('planckarc_nonleak', 'planckarc_leak', 'planckarc_fire_nonleak', 'planckarc_fire_leak', 'rcs0327-all')
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
@@ -42,6 +42,14 @@ def organize_labels(group) :
     elif group == 'metabatch' : return(metabatch)
     else : raise Exception("Error: label group unrecognized, not one of these: batch1, batch2, batch3, batch123, metabatch.")
 
+def sunburst_translate_names() :
+    # Translate the old MagE names for the sunburst arc pointings into the same format as the FIRE pointings.
+    sunburst_translate = {'pos1' : 'M-0',   'planckarc_h6' : 'M-2',   'planckarc_h4' : 'M-3',  'planckarc_h1' : 'M-4'}
+    sunburst_translate.update({'planckarc_h3' : 'M-5',   'planckarc_h1a' : 'M-6',    'planckarc_h1andh1a' : 'M-4+M-6',  'planckarc_h9' : 'M-7'})
+    sunburst_translate.update({'planckarc_h5' : 'M-8',   'planckarc_f' : 'M-8',      'planckarc_h2' : 'M-9'})
+    #there is no M-1; it was observed with FIRE but not with MagE.
+    return(sunburst_translate)
+        
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
     thefile = spec_path + "dict_longnames.txt"
