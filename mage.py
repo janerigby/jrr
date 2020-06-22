@@ -1,5 +1,5 @@
 ''' Scripts to read and analyze MagE/Magellan spectra.  
-    jrigby, begun Oct 2015.  Updates March--Dec 2016
+    jrigby, begun Oct 2015.  Updates March--Dec 2016, then a later trickle.
 '''
 from __future__ import print_function
 from builtins import zip
@@ -27,28 +27,36 @@ color4 = 'b'     # color for 2nd spectrum, for comparison
 def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
     return(1267.0, 1276.0)  # These are rest wavelengths, in Angstroms
 
+def sunburst_translate_names() :
+    # Translate the old MagE names for the sunburst arc pointings into the same format as the FIRE pointings.
+    # See ~/Dropbox/SGAS-shared/NIR_spectra/FIRE/sunburst_reduced/what_these_data_are_JRmods_v2.txt
+    sunburst_translate = {'planckarc_pos1'    : 'M-0',   'planckarc_h6'  : 'M-2',  'planckarc_h4' : 'M-3',            'planckarc_h1' : 'M-4'}
+    sunburst_translate.update({'planckarc_h3' : 'M-5',   'planckarc_h1a' : 'M-6',  'planckarc_h1andh1a' : 'M-4+M-6'})
+    sunburst_translate.update({'planckarc_h9' : 'M-7',   'planckarc_f'   : 'M-8',  'planckarc_h2' : 'M-9'})
+    #there is no M-1; it was observed with FIRE but not with MagE.
+    long_dict = {}
+    for key, value in sunburst_translate.items() :
+        long_dict.update({key : 'sunburst_'+value})
+    return(long_dict)
+# Now, how to integrate this new function into organize_labels, and speclist??
+
 def organize_labels(group) :
     # Batch1 is what is published in Rigby et al. 2018.  Batch2 is what was processed by Feb 2018.  Batch 3 was processed Dec 2018
     batch1  = ('rcs0327-B', 'rcs0327-E', 'rcs0327-G', 'rcs0327-U', 'rcs0327-counterarc', 'S0004-0103', 'S0033+0242', 'S0108+0624', 'S0900+2234')
     batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
     batch2 = ('planckarc_pos1', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
-    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h5',  'planckarc_h6', 'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
+    batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h6', 'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
+    batch4 = ('S1226+2152image3') # 2020 observations
     metabatch = ('planckarc_nonleak', 'planckarc_leak', 'planckarc_fire_nonleak', 'planckarc_fire_leak', 'rcs0327-all')
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
     elif group == 'batch3' : return(batch3)
+    elif group == 'batch4' : return(batch4)
     elif group == 'batch23' : return(batch2 + batch3)
     elif group == 'batch123' : return(batch1 + batch2 + batch3)
+    elif group == 'batch1234' : return(batch1 + batch2 + batch3 + batch4)
     elif group == 'metabatch' : return(metabatch)
-    else : raise Exception("Error: label group unrecognized, not one of these: batch1, batch2, batch3, batch123, metabatch.")
-
-def sunburst_translate_names() :
-    # Translate the old MagE names for the sunburst arc pointings into the same format as the FIRE pointings.
-    sunburst_translate = {'pos1' : 'M-0',   'planckarc_h6' : 'M-2',   'planckarc_h4' : 'M-3',  'planckarc_h1' : 'M-4'}
-    sunburst_translate.update({'planckarc_h3' : 'M-5',   'planckarc_h1a' : 'M-6',    'planckarc_h1andh1a' : 'M-4+M-6',  'planckarc_h9' : 'M-7'})
-    sunburst_translate.update({'planckarc_h5' : 'M-8',   'planckarc_f' : 'M-8',      'planckarc_h2' : 'M-9'})
-    #there is no M-1; it was observed with FIRE but not with MagE.
-    return(sunburst_translate)
+    else : raise Exception("Error: label group unrecognized, not one of these: batch1, batch2, batch3, batch4, batch123, batch1234, metabatch.")
         
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
@@ -122,8 +130,7 @@ def getlist(mage_mode, optional_file=False, zchoice='stars', MWdr=True) :
         pspecs.loc[(pspecs['fl_st']) & (pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'dz_syst'] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
         pspecs.loc[(pspecs['fl_st']) & (pspecs['fl_neb']) & (pspecs['fl_ISM']), 'dz_syst'] = -999  # Should never happen
     elif zchoice == 'neb' :
-        pspecs.loc[~pspecs['fl_neb'], 'z_syst']                        = pspecs['z_neb']  # use nebular z if have it
-        pspecs.loc[(pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'z_syst'] = pspecs['z_ISM'] #else ISM
+        pspecs.loc[~pspecs['fl_neb'], 'z_syst']                        = pspecs['z_neb']  # use nebular z if have
         pspecs.loc[(pspecs['fl_neb']) & (pspecs['fl_ISM']), 'z_syst'] = -999  # Should never happen
         pspecs.loc[~pspecs['fl_neb'], 'dz_syst'] = pspecs['sig_neb']
         pspecs.loc[(pspecs['fl_neb']) & (~pspecs['fl_ISM']), 'dz_syst'] = np.sqrt(( pspecs['sig_ISM']**2 + extra_dz**2).astype(np.float64))
