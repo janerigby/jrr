@@ -27,17 +27,22 @@ color4 = 'b'     # color for 2nd spectrum, for comparison
 def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
     return(1267.0, 1276.0)  # These are rest wavelengths, in Angstroms
 
-def sunburst_translate_names() :
+def sunburst_translate_names(longnames_old=True, longnames_new=True) :
     # Translate the old MagE names for the sunburst arc pointings into the same format as the FIRE pointings.
     # See ~/Dropbox/SGAS-shared/NIR_spectra/FIRE/sunburst_reduced/what_these_data_are_JRmods_v2.txt
-    sunburst_translate = {'planckarc_pos1'    : 'M-0',   'planckarc_h6'  : 'M-2',  'planckarc_h4' : 'M-3',            'planckarc_h1' : 'M-4'}
-    sunburst_translate.update({'planckarc_h3' : 'M-5',   'planckarc_h1a' : 'M-6',  'planckarc_h1andh1a' : 'M-4+M-6'})
-    sunburst_translate.update({'planckarc_h9' : 'M-7',   'planckarc_f'   : 'M-8',  'planckarc_h2' : 'M-9'})
+    sunburst_translate = {'pos1'    : 'M-0',   'h6'  : 'M-2',  'h4' : 'M-3',            'h1' : 'M-4'}
+    sunburst_translate.update({'h3' : 'M-5',   'h1a' : 'M-6',  'h1andh1a' : 'M-4+M-6'})
+    sunburst_translate.update({'h9' : 'M-7',   'f'   : 'M-8',  'h2' : 'M-9'})
     #there is no M-1; it was observed with FIRE but not with MagE.
-    long_dict = {}
+    prefix_old = 'planckarc_'  ;   prefix_new = 'sunburst_'
+    new_dict = {}
+    if longnames_old : p0 = prefix_old
+    else :             p0 = ""
+    if longnames_new : p1 = prefix_new
+    else :             p1 = ""
     for key, value in sunburst_translate.items() :
-        long_dict.update({key : 'sunburst_'+value})
-    return(long_dict)
+        new_dict.update({ p0+ key  : p1 + value})
+    return (new_dict)
 # Now, how to integrate this new function into organize_labels, and speclist??
 
 def organize_labels(group) :
@@ -46,7 +51,7 @@ def organize_labels(group) :
     batch1 += ('S0957+0509', 'S1050+0017', 'Horseshoe',  'S1226+2152', 'S1429+1202', 'S1458-0023', 'S1527+0652', 'S1527+0652-fnt', 'S2111-0114', 'Cosmic~Eye', 'S2243-0935')      
     batch2 = ('planckarc_pos1', 'planckarc', 'PSZ0441_slitA', 'PSZ0441_slitB', 'PSZ0441', 'SPT0310_slitA', 'SPT0310_slitB', 'SPT0310', 'SPT2325')  # Friends of Megasuara, batch2
     batch3 = ('planckarc_h1',  'planckarc_h1a', 'planckarc_h1andh1a', 'planckarc_h2', 'planckarc_h3', 'planckarc_h4', 'planckarc_h6', 'planckarc_f',  'planckarc_h9',  'SPT0356',  'SPT0142')
-    batch4 = ('S1226+2152image3') # 2020 observations
+    batch4 = ('S1226+2152image3',) # 2020 observations
     metabatch = ('planckarc_nonleak', 'planckarc_leak', 'planckarc_fire_nonleak', 'planckarc_fire_leak', 'rcs0327-all')
     if group   == 'batch1' : return(batch1)
     elif group == 'batch2' : return(batch2)
