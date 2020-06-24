@@ -42,8 +42,18 @@ def sunburst_translate_names(longnames_old=True, longnames_new=True) :
     else :             p1 = ""
     for key, value in sunburst_translate.items() :
         new_dict.update({ p0+ key  : p1 + value})
-    return (new_dict)
-# Now, how to integrate this new function into organize_labels, and speclist??
+    reversed_dict = {value : key for (key, value) in new_dict.items()}  # Make the reversed dictionary, where newnames are the keys 
+    return (new_dict, reversed_dict)
+# Now, how to integrate this new function into organize_labels, and speclist??  # Or should I just reorganize spectra-filenames-redshifts.txt,
+# and to hell with backwards compatibility?
+
+def sunburst_labels_goback(labels) : # Given a label list that includes new Sunburst names (ex. sunburst_M-0), translate to old planckarc_ names
+    (sunburst_dict, reverse_sunburst_dict)  =  sunburst_translate_names(longnames_old=True, longnames_new=True)
+    labels2 = []
+    for label in labels:
+        if 'sunburst' in label :   labels2.append(reverse_sunburst_dict[label])  # grab the old planckarc name
+        else :                     labels2.append(label)                         # pass through
+    return(labels2)
 
 def organize_labels(group) :
     # Batch1 is what is published in Rigby et al. 2018.  Batch2 is what was processed by Feb 2018.  Batch 3 was processed Dec 2018
@@ -68,7 +78,7 @@ def longnames(mage_mode) :
     thefile = spec_path + "dict_longnames.txt"
     longnames = pandas.read_table(thefile, delim_whitespace=True, comment="#")
     longnames['longname'] = longnames['longname'].str.replace("_", " ")
-    longnames.set_index("short_label", inplace=True, drop=True)  # New! Index by short_label.  May screw stuff up downstream, but worth doing
+    longnames.set_index("short_label", inplace=True, drop=True)  # Index by short_label.  May screw stuff up downstream, but worth doing
     return(longnames)
 
 def prettylabel_from_shortlabel(short_label) :  # For making plots
@@ -278,21 +288,21 @@ def wrap_open_spectrum(label, mage_mode, addS99=False, zchoice='stars', MWdr=Tru
     return(sp, resoln, dresoln, LL, zz_syst)
 
 def open_many_spectra(mage_mode, which_list="wcont", labels=(), verbose=True, zchoice='stars', addS99=True, MWdr=True, silent=False) :
-    ''' This opens all the Megasaura MagE spectra (w hand-fit-continuua) into honking dictionaries of pandas dataframes. Returns:
+    ''' This opens all the Megasaura MagE spectra into honking dictionaries of pandas dataframes. Returns:
     sp:        dictionary of pandas dataframes containing the spectra
     resoln:    dictionary of resolutions (float)
     dresoln:   dictionary of uncertainty in resolutions (float)
     LL:        dictionary of pandas dataframes of linelists
     zz_syst:   dictionary of systemic redshifts (float)
     speclist:  pandas dataframe describing the spectra (from getlist or variants)
-    MWdr:      use the Milky Way dereddened spectra?  YES YOU WANT THIS.  Default=False for backward compatability'''
+    MWdr:      use the Milky Way dereddened spectra?  YES YOU WANT THIS.'''
     if not silent: print("Loading MagE spectra in advance; this may be slow, but worthwhile if doing a lot of back and forth.")
     sp = {}; resoln = {}; dresoln = {}
     LL = {}; zz_sys = {}; boxcar  = {}
-    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice, MWdr=MWdr)
+    speclist = wrap_getlist(mage_mode, which_list=which_list, labels=labels, zchoice=zchoice, MWdr=MWdr)  #**
     for label in speclist.index :
         if verbose: print("Loading  ", label)
-        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice, MWdr=MWdr)
+        (sp[label], resoln[label], dresoln[label], LL[label], zz_sys[label]) = wrap_open_spectrum(label, mage_mode, addS99=addS99, zchoice=zchoice, MWdr=MWdr) #**
     return(sp, resoln, dresoln, LL, zz_sys, speclist)  # returns dictionaries for first 5 things, and the speclist
     
 def get_S99_path(MWdr=True) :  # Get path for S99
