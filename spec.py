@@ -206,13 +206,10 @@ def convert2obsframe(rest_wave, rest_f, rest_f_u, zz, units) :
         raise Exception('ERROR: last argument must specify whether  units of f, f_u are fnu or flam.  Must be same units for input and output')
 
 def convert2obsframe_df(df, zz, units='fnu', colrw='rest_wave', colrf='rest_fnu', colrf_u='rest_fnu_u') :
-    (wave, f, f_u) =  convert2obsframe(df[colrw], df[colf], df[colf_u], zz, units)
-    colwave = re.sub('rest_', '', colrw)
-    colf    = re.sub('rest_', '', colrf)
-    colf_u  = re.sub('rest_', '', colrf_u)     
-    df[colwave] = pandas.Series(wave)
-    df[colf]    = pandas.Series(f)
-    df[colf_u]  = pandas.Series(f_u)
+    (wave, f, f_u) =  convert2obsframe(df[colrw], df[colrf], df[colrf_u], zz, units)
+    df[sub('rest_', '', colrw)]   = pandas.Series(wave)
+    df[sub('rest_', '', colrf)]   = pandas.Series(f)
+    df[sub('rest_', '', colrf_u)] = pandas.Series(f_u)
     return(0)  # acts on df
  
 def calc_EW(flam, flam_u, cont, cont_u, disp, redshift) :   # calculate equivalent width as simple sum over the region of interest.
