@@ -9,6 +9,7 @@ from jrr import util
 import pandas
 from   math import ceil
 from   matplotlib import pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from mpl_toolkits.axes_grid1 import host_subplot
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter, MaxNLocator
 import numpy as np
@@ -18,6 +19,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 color1 = 'k'     # color for spectra
 color2 = '0.65'  # color for uncertainty spectra
 color3 = '0.5'   # color for continuum
+
+def force_axisticks_linear(whichaxis) :
+    for axis in whichaxis :  #ax.yaxis]:
+        formatter = FuncFormatter(lambda y, _: '{:.16g}'.format(y))
+        axis.set_major_formatter(formatter)
 
 def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', fontsize=10, fontname='Times New Roman') :
     # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: feed it a dataframe.
