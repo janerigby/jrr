@@ -4,6 +4,7 @@ from __future__ import print_function
 import numpy as np
 import subprocess
 from os.path import exists, basename
+from shutil import copy
 import fileinput
 from   re import split, sub, search
 from astropy.stats import sigma_clip, median_absolute_deviation
@@ -88,9 +89,11 @@ def strip_pound_before_colnames(infile) :
 def put_header_on_file(infile, header_text, outfile) :
     ''' Pandas doesn't allow user to add explanatory header
     to output files.  Headers are useful.  So, writing wrapper to add one.'''
-    tmp = "/tmp/header"
+    tmp =  '/tmp/header'
+    tmp2 = '/tmp/tmpfile'
     with open(tmp, "w") as myfile:  myfile.write(header_text)
-    subprocess.check_output("cat " + tmp + " " + infile + " > " + outfile, shell=True)
+    subprocess.check_output("cat " + tmp + " " + infile + " > " + tmp2, shell=True)
+    copy(tmp2, outfile)  # This extra step prevents cat from making an infinite loop when infile=outfile
     return(0)
 
 def read_header_from_file(infile, comment="#") :
