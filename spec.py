@@ -336,8 +336,8 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
         if colmask not in sp : sp[colmask] = False
         flag_near_lines(sp, LL, colv2mask=colv2mask, colwave=colwave)  # lines are masked in sp.linemask
         sp.loc[sp['linemask'], colmask] = True           # add masked lines to the continuum-fitting mask
-    # astropy.convolve barfs on pandas.Series as input.  Use .as_matrix() to send as np array
-    smooth1 = astropy.convolution.convolve(sp[colf].as_matrix(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].as_matrix()) # boxcar smooth
+    # astropy.convolve barfs on pandas.Series as input.  Use .to_numpy() to send as np array
+    smooth1 = astropy.convolution.convolve(sp[colf].to_numpy(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].to_numpy()) # boxcar smooth
     small_kern = int(util.round_up_to_odd(boxcar/10.))
     smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
@@ -429,24 +429,24 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
     print("jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW)
     #sp['oldfnu'] = sp[colf]  # Debugging
-    MW_extinction = extinction.ccm89(sp[colwave].astype('float64').as_matrix(), Av, Rv)
+    MW_extinction = extinction.ccm89(sp[colwave].astype('float64').to_numpy(), Av, Rv)
     sp['MWredcor'] = 10**(-0.4 * MW_extinction)
-    sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').as_matrix()))
-    sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').as_matrix()))
-    if colcont  in list(sp.keys()) :  sp[colcont] = pandas.Series(extinction.apply(MW_extinction,  sp[colcont].astype('float64').as_matrix()))
-    if colcontu in list(sp.keys()) : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').as_matrix()))
-    if colmed   in list(sp.keys()) :   sp[colmed] = pandas.Series(extinction.apply(MW_extinction,   sp[colmed].astype('float64').as_matrix()))
+    sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').to_numpy()))
+    sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').to_numpy()))
+    if colcont  in list(sp.keys()) :  sp[colcont] = pandas.Series(extinction.apply(MW_extinction,  sp[colcont].astype('float64').to_numpy()))
+    if colcontu in list(sp.keys()) : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').to_numpy()))
+    if colmed   in list(sp.keys()) :   sp[colmed] = pandas.Series(extinction.apply(MW_extinction,   sp[colmed].astype('float64').to_numpy()))
     return(0)
 
 def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, colwave='rest_wave') :
     # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti
     sp_filt = sp.loc[sp[colwave].between(1200,20000)]
     Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
-    Av = -1 * Rv * this_ebv  # stupidity w .Series and .as_matrix() is bc extinction package barfs on pandas. pandas->np->pandas
+    Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
     colfout = colf + "_dered"
     coluout = colu + "_dered"
-    sp[colfout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').as_matrix(), Av, Rv, unit='aa'), sp[colf].astype('float64').as_matrix()))
+    sp[colfout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa'), sp[colf].astype('float64').to_numpy()))
     if deredden_uncert :
-        sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').as_matrix(), Av, Rv, unit='aa'), sp[colu].astype('float64').as_matrix()))
+        sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa'), sp[colu].astype('float64').to_numpy()))
     return(0) 
 

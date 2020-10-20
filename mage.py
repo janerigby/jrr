@@ -76,7 +76,7 @@ def organize_labels(group) :
 def longnames(mage_mode) :
     (spec_path, line_path) = getpath(mage_mode)
     thefile = spec_path + "dict_longnames.txt"
-    longnames = pandas.read_table(thefile, delim_whitespace=True, comment="#")
+    longnames = pandas.read_csv(thefile, delim_whitespace=True, comment="#")
     longnames['longname'] = longnames['longname'].str.replace("_", " ")
     longnames.set_index("short_label", inplace=True, drop=True)  # Index by short_label.  May screw stuff up downstream, but worth doing
     return(longnames)
@@ -116,7 +116,7 @@ def getlist(mage_mode, optional_file=False, zchoice='stars', MWdr=True) :
     else :
         (spec_path, line_path) = getpath(mage_mode)
         thelist = spec_path + "spectra-filenames-redshifts.txt"
-    pspecs = pandas.read_table(thelist, delim_whitespace=True, comment="#")
+    pspecs = pandas.read_csv(thelist, delim_whitespace=True, comment="#")
     if MWdr : pspecs['filename'] = pspecs['filename'].str.replace('.txt', '_MWdr.txt')
     # specs holds the filenames and redshifts, for example   specs['filename'], specs['z_stars'] 
    
@@ -235,7 +235,7 @@ def open_spectrum(infile, zz, mage_mode) :
     if search("wC1", infile) :  hascont = True # The continuum exists        
     else :  hascont=False   # file lacks continuum, e.g. *comb1.txt
 
-    sp =  pandas.read_table(specdir+infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)#, names=names)
+    sp =  pandas.read_csv(specdir+infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)#, names=names)
     sp.rename(columns= {'noise'  : 'fnu_u'}, inplace=True)
     sp.rename(columns= {'avgsky' : 'fnu_sky'}, inplace=True)
     sp.rename(columns= {'obswave' : 'wave_sky'}, inplace=True)
@@ -332,7 +332,7 @@ def open_modelfit(rootname, denorm=True, altfile=None, MWdr=True, debug=False, m
     if altfile :  modelfile = altfile # manual override for path & filename
     else :        modelfile = getfullname_modelfit(rootname, MWdr=MWdr, model_type=model_type)
     if debug : print("DEBUGGING open_modelfit, file was", modelfile)
-    model =  pandas.read_table(modelfile, delim_whitespace=True, comment="#", names=('rest_wave', 'rest_flam_data_norm', 'rest_flam_data_u_norm', 'rest_flam_fit_norm'))
+    model =  pandas.read_csv(modelfile, delim_whitespace=True, comment="#", names=('rest_wave', 'rest_flam_data_norm', 'rest_flam_data_u_norm', 'rest_flam_fit_norm'))
     model['rest_flam_fit_u'] = np.nan
     model['badmask']  = False
     model['linemask'] = False
@@ -433,7 +433,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
         elif which_stack == "divbys99" :  stackfile = "magestack_" + zchoice + "_divbyS99_spectrum.txt"
         else : raise Exception("I do not recognize which_stack as one of the choices: standard, Stack-A, or divbys99")
         infile = indir + stackfile
-    sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)
+    sp =  pandas.read_csv(infile, delim_whitespace=True, comment="#", header=0, dtype=np.float64)
     if 'restwave' in list(sp.keys()) :   sp.rename(columns = {'restwave' : 'rest_wave'}, inplace=True)
     if which_stack == "Stack-A" :
         sp['rest_wave'] = sp['rest_wave'] / (1 + 0.0000400)  # correct slight redshift offset, from 12 km/s measured by Chisholm
@@ -458,7 +458,7 @@ def open_stacked_spectrum(mage_mode, alt_infile=False, which_stack="standard", z
 def open_Crowther2016_spectrum() :
     print("STATUS:  making velocity plots of the stacked Crowther et al. 2016 spectrum")
     infile = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Crowther2016/r136_stis_all.txt" # on satchmo
-    sp =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)  # cols are wave, flam
+    sp =  pandas.read_csv(infile, delim_whitespace=True, comment="#", header=0)  # cols are wave, flam
     sp['fnu'] = spec.fnu2flam(sp['wave'], sp['flam'])
     return(sp)
         
@@ -534,7 +534,7 @@ def get_linelist(linelist) :
     ''' Grabs linelist (generated beforehand by concat-linelist.pl) and saves to a Pandas Data Frame.
     Update: Make it grab the systemic redshift, too.  
     '''
-    L = pandas.read_table(linelist,  delim_whitespace=True, comment="%", names=('restwav', 'lab1', 'lab2', 'foo1', 'foo2', 'color', 'zz', 'type', 'src'))
+    L = pandas.read_csv(linelist,  delim_whitespace=True, comment="%", names=('restwav', 'lab1', 'lab2', 'foo1', 'foo2', 'color', 'zz', 'type', 'src'))
     L.lab1 = L.lab1.str.replace("_", " ")  # clean up formatting.  Should go fix original Linelists/MINE to get all to have _
     L.insert(7, 'obswav', L.restwav * (1.0 + L.zz))  # observed wavelength for this line
     L.insert(8, 'fake_v',   0)  # need this for plot_linelist if velplot
@@ -581,7 +581,7 @@ def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line
 def open_Leitherer_2011_stack() :
     # call:  (restwave, avg_flux, median_flux) = open_Leitherer_2011_stack() :
     infile = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/Leitherer_2011/fos_ghrs_composite.txt"
-    leith =  pandas.read_table(infile, delim_whitespace=True, comment="#", header=0)
+    leith =  pandas.read_csv(infile, delim_whitespace=True, comment="#", header=0)
     return(leith)
 
     
@@ -713,8 +713,8 @@ def read_chuck_UVspec(mage_mode="released", addS99=False, autofitcont=False) :
     (spec_path, line_path) = getpath(mage_mode)
     litfile = spec_path + "../Lit-spectra/Steidel2016/KBSS-LM1.uv.fnu.csv"
     #names = ("index", "rest_wave", "rest_fnu", "rest_fnu_u")
-    #sp = pandas.read_table(litfile, delim_whitespace=True, comment="#", names=names, skiprows=1, index_col=0)
-    sp = pandas.read_table(litfile, delim_whitespace=True, comment="#")
+    #sp = pandas.read_csv(litfile, delim_whitespace=True, comment="#", names=names, skiprows=1, index_col=0)
+    sp = pandas.read_csv(litfile, delim_whitespace=True, comment="#")
     sp['rest_wave'] = sp['wave']
     sp['rest_fnu']  = sp['fnu']
     sp['rest_fnu_u']  = sp['fnu_u']
@@ -752,7 +752,7 @@ def convert_chuck_mosfire(infile, outfile=None) :
 
 def read_shapley_composite() :
     infile = "/Users/jrrigby1/SCIENCE/Lensed-LBGs/Mage/Lit-spectra/LBGs/composite-LBG-shapley.dat"
-    df = pandas.read_table(infile, delim_whitespace=True, comment="#")
+    df = pandas.read_csv(infile, delim_whitespace=True, comment="#")
     df['fnu_u'] = 0.0
     df['flam']     = spec.fnu2flam(df.wave, df.fnu)          # convert fnu to flambda
     df['flam_u']   = spec.fnu2flam(df.wave, df.fnu_u)
@@ -776,7 +776,7 @@ def open_planckarc_sum(zz, vmask1, vmask2, smooth_length=50., option="full") :
     if   option == "full" : pfile = "psz1550_muse_full_F.fits.txt"
     elif option == "wtd"  : pfile = "psz1550_muse_full_whtd_F.fits.txt"
     else : raise Exception("Error: Option is one one of full or wtd")
-    pf = pandas.read_table(pfile, delim_whitespace=True, comment="#", names=('wave', 'flam', 'flam_u'))
+    pf = pandas.read_csv(pfile, delim_whitespace=True, comment="#", names=('wave', 'flam', 'flam_u'))
     pf['badmask']  = False
     pf['contmask'] = False
     pf['unity'] = 1.0
@@ -822,10 +822,10 @@ def load_doublet_df(batch) :  # Load a dataframe containing the intervening doub
     doubletfiles['batch1']  = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/Results_16Feb2018/found_doublets_SNR4_JRRedit.txt"
     doubletfiles['batch23'] = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/Results_21Feb2019/found_doublets_batch3_SNR4_JRRedit.txt"
     if batch in ('batch1', 'batch23') :
-        doublet_df = pandas.read_table(doubletfiles[batch], delim_whitespace=True, comment="#")
+        doublet_df = pandas.read_csv(doubletfiles[batch], delim_whitespace=True, comment="#")
     elif batch == ('batch123') :
-        doublet_df1 = pandas.read_table(doubletfiles['batch1'], delim_whitespace=True, comment="#")
-        doublet_df2 = pandas.read_table(doubletfiles['batch23'], delim_whitespace=True, comment="#")
+        doublet_df1 = pandas.read_csv(doubletfiles['batch1'], delim_whitespace=True, comment="#")
+        doublet_df2 = pandas.read_csv(doubletfiles['batch23'], delim_whitespace=True, comment="#")
         doublet_df = pandas.concat([doublet_df1, doublet_df2])#, sort=False)
     recover_all_shortnames(doublet_df)
     return(doublet_df)

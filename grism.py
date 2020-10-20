@@ -28,8 +28,8 @@ def wrap_fit_continuum(sp, LL, zz, boxcar, colwave='wave', colf='flam_cor', colf
     return(smooth1, smooth2)
 
 def load_linelists(linelistdir, zz, vmask=500.) :
-    LL_uv  = pandas.read_table(linelistdir + "rest_UV_emission_linelist_short.txt",      delim_whitespace=True, comment="#")
-    LL_opt = pandas.read_table(linelistdir + "rest_optical_emission_linelist_short.txt", delim_whitespace=True, comment="#")
+    LL_uv  = pandas.read_csv(linelistdir + "rest_UV_emission_linelist_short.txt",      delim_whitespace=True, comment="#")
+    LL_opt = pandas.read_csv(linelistdir + "rest_optical_emission_linelist_short.txt", delim_whitespace=True, comment="#")
     (spec_path, line_path) = mage.getpath('released')
     (LL_temp, zz_notused) =  mage.get_linelist(line_path + 's1723.linelist')
     LL_uvabs = LL_temp.loc[LL_temp['type'].eq("ISM")].copy(deep=True)  # This already has redshift from .linelist.  may be out of synch****

@@ -37,7 +37,7 @@ def load_spectra(filename, ver='2.1') :  # Loads spectra for all ages.  1st col 
     # Uses filename, which should look like 'BPASSv2.1_imf135_100/spectra.z020.dat.gz'
     bpassdir = model_dir(ver=ver)
     df_age = ages_setup()
-    df_bpass = pandas.read_table(bpassdir + filename, header=None, delim_whitespace=True, names=['wave'] + df_age['colname'].tolist())
+    df_bpass = pandas.read_csv(bpassdir + filename, header=None, delim_whitespace=True, names=['wave'] + df_age['colname'].tolist())
     return(df_bpass) 
 
 def load_1spectrum(filename, age_to_find, ver='2.1') : #Streamline version of above, just loads 1 age (units=yr)  Faster.
@@ -47,7 +47,7 @@ def load_1spectrum(filename, age_to_find, ver='2.1') : #Streamline version of ab
     #print "DEBUG, closest age was", closest_age
     usecols = [0, closest_age.index.values[0] + 1] 
     names = ['wave', 'flam']
-    df_bpass = pandas.read_table(bpassdir + filename, header=None, delim_whitespace=True, usecols=usecols, names=names)
+    df_bpass = pandas.read_csv(bpassdir + filename, header=None, delim_whitespace=True, usecols=usecols, names=names)
     return(df_bpass)
     
 def wrap_load_1spectrum(Z, age, style, ver='2.1') :  #uses parameters rather than filenames. Units of age are years.
