@@ -145,6 +145,15 @@ def Kennicutt_LUV_to_SFR(LUV) :
 def Kennicutt_SFR_to_LHa(SFR) :
     return (SFR / 7.9E-42)  # LHa in erg/s, from SFR in Msol/yr.   Eqn 2 of Kennicutt 1998
 
+def Kennicutt_LHa_to_SFR(LHa) :
+    return (LHa * 7.9E-42)  # from LHa in erg/s to SFR in Msol/yr.  Eqn 2 of Kennicutt 1998
+
+def Kennicutt_SFR_to_fHa(SFR, zz) :
+    LHa = Kennicutt_SFR_to_LHa(SFR)   # this is a flux, redshift invariant
+    fHa = LHa / (4. * np.pi * util.luminosity_distance(zz)**2)
+    return(fHa)
+    
+
 def luminosity_distance(zz) :
     return ( cosmo.luminosity_distance(zz).to(units.cm).value ) # in cm
 
