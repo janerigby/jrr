@@ -15,10 +15,12 @@ import math
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from astropy.stats import sigma_clip
-from astropy import constants
 import astropy.convolution
+from astropy import constants
+from astropy import units 
 import extinction
 from matplotlib import pyplot as plt
+
 
 def calz_unred(wave, flux, ebv, R_V=4.05):    # pythonified version of idlutil calz_unred
     # rest wave units are Angstroms.  ebv is for the stars, following note in idutil calz_unred, which implements Calzetti 2000 attenuation

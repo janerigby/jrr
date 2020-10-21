@@ -10,6 +10,7 @@ from   re import split, sub, search
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
 from astropy import units
+from astropy.cosmology import WMAP9 as cosmo
 import scipy  
 import scikits.bootstrap as bootstrap  
 
@@ -119,6 +120,33 @@ def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
 def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies    
     Jy = 10**(-0.4*(AB + 48.57))/1E-23  
     return(Jy)
+
+
+#### Conversions that are useful to estimate SFRs  From Kennicutt 1998 and supporting
+def mAB_to_fnu(m_AB, zz=0, convert_to_rest=False) :
+    # Convert AB magnitude to fnu in erg/s/cm^2/Hz.  Does not remove bandwidth compression by default
+     fnu = 10**((m_AB + 48.60)/-2.5)
+     if convert_to_rest :  fnu /= (1 + zz)    # Remove the bandwidth compression
+     return(fnu)
+
+def fnu_to_Lnu(fnu, zz) :  # From observed fnu to rest Fnu.  Remove bandwidth compression
+    d_L =  luminosity_distance(zz)
+    #Lnu = fnu_obs / (1+z)  * 4 *pi * D_L^2      , where the (1+z) corrects for bandwith compression
+    Lnu = fnu  / (1 + zz) * 4. * np.pi * d_L**2 
+    return(Lnu)
+
+def mAB_to_Lnu(m_AB, zz) :  # roll up the above 2 for convenience
+    fnu = mAB_to_fnu(m_AB, zz)
+    return(fnu_to_Lnu(fnu, zz))
+
+def Kennicutt_LUV_to_SFR(LUV) : 
+    return (LUV * 1.4E-28 )  # SFR, from Eqn 1 of Kennicutt 1998, in Msol/yr
+
+def Kennicutt_SFR_to_LHa(SFR) :
+    return (SFR / 7.9E-42)  # LHa in erg/s, from SFR in Msol/yr.   Eqn 2 of Kennicutt 1998
+
+def luminosity_distance(zz) :
+    return ( cosmo.luminosity_distance(zz).to(units.cm).value ) # in cm
 
 #####  Astronomy coordinate systems  #####
 
