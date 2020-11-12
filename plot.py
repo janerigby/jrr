@@ -25,11 +25,15 @@ def force_axisticks_linear(whichaxis) :
         formatter = FuncFormatter(lambda y, _: '{:.16g}'.format(y))
         axis.set_major_formatter(formatter)
 
-def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', fontsize=10, fontname='Times New Roman') :
+def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', fontsize=10, fontname='Times New Roman', arrowprops=None, ax=None) :
     # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: feed it a dataframe.
     for index, row in df.iterrows():
-         plt.annotate(row[text], xy=(row[xcol], row[ycol]), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, fontname=fontname)
+        if ax==None: 
+            plt.annotate(row[text], xy=(row[xcol], row[ycol]), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, fontname=fontname, arrowprops=arrowprops)
+        else:
+            ax.annotate(row[text], xy=(row[xcol], row[ycol]), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, fontname=fontname, arrowprops=arrowprops)
     return(0)
+
 
 def standard_colors1():
     return(['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan'])
