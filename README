@@ -2,11 +2,17 @@ This is Jane Rigby's python module to deal with astronomical data.
 It uses Pandas DataFrames and AstroPy.
 Components:
 mage.py 	tools to deal w Magellan/MagE spectra
+sgas.py         tools to deal with other SGAS datasets
 instruments.py	tools to deal w particular instruments and telescopes
-spec.py		general tools to deal with spectra
+spec.py		general tools to deal with spectra in general
+grism.py        specific tools to deal with HST grism spectra
 peakdet.py	simple peak detection
 plot.py		tools to make plots.  
 util.py		general utilities
+barycen.py      calculate the barycentric correction
+kennicutt.py    conversions among star formation rates
+MW_EBV.py       specific tools to deal with Milky Way dereddening
+
 
 First commit to github: July 2016
 Jane.Rigby@gmail.com

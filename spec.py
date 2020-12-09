@@ -2,10 +2,10 @@
 instrument-specific should go here.  jrigby, May 2016'''
 from __future__ import print_function
 
-from builtins import range
+#from builtins import range
 import operator  # Needed to get absorption/emission signs right for find_edges_of_line()
 import warnings
-from jrr import util
+from jrr import util, peakdet
 from astropy.wcs import WCS
 from astropy.io import fits
 from re import sub
@@ -451,4 +451,36 @@ def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u
     if deredden_uncert :
         sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa'), sp[colu].astype('float64').to_numpy()))
     return(0) 
+
+def find_lines_Schneider(sp, resoln, siglim=3., abs=True, delta=0.15) :
+    # Blind search for absorption lines, following Schneider et al. 1993
+    # Delta seems pretty damned arbitary, may bite me later.
+    # Significant peaks identified as sp['peak']=True
+    ayan.mage.calc_schneider_EW(sp, resoln, plotit=False)  # Calculate EW and EW limits
+    sp['temp'] = False  # 1st pass, found a peak
+    sp['peak'] = False  # 2nd pass, peak is significant
+    maxtab, mintab = peakdet.peakdet(sp.W_interp,delta)  # Find peaks.
+    if abs:   peak_ind =  [np.int(p[0]) for p in mintab] # The minima
+    else:     peak_ind =  [np.int(p[0]) for p in maxtab] # The maxima
+    sp['temp'].iloc[peak_ind] = True  # Convert back into pandas style
+    # Choose only peaks that are greater than siglim significant
+    if abs :  # If looking for absorption lines 
+        subset = sp['temp']  &  (sp['W_interp'] < sp['W_u_interp'] * siglim * -1)
+    else :    # If looking for emission lines
+        subset = sp['temp']  &  (sp['W_interp'] > sp['W_u_interp'] * siglim)
+    sp['peak'].ix[subset] = True  # Peaks now marked
+    sp.loc[sp['wave'].between(4737.6, 4738), 'peak'] = True  # ADD PEAK FOR S1527 at z=2.055, to work around bad skyline
+    print("FINDING PEAKS (this is slow), N peaks: ", sp['temp'].sum(),  "  significant peaks: ", sp['peak'].sum())
+    return(0)
+
+def find_lines_simple(sp, abs=True, wavcol='wave', fcol='fnu', delta=0.15) :
+    sp['temp'] = False  # 1st pass, found a peak
+    sp['peak'] = False  # 2nd pass, peak is significant
+    maxtab, mintab = peakdet.peakdet(sp[fcol], delta)  # Find peaks.
+    if abs:   peak_ind =  [np.int(p[0]) for p in mintab] # The minima, if absorption lines
+    else:     peak_ind =  [np.int(p[0]) for p in maxtab] # The maxima, if emission lines
+    sp.loc[peak_ind, 'peak'] = True
+    peak_waves = sp[wavcol].iloc[peak_ind]
+    print("Found this many peaks: ", sp['peak'].sum())
+    return(peak_ind, peak_waves)
 
