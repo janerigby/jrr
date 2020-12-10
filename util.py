@@ -121,6 +121,11 @@ def AB2Jy(AB) :   # convert AB magnitude to flux density in Janskies
     Jy = 10**(-0.4*(AB + 48.57))/1E-23  
     return(Jy)
 
+def Jy2cgs(Jy) : # convert flux density fnu in Janskies to fnu in erg/s/cm^2/Hz
+    return(Jy * 1E-23)
+
+def cgs2Jy(fnu_cgs) : # convert flux density fnu in Janskies to fnu in erg/s/cm^2/Hz
+    return(fnu_cgs  /  1E-23)
 
 #### Conversions that are useful to estimate SFRs  From Kennicutt 1998 and supporting
 def mAB_to_fnu(m_AB, zz=0, convert_to_rest=False) :

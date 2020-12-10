@@ -477,10 +477,14 @@ def find_lines_simple(sp, abs=True, wavcol='wave', fcol='fnu', delta=0.15) :
     sp['temp'] = False  # 1st pass, found a peak
     sp['peak'] = False  # 2nd pass, peak is significant
     maxtab, mintab = peakdet.peakdet(sp[fcol], delta)  # Find peaks.
-    if abs:   peak_ind =  [np.int(p[0]) for p in mintab] # The minima, if absorption lines
-    else:     peak_ind =  [np.int(p[0]) for p in maxtab] # The maxima, if emission lines
+    if abs:
+        peak_ind =  [np.int(p[0]) for p in mintab] # The minima, if absorption lines
+        peakf    =  [y   for x,y in mintab]
+    else:
+        peak_ind =  [np.int(p[0]) for p in maxtab] # The maxima, if emission lines
+        peakf    =  [y   for x,y in maxtab]
     sp.loc[peak_ind, 'peak'] = True
     peak_waves = sp[wavcol].iloc[peak_ind]
     print("Found this many peaks: ", sp['peak'].sum())
-    return(peak_ind, peak_waves)
+    return(peak_ind, peak_waves, peakf)
 
