@@ -452,11 +452,27 @@ def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u
         sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa'), sp[colu].astype('float64').to_numpy()))
     return(0) 
 
+def find_lines_simple(sp, abs=True, wavcol='wave', fcol='fnu', delta=0.15) :
+    sp['temp'] = False  # 1st pass, found a peak
+    sp['peak'] = False  # 2nd pass, peak is significant
+    maxtab, mintab = peakdet.peakdet(sp[fcol], delta)  # Find peaks.
+    if abs:
+        peak_ind =  [np.int(p[0]) for p in mintab] # The minima, if absorption lines
+        peakf    =  [y   for x,y in mintab]
+    else:
+        peak_ind =  [np.int(p[0]) for p in maxtab] # The maxima, if emission lines
+        peakf    =  [y   for x,y in maxtab]
+    sp.loc[peak_ind, 'peak'] = True
+    peak_waves = sp[wavcol].iloc[peak_ind]
+    print("Found this many peaks: ", sp['peak'].sum())
+    return(peak_ind, peak_waves, peakf)
+
+
 def find_lines_Schneider(sp, resoln, siglim=3., abs=True, delta=0.15) :
     # Blind search for absorption lines, following Schneider et al. 1993
     # Delta seems pretty damned arbitary, may bite me later.
     # Significant peaks identified as sp['peak']=True
-    ayan.mage.calc_schneider_EW(sp, resoln, plotit=False)  # Calculate EW and EW limits
+    calc_schneider_EW(sp, resoln, plotit=False)  # Calculate EW and EW limits  # Pulled this out of ayan's package, so I control it. It's below
     sp['temp'] = False  # 1st pass, found a peak
     sp['peak'] = False  # 2nd pass, peak is significant
     maxtab, mintab = peakdet.peakdet(sp.W_interp,delta)  # Find peaks.
@@ -473,18 +489,43 @@ def find_lines_Schneider(sp, resoln, siglim=3., abs=True, delta=0.15) :
     print("FINDING PEAKS (this is slow), N peaks: ", sp['temp'].sum(),  "  significant peaks: ", sp['peak'].sum())
     return(0)
 
-def find_lines_simple(sp, abs=True, wavcol='wave', fcol='fnu', delta=0.15) :
-    sp['temp'] = False  # 1st pass, found a peak
-    sp['peak'] = False  # 2nd pass, peak is significant
-    maxtab, mintab = peakdet.peakdet(sp[fcol], delta)  # Find peaks.
-    if abs:
-        peak_ind =  [np.int(p[0]) for p in mintab] # The minima, if absorption lines
-        peakf    =  [y   for x,y in mintab]
-    else:
-        peak_ind =  [np.int(p[0]) for p in maxtab] # The maxima, if emission lines
-        peakf    =  [y   for x,y in maxtab]
-    sp.loc[peak_ind, 'peak'] = True
-    peak_waves = sp[wavcol].iloc[peak_ind]
-    print("Found this many peaks: ", sp['peak'].sum())
-    return(peak_ind, peak_waves, peakf)
 
+def calc_schneider_EW(sp, resoln):
+    ''' Function to calculate the limiting equivalent width for detection for every
+    pixel in the spectrum, following Schneider et al. 1993, ApJS, 87, 45. Coded by Ayan in ~2017;
+    copied over 2020 by jrigby to jrr so no longer dependent on ayan package.
+    No output; instead, adds 2 columns to input dataframe sp.  XX describe them.  
+    Ayan, could you please document whether EW is in rest-frame or observed frame?  Reading
+    the code, I think it is observed frame if observed wavelengths are passed. -Jane. '''
+    EW=[] ; sig=[] ; sig_int=[] ; signorm_int=[]
+    w = sp.wave.values
+    f = (sp.flam/sp.flam_autocont).values
+    #--normalised error spectrum for EW limit----
+    unorm = (sp.flam_u/sp.flam_autocont).values #normalised flux error
+    func_u = interp1d(w, unorm, kind='linear')
+    uinorm = func_u(w) #interpolated normalised flux error
+    #---------------------------
+    disp = np.concatenate(([np.diff(w)[0]],np.diff(w))) #disperion array
+    n = len(w)
+    lim = 3.
+    N = 2.
+    for ii in range(len(w)):
+        b = w[ii]
+        c = w[ii]*gf2s/resoln       
+        j0 = int(np.round(N*c/disp[ii]))
+        a = 1./np.sum([exp(-((disp[ii]*(j0-j))**2)/(2*c**2)) for j in range(2*j0+1)])
+        P = [a*exp(-((disp[ii]*(j0-j))**2)/(2*c**2)) for j in range(2*j0+1)]
+        j1 = max(1,j0-ii)
+        j2 = min(2*j0, j0+(n-1)-ii)
+        #For reference of following equations, please see 1st and 3rd equation of section 6.2 of Schneider et al. 1993.
+        #The 2 quantities on the left side of those equations correspond to 'EW' and 'signorm_int' respectively which subsequently become 'W_interp' and 'W_u_interp'
+        EW.append(disp[ii]*np.sum(P[j]*(f[ii+j-j0]-1.)for j in range(j1, j2+1))/np.sum(P[j]**2 for j in range(j1, j2+1)))
+        signorm_int.append(disp[ii]*np.sqrt(np.sum(P[j]**2*uinorm[ii+j-j0]**2for j in range(j1, j2+1)))/np.sum(P[j]**2 for j in range(j1, j2+1)))
+        #sig.append(disp[ii]*np.sqrt(np.sum(P[j]**2*unorm[ii+j-j0]**2for j in range(j1, j2+1)))/np.sum(P[j]**2 for j in range(j1, j2+1)))
+    func_ew = interp1d(w, EW, kind='linear')
+    W = func_ew(w) #interpolating EW
+    #sp['W_interp'] = pd.Series(W) #'W_interp' is the result of interpolation of the weighted rolling average of the EW (based on the SSF chosen)
+    #sp['W_u_interp'] = pd.Series(signorm_int) #'W_u_interp' is 1 sigma error in EW derived by weighted rolling average of interpolated flux error.
+    sp['W_interp'] = W
+    sp['W_u_interp'] = signorm_int
+    return(0)
