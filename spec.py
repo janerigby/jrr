@@ -18,8 +18,10 @@ from astropy.stats import sigma_clip
 import astropy.convolution
 from astropy import constants
 from astropy import units 
+from astropy.stats import gaussian_fwhm_to_sigma 
 import extinction
 from matplotlib import pyplot as plt
+from scipy import asarray as ar,exp
 
 
 def calz_unred(wave, flux, ebv, R_V=4.05):    # pythonified version of idlutil calz_unred
@@ -472,7 +474,7 @@ def find_lines_Schneider(sp, resoln, siglim=3., abs=True, delta=0.15) :
     # Blind search for absorption lines, following Schneider et al. 1993
     # Delta seems pretty damned arbitary, may bite me later.
     # Significant peaks identified as sp['peak']=True
-    calc_schneider_EW(sp, resoln, plotit=False)  # Calculate EW and EW limits  # Pulled this out of ayan's package, so I control it. It's below
+    calc_schneider_EW(sp, resoln)  # Calculate EW and EW limits  # Pulled this out of ayan's package, so I control it. It's below
     sp['temp'] = False  # 1st pass, found a peak
     sp['peak'] = False  # 2nd pass, peak is significant
     maxtab, mintab = peakdet.peakdet(sp.W_interp,delta)  # Find peaks.
@@ -484,7 +486,7 @@ def find_lines_Schneider(sp, resoln, siglim=3., abs=True, delta=0.15) :
         subset = sp['temp']  &  (sp['W_interp'] < sp['W_u_interp'] * siglim * -1)
     else :    # If looking for emission lines
         subset = sp['temp']  &  (sp['W_interp'] > sp['W_u_interp'] * siglim)
-    sp['peak'].ix[subset] = True  # Peaks now marked
+    sp['peak'].iloc[subset] = True  # Peaks now marked
     sp.loc[sp['wave'].between(4737.6, 4738), 'peak'] = True  # ADD PEAK FOR S1527 at z=2.055, to work around bad skyline
     print("FINDING PEAKS (this is slow), N peaks: ", sp['temp'].sum(),  "  significant peaks: ", sp['peak'].sum())
     return(0)
@@ -511,7 +513,7 @@ def calc_schneider_EW(sp, resoln):
     N = 2.
     for ii in range(len(w)):
         b = w[ii]
-        c = w[ii]*gf2s/resoln       
+        c = w[ii]* gaussian_fwhm_to_sigma  /resoln       
         j0 = int(np.round(N*c/disp[ii]))
         a = 1./np.sum([exp(-((disp[ii]*(j0-j))**2)/(2*c**2)) for j in range(2*j0+1)])
         P = [a*exp(-((disp[ii]*(j0-j))**2)/(2*c**2)) for j in range(2*j0+1)]
