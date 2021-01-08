@@ -7,12 +7,15 @@ from os.path import exists, basename
 from shutil import copy
 import fileinput
 from   re import split, sub, search
+from astropy.io.fits import getdata
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
 from astropy import units
 from astropy.cosmology import WMAP9 as cosmo
+from astropy.wcs import WCS
 import scipy  
 import scikits.bootstrap as bootstrap  
+import csv
 
 #####  Math  #####
 
@@ -175,6 +178,28 @@ def convert_RADEC_segidecimal_df(df, colra='RA', coldec='DEC', newRA='RA_deg', n
     df[newRA]  = temp1
     df[newDEC] = temp2
     return(0)
+
+def offset_coords(sk, delta_RA=0, delta_DEC=0) :
+    ''' From Astropy SkyCoords position sk, compute new coordinates after offsets (in arcsec).  Positive deltas move N and E 
+    This should be an method astropy SkyCoord, but I can't find one.'''
+    # Coords should be in picky Astropy format, for example sk = SkyCoord(RA, DEC, unit='deg') 
+    newsk = sk.directional_offset_by(0. *units.deg, delta_DEC * units.arcsec).directional_offset_by(90. *units.deg, delta_RA * units.arcsec)
+    return(newsk)
+
+def imval_at_coords(imagefile, sk) :
+    ''' For a given image and coordinates, return value of that image at coordinates, and nearest xy pixel
+    Coordinates should be astropy SkyCoord'''
+    (image, hdr) = getdata(imagefile, header=True)
+    wcs  = WCS(hdr)
+    # should generalize this so it can take segidecimal, too
+    xy= wcs.world_to_array_index(sk)  # Careful.  This rounds.  Array indexes to feed to the fits image. Numpy indices, NOT FITS!
+    imval = image[xy]
+    return(imval, xy)
+
+def print_skycoords_decimal(sk) :
+    #Astropy Skycoords prints in weird sexadecimal format unless told not to
+    return (sk.ra.to_string(unit=units.deg, decimal=True, precision=6) +  ' ' + sk.dec.to_string(unit=units.deg, decimal=True, precision=6, alwayssign=True))
+
     
 def convert_RADEC_Galactic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Galactic.  Can be LISTS []
     thisradec = SkyCoord(RA_deg, DEC_deg, unit=(units.deg, units.deg), frame='icrs')
@@ -194,7 +219,6 @@ def convert_RADEC_GalEclip_df(df, colra='RA', coldec='DEC') :
     df['Ecl_lat'] = templat
     return(0)  # acts on the dataframe
 
-
 ### Basic pandas list handling
 
 def getval_or_nan(expression, place=0) :   # convenience function, better error handling 
@@ -212,4 +236,12 @@ def linerat_from_df(df, linename1, linename2, colname='linename', colf='flux', c
     dfluxrat = sigma_adivb(flux1, dflux1, flux2, dflux2)
     return(flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat)
 
-        
+def make_ds9_regions_file(outfile, df, racol='RA', deccol='DEC', textcol='text', colorcol='color', radiuscol='radius', font=None, precision=8) :
+    # Make a ds9 regions file from a pandas data frame.
+    #Input is a dataframe containing RA, DEC, radius, text, and color for each circle to be made.  Precision is number of decimals for RA, DEC
+    if font==None:  font="font=\"helvetica 14 normal roman\""
+    df['ds9'] = 'circle(' + df[racol].round(precision).astype('str') + ',' + df[deccol].round(precision).astype('str') + ',' + df[radiuscol] + '\") # ' + df[colorcol] + ' ' + df[textcol]
+    header = '# Region file format: DS9 version 4.1\nglobal color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\nfk5\n'
+    df['ds9'].to_csv(outfile, index=False, header=False, quoting=csv.QUOTE_NONE, quotechar="",  escapechar="\\", sep='\t')  # Last 4 arguments prevent pandas from escaping commas & quotes
+    put_header_on_file(outfile, header, outfile)
+    return(0)
