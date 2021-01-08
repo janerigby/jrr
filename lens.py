@@ -31,7 +31,7 @@ def make_lensed_regions_file(df_in, datadir, prefix, racol, deccol, color='green
     df_reg = df_in.copy(deep=True)
     df_reg['text'] = 'text={' + df_reg['ID'].astype('str') + ' ' + suffix  + '}'
     df_reg['color'] = 'color=' + color
-    df_reg['radius'] = '1.5'
+    df_reg['radius'] = '0.2'
     util.make_ds9_regions_file(datadir + prefix + suffix + '.reg', df_reg, racol=racol, deccol=deccol)
     return(df_reg)
 
