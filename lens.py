@@ -37,7 +37,7 @@ def make_lensed_regions_file(df_in, datadir, prefix, racol, deccol, color='green
 
 def compute_sourceplane_positions(arcs_df, prefix,z_lens, datadir, deflection_map, cosmo, deflection_norm=1, debug=False) :
     # Compute source plane positions, given a dataframe of image plane positions and redshifts, and deflection maps in x,y
-    # see test_lensing_deflections.py for a worked example for A2744 and RCS0327
+    # see test_lensing_deflections.py for worked examples A2744 and RCS0327
     # def of deflection_norm:  The normalization for the deflection maps, which are scaled to some d_LS/d_S.  They scale linearly w d_LS/d_S.
     prev_imgpos = SkyCoord(0.0, 0.0, unit='deg') # initalize
     prev_srcpos = SkyCoord(0.0, 0.0, unit='deg') # initalize
@@ -57,7 +57,7 @@ def compute_sourceplane_positions(arcs_df, prefix,z_lens, datadir, deflection_ma
             if debug:
                 print("  ", row.ID, "  Deflection in", key, "at", xy, "(stupid numpy yx index):", np.round(imval, 2), end='  ')
                 print("scale by", np.round(defscale,3), "to get ", np.round(thisdeflect[key],2))
-        src_pos =  util.offset_coords(img_pos, delta_RA=thisdeflect['x'] *1, delta_DEC=thisdeflect['y']*-1) # minus sign here, per lensing eqn?
+        src_pos =  util.offset_coords(img_pos, delta_RA=thisdeflect['x'] *1, delta_DEC=thisdeflect['y']*-1) # checked signs with Keren
         src_pos_list.append(util.print_skycoords_decimal(src_pos)) # save this to list, then put it in the data frame after the loop.
         print(row.ID, util.print_skycoords_decimal(img_pos), util.print_skycoords_decimal(src_pos), end=' ')
         print(prev_imgpos.separation(img_pos).to_string(unit=u.arcsec, precision=2),  prev_srcpos.separation(src_pos).to_string(unit=u.arcsec, precision=2))
