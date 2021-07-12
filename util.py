@@ -10,7 +10,7 @@ from   re import split, sub, search
 from astropy.io.fits import getdata
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
-from astropy import units
+from astropy import units as u
 from astropy.cosmology import WMAP9 as cosmo
 from astropy.wcs import WCS
 import scipy  
@@ -163,13 +163,13 @@ def Kennicutt_SFR_to_fHa(SFR, zz) :
     
 
 def luminosity_distance(zz) :
-    return ( cosmo.luminosity_distance(zz).to(units.cm).value ) # in cm
+    return ( cosmo.luminosity_distance(zz).to(u.cm).value ) # in cm
 
 #####  Astronomy coordinate systems  #####
 
 def convert_RADEC_segidecimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
     # RA_segi, DEC_segi are *lists*.  ([0., 22, 180], [-10., 10., 10])
-    thisradec = SkyCoord(RA_segi, DEC_segi, unit=(units.hourangle, units.deg), frame='icrs')
+    thisradec = SkyCoord(RA_segi, DEC_segi, unit=(u.hourangle, u.deg), frame='icrs')
     return(thisradec.ra.value, thisradec.dec.value)
 
 def convert_RADEC_segidecimal_df(df, colra='RA', coldec='DEC', newRA='RA_deg', newDEC='DEC_deg') :
@@ -183,7 +183,7 @@ def offset_coords(sk, delta_RA=0, delta_DEC=0) :
     ''' From Astropy SkyCoords position sk, compute new coordinates after offsets (in arcsec).  Positive deltas move N and E 
     This should be an method astropy SkyCoord, but I can't find one.'''
     # Coords should be in picky Astropy format, for example sk = SkyCoord(RA, DEC, unit='deg') 
-    newsk = sk.directional_offset_by(0. *units.deg, delta_DEC * units.arcsec).directional_offset_by(90. *units.deg, delta_RA * units.arcsec)
+    newsk = sk.directional_offset_by(0. *u.deg, delta_DEC * u.arcsec).directional_offset_by(90. *u.deg, delta_RA * u.arcsec)
     return(newsk)
 
 def imval_at_coords(imagefile, sk) :
@@ -198,15 +198,23 @@ def imval_at_coords(imagefile, sk) :
 
 def print_skycoords_decimal(sk) :
     #Astropy Skycoords prints in weird sexadecimal format unless told not to
-    return (sk.ra.to_string(unit=units.deg, decimal=True, precision=6) +  ' ' + sk.dec.to_string(unit=units.deg, decimal=True, precision=6, alwayssign=True))
+    return (sk.ra.to_string(unit=u.deg, decimal=True, precision=6) +  ' ' + sk.dec.to_string(unit=u.deg, decimal=True, precision=6, alwayssign=True))
 
-    
+def distancefrom_coords(RA, DEC, RA_0, DEC_0, uRA=u.deg, uDEC=u.deg, uRA0=u.deg, uDEC0=u.deg) : #compute distance from a given position RA_0, DEC_0
+    sk0 = SkyCoord(RA_0, DEC_0, unit=(uRA0, uDEC0)) # the coordinates we're comparing to
+    sk1 = SkyCoord(RA, DEC, unit=(uRA, uDEC))
+    return(sk0.separation(sk1).to(u.arcsec))
+
+def distancefrom_coords_df(df, RA_0, DEC_0, colRA='RA', colDEC='DEC', uRA0=u.deg, uDEC0=u.deg, newcol='offset_arcsec') :  # same but for a dataframe
+    df[newcol] = distancefrom_coords(df[colRA], df[colDEC], RA_0, DEC_0, uRA0=uRA0, uDEC0=uDEC0)
+    return(0) # acts on df
+  
 def convert_RADEC_Galactic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Galactic.  Can be LISTS []
-    thisradec = SkyCoord(RA_deg, DEC_deg, unit=(units.deg, units.deg), frame='icrs')
+    thisradec = SkyCoord(RA_deg, DEC_deg, unit=(u.deg, u.deg), frame='icrs')
     return(thisradec.galactic.l.value, thisradec.galactic.b.value)
 
 def convert_RADEC_Ecliptic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Ecliptic. Can be LISTS []
-    thisradec = SkyCoord(RA_deg, DEC_deg, unit=(units.deg, units.deg), frame='icrs')
+    thisradec = SkyCoord(RA_deg, DEC_deg, unit=(u.deg, u.deg), frame='icrs')
     return(thisradec.barycentrictrueecliptic.lon.value, thisradec.barycentrictrueecliptic.lat.value)
 
 def convert_RADEC_GalEclip_df(df, colra='RA', coldec='DEC') :
@@ -236,11 +244,15 @@ def linerat_from_df(df, linename1, linename2, colname='linename', colf='flux', c
     dfluxrat = sigma_adivb(flux1, dflux1, flux2, dflux2)
     return(flux1, dflux1, flux2, dflux2, fluxrat, dfluxrat)
 
-def make_ds9_regions_file(outfile, df, racol='RA', deccol='DEC', textcol='text', colorcol='color', radiuscol='radius', font=None, precision=8) :
+def make_ds9_regions_file(outfile, df, racol='RA', deccol='DEC', textcol='text', colorcol='color', radiuscol='radius', font=None, roundregions=True, precision=8) :
     # Make a ds9 regions file from a pandas data frame.
     #Input is a dataframe containing RA, DEC, radius, text, and color for each circle to be made.  Precision is number of decimals for RA, DEC
     if font==None:  font="font=\"helvetica 14 normal roman\""
-    df['ds9'] = 'circle(' + df[racol].round(precision).astype('str') + ',' + df[deccol].round(precision).astype('str') + ',' + df[radiuscol] + '\") # ' + df[colorcol] + ' ' + df[textcol]
+    if roundregions :
+        df['ds9'] = 'circle(' + df[racol].round(precision).astype('str') + ',' + df[deccol].round(precision).astype('str') + ',' + df[radiuscol] + '\") # ' + df[colorcol] + ' ' + df[textcol]
+    else :
+        df['ds9'] = 'circle(' + df[racol].astype('str') + ',' + df[deccol].astype('str') + ',' + df[radiuscol] + '\") # ' + df[colorcol] + ' ' + df[textcol]
+        
     header = '# Region file format: DS9 version 4.1\nglobal color=green dashlist=8 3 width=1 font="helvetica 10 normal roman" select=1 highlite=1 dash=0 fixed=0 edit=1 move=1 delete=1 include=1 source=1\nfk5\n'
     df['ds9'].to_csv(outfile, index=False, header=False, quoting=csv.QUOTE_NONE, quotechar="",  escapechar="\\", sep='\t')  # Last 4 arguments prevent pandas from escaping commas & quotes
     put_header_on_file(outfile, header, outfile)
