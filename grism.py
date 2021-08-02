@@ -59,7 +59,8 @@ def get_MWreddening_S1723(internet=True) :
 def get_grism_info(which_grism) :
     # R is FWHM, for a pt source.  For extended source will be morphologically broadened
     # wave_unc is relative wavelength uncertainty, in Angstroms, from wfc3 data handbook, S9.4.8
-    if   which_grism == 'G141' :   grism_info = {'R':130., 'x1':11000., 'x2':16600., 'wave_unc':9.}
+#    if   which_grism == 'G141' :   grism_info = {'R':130., 'x1':11000., 'x2':16600., 'wave_unc':9.} # what was used for S1723, S2340
+    if   which_grism == 'G141' :   grism_info = {'R':130., 'x1':11000., 'x2':17100., 'wave_unc':9.}  # extending to the red for Sunburst
     elif which_grism == 'G102' :   grism_info = {'R':210., 'x1': 8000., 'x2':11500., 'wave_unc':6. }
     else : error_unknown_grism(which_grism)
     return(grism_info)
