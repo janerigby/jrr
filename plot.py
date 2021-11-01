@@ -25,13 +25,19 @@ def force_axisticks_linear(whichaxis) :
         formatter = FuncFormatter(lambda y, _: '{:.16g}'.format(y))
         axis.set_major_formatter(formatter)
 
-def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', fontsize=10, fontname='Times New Roman', arrowprops=None, ax=None) :
-    # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: feed it a dataframe.
+def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', fontsize=10, fontname='Times New Roman', arrowprops=None, ax=None, log=False) :
+    # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: iterate through the dataframe.
     for index, row in df.iterrows():
-        if ax==None: 
-            plt.annotate(row[text], xy=(row[xcol], row[ycol]), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, fontname=fontname, arrowprops=arrowprops)
+        if text=='index' : putlabel = index   # We may want to label the index, and that's handled differently from df['acolumn']
+        else             : putlabel = row[text]
+        if log == True :  x = np.log10(row[xcol])  ; y = np.log10(row[ycol]) # plot the log of x, y
+        else           :  x = row[xcol]            ; y = row[ycol]
+        if ax==None:
+            plt.annotate(putlabel, xy=(x,y), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, \
+                             fontname=fontname, arrowprops=arrowprops)
         else:
-            ax.annotate(row[text], xy=(row[xcol], row[ycol]), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, fontname=fontname, arrowprops=arrowprops)
+            ax.annotate(putlabel, xy=(x,y), xycoords=xycoords, xytext=xytext, textcoords="offset points", ha=ha, fontsize=fontsize, \
+                            fontname=fontname, arrowprops=arrowprops)
     return(0)
 
 
@@ -95,7 +101,7 @@ def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Nco
             ax.axes.xaxis.set_ticklabels([])  # if not last subplot, suppress  numbers on x axis
         fig.subplots_adjust(hspace=0)
 
-def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, spec_label=(), win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85), lw=(1,)) :
+def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center, spec_label=(), win=2000, Ncol=1, LL=(), extra_label="",figsize=(8,16), vel_plot=True, plot_xaxis=True, ymax=(), colortab=False, verbose=True, drawunity=False, label_loc=(0.55,0.85), lw=(1,),  second_doublet=False, plot_linelabel=True, makenewfig=True) :
     '''Plot flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines,
     in a [Nrow x Ncol] box.  CAN PLOT MULTIPLE SPECTRA IN EACH BOX.
     Inputs are:
@@ -120,6 +126,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     drawunity:       (Optional), draw a line at unity?  Good for spectra that are already continuum-normalized
     label_loc:       (Optional), where to draw the line label for each boxplot.  By default, upper right
     lw:              (Optional), scalar or tuple of linewidths.  If scalar, same lw for all
+    second_doublet:  (Optional)  a second wavelength to draw a vertical line over.  Useful for the second transition of a doublet.
+    plot_linelabel:  (Optional) flag to suppress plotting of line_label
     thewaves is now a tuple? of wavelength arrays.  same for thefnus, the dfnus, thezs
     If only plotting one spectrum, still need input format to be tuples, as in thewaves=(wave_array,).'''
 
@@ -130,7 +138,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     if type(line_center) == np.float64 :  Nrow=1
     else :  Nrow = int(np.ceil( float(len(line_center)) / Ncol))  # Calculate how many rows to generate
     #print "DEBUGGING ", Nrow, Ncol, len(line_center)
-    fig = plt.figure(figsize=figsize)
+    if makenewfig: fig = plt.figure(figsize=figsize) # turn this off if calling this to make a grid
 
     if len(spec_label) == len(thewaves) :  pass  #print "DEBUGGING, adding spectrum label to legend"
     else : spec_label = np.repeat('_nolegend_', len(thewaves))  # override the legend
@@ -145,7 +153,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
     for ii, dum in enumerate(line_label) :
         if verbose : print("    Plotting ", line_label[ii], " at ", line_center[ii])
         ax = fig.add_subplot(Nrow, Ncol, ii+1)
-        plt.annotate( line_label[ii], label_loc, xycoords="axes fraction")
+        if plot_linelabel: plt.annotate( line_label[ii], label_loc, xycoords="axes fraction")
         max_in_window = 0.
         if(vel_plot) :
             for ss in range(0, len(thewaves)) :  # For each spectrum to overplot
@@ -158,7 +166,7 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                     plt.step(vel[in_window], thedfnus[ss][in_window], color='grey', linewidth=1, label='_nolegend_')  # plot uncertainty in grey
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
-            plt.plot( (0., 0.), (0.0,2), color=color2, linewidth=2)  # plot tics at zero velocity
+            plt.plot( (0., 0.), (0.0,100), color=color2, linewidth=3)  # plot tics at zero velocity
             if drawunity: plt.plot( (win0, win1), (1.0,1.0), color=color3)        # plot unity continuum
             plt.xlim(win0, win1)
         else :
@@ -171,7 +179,8 @@ def boxplot_Nspectra(thewaves, thefnus, thedfnus, thezs, line_label, line_center
                     plt.step(restwave[in_window], thedfnus[ss][in_window], color='grey', linewidth=1, label='_nolegend_')
                 thismax = thefnus[ss][in_window].max()
                 max_in_window =  util.robust_max((thismax, max_in_window))
-            plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=color3, linewidth=2)  # plot tics at zero velocity
+            plt.plot( (line_center[ii], line_center[ii]), (0.0,100), color=mycol[1], linewidth=3, alpha=0.4)  # plot tics at zero velocity
+            if second_doublet:  plt.plot( (second_doublet, second_doublet), (0.0,100), color=mycol[4], linewidth=3, alpha=0.4) # plot the second component of the doublet
             if drawunity: plt.plot( (line_center[ii] + win0, line_center[ii] + win1), (1.0,1.0), color=color3,  label='_nolegend_')  # plot unity continuum
             plt.xlim(line_center[ii] +win0, line_center[ii] + win1)
         ax.locator_params(axis='y', nbins=4)

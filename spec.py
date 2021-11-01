@@ -230,21 +230,21 @@ def onegaus(x, aa, bb, cc, cont): # Define a Gaussian with linear continuum
     y = (aa * np.exp((x - bb)**2/(-2*cc**2))  + cont)
     return y
 
-def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line.  Uses Pandas
+def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0., method='least_squares', sigma=None) : # Gaussian fit to emission line.  Uses Pandas
     # guess_pars are the initial guess at the Gaussian.
     if colwave == "index" : xvar = sp.index
     else                  : xvar = sp[colwave]
-    popt, pcov = curve_fit(onegaus, xvar, sp[colf], p0=guess_pars)
+    popt, pcov = curve_fit(onegaus, xvar, sp[colf], p0=guess_pars, method=method, sigma=sigma)
     fit = onegaus(xvar, *popt)
     return(popt, fit)
 
-def fit_gaussian_fixedcont(sp, guess_pars, contlevel=0.0, colwave='wave', colf='flam', zz=0.) : # Gaussian fit to emission line, continuum fixed.
-    popt, pcov = curve_fit((lambda x, aa, bb, cc: onegaus(x, aa, bb, cc, contlevel)), sp[colwave], sp[colf], p0=guess_pars)
+def fit_gaussian_fixedcont(sp, guess_pars, contlevel=0.0, colwave='wave', colf='flam', zz=0., method='lm', sigma=None) : # Gaussian fit to emission line, continuum fixed.
+    popt, pcov = curve_fit((lambda x, aa, bb, cc: onegaus(x, aa, bb, cc, contlevel)), sp[colwave], sp[colf], p0=guess_pars, method=method, sigma=sigma)
     popt = np.append(popt, contlevel)
     fit = onegaus(sp[colwave], *popt)
     return(popt, fit)
 
-def sum_of_gaussian(gauss_pars) :
+def sum_of_gaussian(gauss_pars) :  # Quick sum of a guassian.  Does not include continuum flux
     (aa, bb, cc, cont) = gauss_pars
     return( aa * cc * np.sqrt(2.0 * np.pi))
 
@@ -403,7 +403,8 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     weights = nf_u ** -2              # compute the weighted avg
     (stacked[pre+'weightavg'], sumweight) = np.ma.average(nf, axis=0, weights=weights, returned=True) # weighted avg
     stacked[pre+'weightavg_u'] =  sumweight**-0.5
-    nf_clip  = sigma_clip(nf, sigma=sigmaclip, iters=None, axis=0)
+#    nf_clip  = sigma_clip(nf, sigma=sigmaclip, iters=None, axis=0)
+    nf_clip  = sigma_clip(nf, sigma=sigmaclip, axis=0)
     stacked[pre+'clipavg'], sumweight2   = np.ma.average(nf_clip, axis=0, weights=weights, returned=True)
     stacked[pre+'clipavg_u'] = sumweight2**-0.5   
     stacked[pre+'median']   = np.ma.median(nf, axis=0)

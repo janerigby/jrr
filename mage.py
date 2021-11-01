@@ -18,6 +18,7 @@ from subprocess import check_output   # Used for grepping from files
 from   astropy.io import fits
 import astropy.convolution
 from astropy.wcs import WCS
+from astropy.table import Table
 
 color1 = 'k'     # color for spectra
 color2 = '0.65'  # color for uncertainty spectra
@@ -30,7 +31,7 @@ def Chisholm_norm_regionA() :   # Region where John Chisholm says to normalize
 def sunburst_translate_names(longnames_old=True, longnames_new=True) :
     # Translate the old MagE names for the sunburst arc pointings into the same format as the FIRE pointings.
     # See ~/Dropbox/SGAS-shared/NIR_spectra/FIRE/sunburst_reduced/what_these_data_are_JRmods_v2.txt
-    sunburst_translate = {'pos1'    : 'M-0',   'h6'  : 'M-2',  'h4' : 'M-3',            'h1' : 'M-4'}
+    sunburst_translate = {'pos1'    : 'M-0',  'h5' : 'M-2',  'h6' : 'M-2',  'h4' : 'M-3',            'h1' : 'M-4'}
     sunburst_translate.update({'h3' : 'M-5',   'h1a' : 'M-6',  'h1andh1a' : 'M-4+M-6'})
     sunburst_translate.update({'h9' : 'M-7',   'f'   : 'M-8',  'h2' : 'M-9'})
     #there is no M-1; it was observed with FIRE but not with MagE.
@@ -44,8 +45,8 @@ def sunburst_translate_names(longnames_old=True, longnames_new=True) :
         new_dict.update({ p0+ key  : p1 + value})
     reversed_dict = {value : key for (key, value) in new_dict.items()}  # Make the reversed dictionary, where newnames are the keys 
     return (new_dict, reversed_dict)
-# Now, how to integrate this new function into organize_labels, and speclist??  # Or should I just reorganize spectra-filenames-redshifts.txt,
-# and to hell with backwards compatibility?
+# Now, how to integrate this new function into organize_labels, and speclist??  # I reorganized spectra-filenames-redshifts.txt,
+# which made this going forward.  Using old code, need to use these helper functions.
 
 def sunburst_labels_goback(labels) : # Given a label list that includes new Sunburst names (ex. sunburst_M-0), translate to old planckarc_ names
     (sunburst_dict, reverse_sunburst_dict)  =  sunburst_translate_names(longnames_old=True, longnames_new=True)
@@ -54,6 +55,21 @@ def sunburst_labels_goback(labels) : # Given a label list that includes new Sunb
         if 'sunburst' in label :   labels2.append(reverse_sunburst_dict[label])  # grab the old planckarc name
         else :                     labels2.append(label)                         # pass through
     return(labels2)
+
+def replace_one_oldsunburstname(oldname) :  # Helper function for replace_all_oldstarburstnames
+    (sunburst_dict, reversed_dict) =  sunburst_translate_names()   
+    if oldname in sunburst_dict.keys() : return(sunburst_dict[oldname])
+    else : return(oldname)
+
+def replace_all_oldstarburstnames_df(df, newcol='shortname', oldcol='oldshortname') :  #apply to a dataframe
+    df[oldcol] = df[newcol]
+    df[newcol] = df[oldcol].apply(replace_one_oldsunburstname)  # magic with Pandas Apply
+    return(0)
+
+def replace_all_oldstarburstnames_list(in_list) :  #apply to a list
+    (sunburst_dict, reversed_dict) =  sunburst_translate_names()  
+    better_list = [sunburst_dict[x] if x in sunburst_dict.keys()  else x  for x in in_list]
+    return(better_list)
 
 def organize_labels(group) :
     # Batch1 is what is published in Rigby et al. 2018.  Batch2 is what was processed by Feb 2018.  Batch 3 was processed Dec 2018
@@ -86,7 +102,8 @@ def prettylabel_from_shortlabel(short_label) :  # For making plots
     temp2 = re.sub("rcs0327-", "RCS0327 Knot ", ( re.sub("rcs0327-counterarc", "RCS0327 counterarc", temp)))
     if re.match("SPT", temp2) :  temp3 = temp2
     else :    temp3 = re.sub("^S", "SGAS J",    re.sub("-bright", "bright", temp2))
-    return ( re.sub("-", r'$-$', temp3))
+    temp4 = re.sub('_', ' ', re.sub('sunburst_', 'Sunburst Arc ', temp3))
+    return ( re.sub("-", r'$-$', temp4))
 
 def getpath(mage_mode) : 
     ''' Haqndle paths for python MagE scripts.  Two use cases:
@@ -573,7 +590,7 @@ def plot_linelist(L_all, z_systemic=np.nan, restframe=False, velplot=False, line
         raise Exception('ERROR: If x-axis is velocity, then restframe must be True')        
         
     for i in range(0, L.index.size):  # Loop through the lines, and plot the ones on the current subplot
-        plt.annotate(L.lab1[i], xy=(wav2plot[i], ypos*3), xytext=(wav2plot[i], ypos), color=L.color[i], rotation=90, ha='center', va='center', arrowprops=dict(color=L.color[i], shrink=0.2,width=0.5, headwidth=0))
+        plt.annotate(L.lab1[i], xy=(wav2plot[i], ypos*3), xytext=(wav2plot[i], ypos), color=L.color[i], rotation=90, ha='center', va='center', arrowprops=dict(color=L.color[i], shrink=0.2,width=0.5, headwidth=0), fontsize=12)
     L = []
     L_all = []
     return(0)
@@ -813,21 +830,36 @@ def recover_all_shortnames(df, colgal='gal', colpointing='pointing') :  # same a
     df['shortname'] = df['shortname'].str.replace('_faint', '-fnt')
     df['shortname'] = df['shortname'].str.replace('_knot', '-')
     df['shortname'] = df['shortname'].str.replace('_main', '')
+    df['shortname'] = df['shortname'].str.replace('_image3', 'image3')
     return(0) # acts on df
 
 def load_doublet_df(batch) :  # Load a dataframe containing the intervening doublets.
-    # batch should be one of 'batch1' (in Rigby et al 2018), 'batch23' (2017, 2018 data), or 'batch123' (everything)
-    if batch not in ('batch1', 'batch23', 'batch123') : raise Exception("Error: batch must be batch1, batch23, or batch123")
+    # batch should be one of 'batch1' (in Rigby et al 2018), 'batch23' (2017, 2018 data), 'batch4', or 'batch1234' (everything)
     doubletfiles = {}
     doubletfiles['batch1']  = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/Results_16Feb2018/found_doublets_SNR4_JRRedit.txt"
     doubletfiles['batch23'] = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/Results_21Feb2019/found_doublets_batch3_SNR4_JRRedit.txt"
-    if batch in ('batch1', 'batch23') :
+    doubletfiles['batch4'] = expanduser("~") + "/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/found_doublets_batch4_SNR4_JRRedit.txt"
+        
+    if batch in ('batch1', 'batch23', 'batch4') :
         doublet_df = pandas.read_csv(doubletfiles[batch], delim_whitespace=True, comment="#")
     elif batch == ('batch123') :
         doublet_df1 = pandas.read_csv(doubletfiles['batch1'], delim_whitespace=True, comment="#")
         doublet_df2 = pandas.read_csv(doubletfiles['batch23'], delim_whitespace=True, comment="#")
         doublet_df = pandas.concat([doublet_df1, doublet_df2])#, sort=False)
-    recover_all_shortnames(doublet_df)
+    elif batch == ('batch1234') :
+        doublet_df1 = pandas.read_csv(doubletfiles['batch1'],  delim_whitespace=True, comment="#")
+        doublet_df2 = pandas.read_csv(doubletfiles['batch23'], delim_whitespace=True, comment="#")
+        doublet_df4 = pandas.read_csv(doubletfiles['batch4'],  delim_whitespace=True, comment="#")
+        doublet_df = pandas.concat([doublet_df1, doublet_df2, doublet_df4])#, sort=False)
+    elif batch == ('aspublished') :     # Need to temporarily comment out the \tablehead to get this to work
+        infile = '/Users/jrrigby1/Dropbox/MagE_atlas/Contrib/Intervening/Doublet_search/tab_doublet_table_JRRedit_v5.tex'
+        # This infile should be the latex table that I publish, but with a last temporary column of shortname
+        names = ['gal', 'pointing', 'zz', 'doubname', 'wave1', 'wave2', 'EWr1', 'EWr2', 'snr1', 'snr2', 'flag', 'shortname']
+        doublet_df =  Table.read(infile, format='aastex').to_pandas()
+        doublet_df.columns = names
+    else : raise Exception("Error: batch must be one of batch1, batch23, batch4, batch1234, aspublished.  It was", batch)
+    if batch != 'aspublished' :
+        recover_all_shortnames(doublet_df)
+        replace_all_oldstarburstnames_df(doublet_df)  # Now using M-X format of MagE slits for the paper.  Updating.
     return(doublet_df)
-
 

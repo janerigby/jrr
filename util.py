@@ -6,6 +6,7 @@ import subprocess
 from os.path import exists, basename
 from shutil import copy
 import fileinput
+import operator
 from   re import split, sub, search
 from astropy.io.fits import getdata
 from astropy.stats import sigma_clip, median_absolute_deviation
@@ -27,15 +28,36 @@ def bootstrap_val_confint(df, statfunction, alpha=0.05) :
     CI = bootstrap.ci(data=df, statfunction=statfunction, alpha=alpha)
     return( result,  np.abs(CI[0] - result),  CI[1] - result) 
 
+def sigma_atimesb(a, siga, b, sigb) : # find uncertainty in f, where f=a*b, and siga, sigb are uncerts in a,b
+    return(np.sqrt( (siga * b)**2 + (sigb * a)**2 ))
+
+def sigma_atimesb_df(df, cola, colsiga, colb, colsigb) : # convenience function for a dataframe
+    return(sigma_atimesb(df[cola], df[colsiga], df[colb], df[colsigb]))
+    
 def sigma_adivb(a, siga, b, sigb) :  # find undertainty in f, where f=a/b , and siga, sigb are uncerts in a,b
     return(  np.sqrt( (siga/b)**2 + (sigb * a/b**2)**2)  )
 
 def sigma_adivb_df(df, cola, colsiga, colb, colsigb) :  # convenience function for a dataframe
     return(sigma_adivb(df[cola], df[colsiga], df[colb], df[colsigb]))
-    
+
 def add_in_quad(array, axis=0) :
     # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
     return( np.sqrt( np.sum((array**2), axis=axis)) )
+w
+def errorbars_to_log10(x, dx) :
+    dp = np.log10(x + dx) - np.log10(x)
+    dm = np.log10(x) - np.log10(x - dx)
+    return((dm + dp)/2.0)
+
+def domath_2cols_df(df, new_col, new_ucol, col1, ucol1, col2, ucol2, theop=operator.add):
+    # Do simple math (add subtract multiply divide) on 2 columns of a dataframe, and propogate errors
+    if theop not in [operator.add, operator.sub, operator.mul, operator.truediv] : raise Exception("ERROR: operator not supported", theop)
+    df[new_col]   = theop( df[col1],  df[col2])  # Applying the the operator is trivial. Below, handle uncertainties
+    if theop in (operator.add, operator.sub) : # if addition or subtraction
+        df[new_ucol] = np.round(np.sqrt( df[ucol1]**2 + df[ucol2]**2), 2)
+    elif theop == operator.truediv :    df[new_ucol] = sigma_adivb_df(  df, col1, ucol1, col2, ucol2)
+    elif theop == operator.mul :        df[new_ucol] = sigma_atimesb_df(df, col1, ucol1, col2, ucol2)
+    return(0) # acts on df
 
 def convenience1(df) : # uncertainties get smaller when binning
     return( df.median() / np.sqrt(np.count_nonzero(df)) )  # Still working on this. **
@@ -207,6 +229,14 @@ def distancefrom_coords(RA, DEC, RA_0, DEC_0, uRA=u.deg, uDEC=u.deg, uRA0=u.deg,
 
 def distancefrom_coords_df(df, RA_0, DEC_0, colRA='RA', colDEC='DEC', uRA0=u.deg, uDEC0=u.deg, newcol='offset_arcsec') :  # same but for a dataframe
     df[newcol] = distancefrom_coords(df[colRA], df[colDEC], RA_0, DEC_0, uRA0=uRA0, uDEC0=uDEC0)
+    return(0) # acts on df
+
+def distancefrom_coords2_df(df, colRA1='RA1', colDEC1='DEC1', colRA2='RA2', colDEC2='DEC2', uRA=u.deg, uDEC=u.deg, newcol='offset_arcsec') :  # all cords from dataframe
+    # Try an apply here
+
+    df[newcol] = df.apply(distance_from_coords, args=())
+    
+    df[newcol] = distancefrom_coords(df[colRA1], df[colDEC1], df[colRA2], df[colDEC2], uRA0=uRA, uDEC0=uDEC)
     return(0) # acts on df
   
 def convert_RADEC_Galactic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Galactic.  Can be LISTS []
