@@ -43,7 +43,7 @@ def sigma_adivb_df(df, cola, colsiga, colb, colsigb) :  # convenience function f
 def add_in_quad(array, axis=0) :
     # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
     return( np.sqrt( np.sum((array**2), axis=axis)) )
-w
+
 def errorbars_to_log10(x, dx) :
     dp = np.log10(x + dx) - np.log10(x)
     dm = np.log10(x) - np.log10(x - dx)

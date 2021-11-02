@@ -443,16 +443,22 @@ def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u'
     if colmed   in list(sp.keys()) :   sp[colmed] = pandas.Series(extinction.apply(MW_extinction,   sp[colmed].astype('float64').to_numpy()))
     return(0)
 
-def deredden_internal_extinction(sp, this_ebv, colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, colwave='rest_wave') :
-    # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti
+def deredden_internal_extinction(sp, this_ebv, colwave='rest_wave', colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, whichlaw='Calzetti') :
+    # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti by default, rewriting to accept CCM
+    if whichlaw == 'Calzetti' :
+        Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
+        Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
+        thelaw = extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa')
+    elif whichlaw == 'ccm89' :
+        Rv = 3.1
+        Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
+        thelaw = extinction.ccm89(sp[colwave].astype('float64').to_numpy(), Av, Rv)
+    else : raise Exception("Uncrecognized extinction law, not Calzetti or ccm89", whichlaw)
     sp_filt = sp.loc[sp[colwave].between(1200,20000)]
-    Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
-    Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
     colfout = colf + "_dered"
     coluout = colu + "_dered"
-    sp[colfout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa'), sp[colf].astype('float64').to_numpy()))
-    if deredden_uncert :
-        sp[coluout]  = pandas.Series(extinction.apply(extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa'), sp[colu].astype('float64').to_numpy()))
+    sp[colfout]  =                        pandas.Series(extinction.apply(thelaw, sp[colf].astype('float64').to_numpy()))
+    if deredden_uncert :   sp[coluout]  = pandas.Series(extinction.apply(thelaw, sp[colu].astype('float64').to_numpy()))
     return(0) 
 
 def find_lines_simple(sp, abs=True, wavcol='wave', fcol='fnu', delta=0.15) :
