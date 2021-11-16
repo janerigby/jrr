@@ -11,3 +11,4 @@ from . import bpass
 from . import grism
 from . import sgas
 from . import lens
+from . import phot

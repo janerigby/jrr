@@ -44,12 +44,19 @@ def add_in_quad(array, axis=0) :
     # result = sqrt(a^2 + b^2 + c^2...). Input is a numpy array
     return( np.sqrt( np.sum((array**2), axis=axis)) )
 
-def errorbars_to_log10(x, dx) :
+def errorbar_to_log10(x, dx) :
     dp = np.log10(x + dx) - np.log10(x)
     dm = np.log10(x) - np.log10(x - dx)
     return((dm + dp)/2.0)
 
-def domath_2cols_df(df, new_col, new_ucol, col1, ucol1, col2, ucol2, theop=operator.add):
+def convert_linear_to_log(x, dx, y, dy) :   # dx is uncertainty on x
+    logx  = np.log10(x)
+    logy  = np.log10(y)
+    logdx = errorbar_to_log10(x, dx)
+    logdy = errorbar_to_log10(y, dy)
+    return(logx, logdx, logy, logdy)
+
+def domath_2cols_df(df, new_col, new_ucol, col1, ucol1, col2, ucol2, theop=operator.add, roundflag=False, rounddec=3):
     # Do simple math (add subtract multiply divide) on 2 columns of a dataframe, and propogate errors
     if theop not in [operator.add, operator.sub, operator.mul, operator.truediv] : raise Exception("ERROR: operator not supported", theop)
     df[new_col]   = theop( df[col1],  df[col2])  # Applying the the operator is trivial. Below, handle uncertainties
@@ -57,6 +64,9 @@ def domath_2cols_df(df, new_col, new_ucol, col1, ucol1, col2, ucol2, theop=opera
         df[new_ucol] = np.round(np.sqrt( df[ucol1]**2 + df[ucol2]**2), 2)
     elif theop == operator.truediv :    df[new_ucol] = sigma_adivb_df(  df, col1, ucol1, col2, ucol2)
     elif theop == operator.mul :        df[new_ucol] = sigma_atimesb_df(df, col1, ucol1, col2, ucol2)
+    if roundflag :
+        df[new_col]  = (df[new_col]).round(decimals=rounddec)
+        df[new_ucol] = (df[new_ucol]).round(decimals=rounddec)
     return(0) # acts on df
 
 def convenience1(df) : # uncertainties get smaller when binning
