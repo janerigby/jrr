@@ -1,5 +1,7 @@
 ''' Useful functions from the Sunburst Arc notebooks.  jrigby Dec 2021'''
-from re import sub 
+from re import sub
+from jrr import phot
+from pandas import DataFrame, concat
 
 def contsub_filename(whichline, convolved=False) :  # return continuum subtracted filename and wht map
     if 'Lya' in whichline: 
@@ -33,3 +35,33 @@ def setup_contsub_files(convolved=True) :
                    "F164W_0.03g0.8_cr4.0_0.7_drz", "F167W_0.03g0.8_cr4.0_0.7_drz")
         outfilename = ("Lya_contsubF390W", "Lya_contsubF555W", "OII_contsub", "Hbeta_contsub", "OIII_contsub")
     return(fitsdir, prefix, suffix, offband, onband, outfilename)
+
+def compute_linerats(df) :
+    df['O32']  = df['OIII_both'] / df['OII']
+    df['O3HB'] = df['OIII_5007'] / df['HBeta']
+    df['R23']  = (df['OIII_both'] + df['OII'])/ df['HBeta'] # R23=(4959+5007+3727+3729) / Hbeta
+
+def measure_NB_fluxes_in_FIRE_slits():
+    ffdir = '/Users/jrrigby1/SCIENCE/Lensed-LBGs/Planck_Arc/JR_narrowband/'
+    dirs2phot = ('Flux_maps_v2', 'Flux_maps_v2_convolved', 'Seeing_blurred')
+    f_images = ['Lya_F390W.fits', 'OII.fits', 'Hbeta.fits', 'OIII_5007.fits', 'OIII_both.fits']
+    f_names  = ['Lya', 'OII', 'HBeta', 'OIII_5007', 'OIII_both']
+    regdir = '/Users/jrrigby1/Dropbox/MagE_atlas/Finders/pszarc1550m78/'
+    F814_regfile = 'simple_FIRE_slits_F814W_forphotometry.reg'
+    short_regfile = 'simple_FIRE_slits_F814W_forphot_short.reg'
+    df_NB_fireslits = {}
+    for mapdir in dirs2phot :      # Do photometry on NB images, using FIRE slits.  
+        df_tmp2 = {} # dict of dfs
+        for ii, image in enumerate(f_images) :
+            image_w_path = ffdir + mapdir + '/' + image
+            #print("Doing photometry on", f_names[ii], ", dir", mapdir)
+            tmp_results = phot.pyregion_phot_loop_regions(image_w_path,  regdir + short_regfile)
+            df_tmp = DataFrame.from_dict(tmp_results).T
+            df_tmp.drop(['npix', 'median', 'mean', 'stddev'], inplace=True, axis=1)
+            df_tmp.rename(columns={'thesum': f_names[ii]}, inplace=True)
+            df_tmp2[f_names[ii]] = df_tmp
+        df_tmp3 = concat(df_tmp2, axis=1)
+        df_tmp3.columns = df_tmp3.columns.get_level_values(0)
+        compute_linerats(df_tmp3)
+        df_NB_fireslits[mapdir] = df_tmp3
+    return(df_NB_fireslits)
