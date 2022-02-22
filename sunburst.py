@@ -1,7 +1,7 @@
 ''' Useful functions from the Sunburst Arc notebooks.  jrigby Dec 2021'''
 from re import sub
 from jrr import phot
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, Series
 
 def contsub_filename(whichline, convolved=False) :  # return continuum subtracted filename and wht map
     if 'Lya' in whichline: 
@@ -64,4 +64,11 @@ def measure_NB_fluxes_in_FIRE_slits():
         df_tmp3.columns = df_tmp3.columns.get_level_values(0)
         compute_linerats(df_tmp3)
         df_NB_fireslits[mapdir] = df_tmp3
+        df_NB_fireslits[mapdir]['isleak'] = Series(fireslit_is_leaker())
     return(df_NB_fireslits)
+
+def fireslit_is_leaker() :
+    # returns a dictionary of which FIRE slits contain the leaker
+    slits = {'F-0': True, 'F-1': True, 'F-2': True, 'F-7': True, 'F-8': True, 'F-9': True, \
+            'F-3': False, 'F-4': False, 'F-5': False, 'F-6': False}
+    return(slits)
