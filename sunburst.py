@@ -55,7 +55,7 @@ def measure_NB_fluxes_in_FIRE_slits():
         for ii, image in enumerate(f_images) :
             image_w_path = ffdir + mapdir + '/' + image
             #print("Doing photometry on", f_names[ii], ", dir", mapdir)
-            tmp_results = phot.pyregion_phot_loop_regions(image_w_path,  regdir + short_regfile)
+            tmp_results = phot.photometry_loop_regions(image_w_path,  regdir + short_regfile)
             df_tmp = DataFrame.from_dict(tmp_results).T
             df_tmp.drop(['npix', 'median', 'mean', 'stddev'], inplace=True, axis=1)
             df_tmp.rename(columns={'thesum': f_names[ii]}, inplace=True)
@@ -72,3 +72,5 @@ def fireslit_is_leaker() :
     slits = {'F-0': True, 'F-1': True, 'F-2': True, 'F-7': True, 'F-8': True, 'F-9': True, \
             'F-3': False, 'F-4': False, 'F-5': False, 'F-6': False}
     return(slits)
+
+

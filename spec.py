@@ -23,6 +23,14 @@ import extinction
 from matplotlib import pyplot as plt
 from scipy import asarray as ar,exp
 
+#print("Constants, h, c, k, MJySR in cgs:", h, c, k, MJySR_in_cgs)
+def BB_fnu(wave, T, area) :
+    ''' Inputs are wave (micron), T(K), and area*emissivity
+    Output is fnu (in MJy/SR) for each wave'''
+    h = constants.h.cgs.value
+    c = constants.c.cgs.value
+    k = constants.k_B.cgs.value
+    return((2.0*h / c**2) * (c*1E4/wave)**3 / (np.exp(h *(c*1E4/wave) / k / T) - 1.0) * area)
 
 def calz_unred(wave, flux, ebv, R_V=4.05):    # pythonified version of idlutil calz_unred
     # rest wave units are Angstroms.  ebv is for the stars, following note in idutil calz_unred, which implements Calzetti 2000 attenuation

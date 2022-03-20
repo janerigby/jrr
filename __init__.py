@@ -13,3 +13,4 @@ from . import sgas
 from . import lens
 from . import sunburst
 from . import phot
+from . import jwst

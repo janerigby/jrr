@@ -1,5 +1,6 @@
 ''' Some basic photometry not covered elsewhere.  jrigby Nov 2021 '''
 
+import pandas
 import numpy as np
 import numpy.ma as ma
 from astropy.io import fits
@@ -61,7 +62,8 @@ def pyregion_photometry(imagefile, regfile) :
     return(photreg)
     # In progress.  write background later, and do net photometry. steal from S0033_photometry_v2.ipynb
 
-def pyregion_phot_loop_regions(imagefile, regfile, debug=False) :
+
+def photometry_loop_regions(imagefile, regfile, debug=False) :   # Uses Regions, not pyregions
     # This works for ds9 regions files in either image coords or WCS coords
     reg = regions.Regions.read(regfile, format='ds9')
     imdata, header = fits.getdata(imagefile, header=True)
@@ -80,3 +82,18 @@ def pyregion_phot_loop_regions(imagefile, regfile, debug=False) :
         photreg = basic_photstats(masked_data)
         results[label] = photreg
     return(results)
+
+
+def temporary_simple_region_photometry(imagefile, regionfile, prefix='foo_', drop=['stddev']):
+    tmp_results = photometry_loop_regions(imagefile, regionfile)
+    df_tmp = pandas.DataFrame.from_dict(tmp_results).T
+    df_tmp.drop(drop, inplace=True, axis=1)
+    newkeys = [prefix + x   for x in df_tmp.keys()]
+    df_tmp.columns= newkeys
+    return(df_tmp)
+
+def get_median_of_imagefile(imagefile) :
+    hdu = fits.open(imagefile)
+    median = np.median(hdu[1].data)
+    return(median)
+
