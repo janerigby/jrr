@@ -52,9 +52,10 @@ def get_background_for_hdu(hdu, bkg_file='/tmp/background.txt', debug=False) : #
     datetime = hdu[0].header['DATE-BEG']
     dayofyear = int((split(':', Time(datetime).yday)[1]).lstrip('0'))  # cumbersome format for jwst_backgrounds
     # Gotta format day of year so it's int and doesn't have a leading zero
-    thisfilt = hdu[0].header['FILTER']
-    wave = getwave_for_filter(thisfilt)
-    if debug: print("DEBUGGING:", RA, DEC, datetime, dayofyear, thisfilt, wave)
+    #thisfilt = hdu[0].header['FILTER']
+    #wave = getwave_for_filter(thisfilt)  called like this, wave is not used for anything; give it a dummy
+    wave = 2.0  # dummy wavelength, not used for anything
+    if debug: print("DEBUGGING:", RA, DEC, datetime, dayofyear)
     jbt.get_background(RA, DEC, wave, thisday=dayofyear, thresh=1.1, \
         plot_background=False, plot_bathtub=False, background_file=bkg_file, write_bathtub=True)
     return(0)
