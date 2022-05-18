@@ -25,7 +25,7 @@ def force_axisticks_linear(whichaxis) :
         formatter = FuncFormatter(lambda y, _: '{:.16g}'.format(y))
         axis.set_major_formatter(formatter)
 
-def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', fontsize=10, fontname='Times New Roman', arrowprops=None, ax=None, log=False) :
+def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data', xytext=(4,3), ha='right', va='center', fontsize=10, fontname='Times New Roman', arrowprops=None, ax=None, log=False) :
     # Matplotlib annotate works one annotation at a time -- it can't handle arrays.  Workaround: iterate through the dataframe.
     for index, row in df.iterrows():
         if text=='index' : putlabel = index   # We may want to label the index, and that's handled differently from df['acolumn']
