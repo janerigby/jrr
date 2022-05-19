@@ -46,7 +46,8 @@ def measure_NB_fluxes_in_FIRE_slits():
     dirs2phot = ('Flux_maps_v2', 'Flux_maps_v2_convolved', 'Seeing_blurred', 'Seeing_blurred_0p75/')
     f_images = ['Lya_F390W.fits', 'OII.fits', 'Hbeta.fits', 'OIII_5007.fits', 'OIII_both.fits']
     f_names  = ['Lya', 'OII', 'HBeta', 'OIII_5007', 'OIII_both']
-    regdir = '/Users/jrrigby1/Dropbox/MagE_atlas/Finders/pszarc1550m78/'
+    #regdir = '/Users/jrrigby1/Dropbox/MagE_atlas/Finders/pszarc1550m78/' # bye bye Dropbox I loved you
+    regdir = '/Users/jrrigby1/SCIENCE/Lensed-LBGs/Planck_Arc/Regions_files/Finders_from_dropbox/'
     F814_regfile = 'simple_FIRE_slits_F814W_forphotometry.reg'
     short_regfile = 'simple_FIRE_slits_F814W_forphot_short.reg'
     df_NB_fireslits = {}
