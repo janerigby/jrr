@@ -73,7 +73,7 @@ def photometry_loop_regions(imagefile, regfile, debug=False, override_label=None
     thewcs = WCS(header)
     results = {}  #empty dict
     for thisreg in reg:
-        if 'label' in thisreg.meta.keys() :  label = thisreg.meta['label']
+        if 'text' in thisreg.meta.keys() :  label = thisreg.meta['text']
         elif override_label : label = override_label
         else : label = 'foo'
         if hasattr(thisreg, 'to_pixel') : # If it has a to_pixel method, then assume it's in sky coords
