@@ -15,7 +15,7 @@ def getwave_for_filter(*args):
                'F200W': 1.989, 'F212N': 2.121, 'F250M': 2.503, 'F277W': 2.762, 'F300M': 2.989, \
                'F322W2': 3.232, 'F356W': 3.568, 'F410M': 4.082, 'F430M': 4.281,  'F444W': 4.408, 'F480M': 4.874, \
                'F560W': 5.6, 'F770W': 7.7, 'F1000W': 10.0, 'F1130W': 11.3, 'F1280W': 12.8, 'F1500W': 15.0, \
-               'F180W': 18.0, 'F2100W': 21.0, 'F2550W': 25.5 }
+               'F1800W': 18.0, 'F2100W': 21.0, 'F2550W': 25.5 }
     if len(args)==0 : return(filter_wave)
     elif len(args)==1 and args[0] in filter_wave.keys() :
         return(filter_wave[args[0]])

@@ -42,7 +42,7 @@ def compute_linerats(df) :
     df['R23']  = (df['OIII_both'] + df['OII'])/ df['HBeta'] # R23=(4959+5007+3727+3729) / Hbeta
     return(0) # acts on df
 
-def measure_NB_fluxes_in_FIRE_slits():
+def measure_NB_fluxes_in_FIRE_slits(debug=False):
     ffdir = '/Users/jrrigby1/SCIENCE/Lensed-LBGs/Planck_Arc/JR_narrowband/'
     dirs2phot = ('Flux_maps_v2', 'Flux_maps_v2_convolved', 'Seeing_blurred', 'Seeing_blurred_0p75/')
     f_images = ['Lya_F390W.fits', 'OII.fits', 'Hbeta.fits', 'OIII_5007.fits', 'OIII_both.fits']
@@ -56,12 +56,12 @@ def measure_NB_fluxes_in_FIRE_slits():
         df_tmp2 = {} # dict of dfs
         for ii, image in enumerate(f_images) :
             image_w_path = ffdir + mapdir + '/' + image
-            print("Doing photometry on", f_names[ii], ", dir", mapdir, "image ", image)
+            if debug: print("DEBUGGING, Doing photometry on", f_names[ii], ", dir", mapdir, "image ", image)
             tmp_results = phot.photometry_loop_regions(image_w_path,  regdir + short_regfile)
-            #print("DEBUGGING!", tmp_results)
+            if debug: print("DEBUGGING!", tmp_results)
             df_tmp = DataFrame.from_dict(tmp_results).T
             df_tmp.drop(['npix', 'median', 'mean', 'stddev', 'clipped_median'], inplace=True, axis=1)
-            #print("DEBUGGING2", df_tmp.head())
+            if debug: print("DEBUGGING2", df_tmp.head())
             df_tmp.rename(columns={'thesum': f_names[ii]}, inplace=True)
             df_tmp2[f_names[ii]] = df_tmp
         df_tmp3 = concat(df_tmp2, axis=1)
