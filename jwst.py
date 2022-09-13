@@ -4,8 +4,61 @@ from astropy.io import fits
 from astropy.time import Time
 from jwst_backgrounds import jbt # Import the background module
 from re import split
+import matplotlib.pyplot as plt
 import pandas
+import numpy as np
+from astropy.stats import mad_std
+import astropy.io.ascii as ascii
 
+
+def get_mrieke_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/mrieke_fluxcalib_08252022.txt'):
+    # Create a dict of Marcia Rieke's PHOTMJSR flux calibration zeropoints for NIRCam
+    df = pandas.read_csv(infile, delim_whitespace=True, comment='#')
+    df['detlong'] = 'NRC' + df['detector']
+    df['filter_detector'] = df['filter'] + '_' + df['detlong']
+    df.drop(['filter', 'detector', 'detlong'], inplace=True, axis=1)
+    df.set_index('filter_detector', inplace=True)
+    marcia_dict = df.to_dict()['PHOTMJSR']
+    return(marcia_dict)
+
+def get_gbramer_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/gbramer_fluxcalib_aug2022.txt'):
+    # make a dict of Gabe Bramer's PHOTMJSR flux calibration zeropoints for NIRCam
+    df = pandas.read_csv(infile, delim_whitespace=True, comment='#')
+    df['filter_detector'] = df['filt'] + '_' + df['det']
+    df.drop(['det', 'filt', 'pupil', 'mjsr_0942', 'gbr', 'ila'], inplace=True, axis=1)
+    df.set_index('filter_detector', inplace=True)
+    gabe_dict = df.to_dict()['mjsr_gbr'] # This is PHOTMJSR with Gabe's modification
+    return(gabe_dict)
+
+def get_mboyer_fluxcal_aug2022_fulldataframe(infile='/Users/jrrigby1/Python/jrr/boyer2022_nircamoffsets.txt'):
+    temp_table = ascii.read(infile) # Read a machine-readable table into Pandas, via astropy.Table. Automatically gets format right
+    df = temp_table.to_pandas()
+    df['wave'] = df['Filter'].apply(getwave_for_filter)
+    df['filter_detector'] = df['Filter'] + '_' + df['Detector']
+    return(df)
+
+def get_mboyer_fluxcal_aug2022_justdict(infile='/Users/jrrigby1/Python/jrr/boyer2022_nircamoffsets.txt'):
+    df = get_mboyer_fluxcal_aug2022_fulldataframe(infile=infile)
+    df.drop(['Filter', 'Detector', 'Pupil', 'MJSR-0959'], inplace=True, axis=1)
+    df.drop(['MJSR-mr', 'MJSR-gbr', 'MJSR-1D', 'MJSR-LMC', 'wave'], inplace=True, axis=1)
+    df.rename(columns={'MJSR-2D' : 'PHOTMJSR'}, inplace=True)
+    df.set_index('filter_detector', inplace=True)
+    martha_dict = df.to_dict()['PHOTMJSR']
+    return(martha_dict)
+
+
+
+def estimate_1fnoise_nircam(filename_wpath):
+    # This is an experiment.  std1 should be the standard deviation in the medians of each columns, an estimate of the 1/f noise
+    hdu = fits.open(filename_wpath)
+    f0 = np.median(hdu[1].data, axis=0)
+    f1 = np.median(hdu[1].data, axis=1)
+    plt.plot(f1, color='red')    # median of each row
+    plt.plot(f0, color='green')  # median of each column
+    std0 = mad_std(f0)
+    std1 = mad_std(f1)
+    plt.grid()
+    return(f0,f1, std0, std1, hdu)
 
 def getwave_for_filter(*args):
     # Retrieve either a specific central wavelength for a filter, or a dict of them

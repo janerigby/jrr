@@ -96,6 +96,11 @@ def round_up_to_odd(f):
 def mask_nans(data) :  # return a numpy masked array, with nans masked
     return(np.ma.masked_array(data,np.isnan(data)))
 
+# My new NIRCam pipeline reduction is rotated with a lot of zeros on the edge.  Ignore these in computing median
+def median_ignore_zero(somearray):
+    masked_array = np.ma.masked_equal(somearray, 0)
+    return(np.ma.median(masked_array))
+
 #####  Handle files  #####
 
 def appendfile_if_exists_elseopenit(filename):  # If a file exists, open it as append. If it does not exist, open it for writing
