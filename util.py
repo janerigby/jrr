@@ -10,6 +10,7 @@ import fileinput
 import operator
 from   re import split, sub, search
 from astropy.io.fits import getdata
+from astropy.io import fits
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -223,6 +224,11 @@ def offset_coords(sk, delta_RA=0, delta_DEC=0) :
     # Coords should be in picky Astropy format, for example sk = SkyCoord(RA, DEC, unit='deg') 
     newsk = sk.directional_offset_by(0. *u.deg, delta_DEC * u.arcsec).directional_offset_by(90. *u.deg, delta_RA * u.arcsec)
     return(newsk)
+
+def gethead(imagefile, header_keyword, extension=1) :
+    # return a header keyword from a file, similar to wcstools gethead
+    hdu = fits.open(imagefile)
+    return( hdu[extension].header[header_keyword] )
 
 def imval_at_coords(imagefile, sk) :
     ''' For a given image and coordinates, return value of that image at coordinates, and nearest xy pixel
