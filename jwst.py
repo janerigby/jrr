@@ -21,8 +21,8 @@ def get_mrieke_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/mrieke_fluxcal
     marcia_dict = df.to_dict()['PHOTMJSR']
     return(marcia_dict)
 
-def get_gbramer_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/gbramer_fluxcalib_aug2022.txt'):
-    # make a dict of Gabe Bramer's PHOTMJSR flux calibration zeropoints for NIRCam
+def get_gbrammer_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/gbrammer_fluxcalib_aug2022.txt'):
+    # make a dict of Gabe Brammer's PHOTMJSR flux calibration zeropoints for NIRCam
     df = pandas.read_csv(infile, delim_whitespace=True, comment='#')
     df['filter_detector'] = df['filt'] + '_' + df['det']
     df.drop(['det', 'filt', 'pupil', 'mjsr_0942', 'gbr', 'ila'], inplace=True, axis=1)
@@ -45,7 +45,6 @@ def get_mboyer_fluxcal_aug2022_justdict(infile='/Users/jrrigby1/Python/jrr/boyer
     df.set_index('filter_detector', inplace=True)
     martha_dict = df.to_dict()['PHOTMJSR']
     return(martha_dict)
-
 
 
 def estimate_1fnoise_nircam(filename_wpath):
@@ -147,6 +146,18 @@ def get_background_for_hdu(hdu, bkg_file='/tmp/background.txt', wave=2.0, debug=
     jbt.get_background(RA, DEC, wave, thisday=dayofyear, thresh=1.1, \
         plot_background=plot_background, plot_bathtub=plot_bathtub, background_file=bkg_file, write_bathtub=True, showsubbkgs=showsubbkgs)
     return(0)
+
+# Convenience functions for plotting stray light and other backgrounds
+def plot_expected_bkgs(plotdf, scalestray=1.0, plotlegend=True, suffix=""):
+    wave = np.arange(1,30.,0.1)  
+    plotdf['scaledstraylight'] = plotdf.straylight * scalestray
+    plt.plot(plotdf.wave, plotdf.total - plotdf.straylight + plotdf.scaledstraylight, lw=3, color='k', ls='dashed')
+    plt.plot(plotdf.wave, plotdf.total - plotdf.straylight, color='y', lw=2, label='Predicted bkg if no stray light', linestyle='dashed')
+    plt.plot(plotdf.wave, plotdf.scaledstraylight, color='b', lw=2, label='Predicted stray light only', linestyle='dashed') 
+    plt.grid()
+    if plotlegend: plt.legend()
+    return(0)
+
 
 
 # MAST ARCHIVE 
