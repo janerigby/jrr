@@ -546,3 +546,13 @@ def calc_schneider_EW(sp, resoln):
     sp['W_interp'] = W
     sp['W_u_interp'] = signorm_int
     return(0)
+
+
+def pssc_to_pssl_df(df, PSSLcol='PSSL', PSSCcol='PSSC', wavecol='wavelength', Rcol='R') :  # convert from point source continnum sensitivity to point source line sensitivity
+    # inputs are PSSC in mJy, lambda in microns.
+    # output is cgs (erg/s/s/cm^2
+    # Eqn 2.7 of the Spitzer IRS manual:  PSSL = 3.0E-15 PSSC / (R lambda), where PSSC is in units of mJy, and lambda is in microns.  PSSL is in W/m^2
+    df[PSSLcol] = df[PSSCcol] * 3.0E-15 / ( df[Rcol]  * df[wavecol]) * 1E3   #The last 1E3 converts to cgs
+    return(0) # acts on df
+
+# Need to add the reverse
