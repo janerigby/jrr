@@ -22,6 +22,7 @@ def fire_load_fits(filename) :
 
 def load_Klaus_sensitivities(pandir=None) :   # Load Klaus's sensitivities for JWST
     if pandir == None:  pandir = '/Users/jrrigby1/MISSIONS/JWST/Sens/pandeia_sensitivities_1.5/'
+    print("DEBUG, pandir was", pandir)
     filenames = [ basename(x) for x in glob.glob(pandir + '*npz')]
     pan = {} # empty dictionary of pandeia files (in weird numpy format)
     df = {}  # empty dict of dataframes

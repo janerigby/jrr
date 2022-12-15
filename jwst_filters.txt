@@ -1,4 +1,8 @@
 # NIRCam from https://jwst-docs.stsci.edu/jwst-near-infrared-camera/nircam-instrumentation/nircam-filters
+# NIRISS from https://jwst-docs.stsci.edu/jwst-near-infrared-imager-and-slitless-spectrograph/niriss-instrumentation/niriss-filters
+# MIRI from https://jwst-docs.stsci.edu/jwst-mid-infrared-instrument/miri-instrumentation/miri-filters-and-dispersers
+# Jrigby Nov 2022
+#
 instrument filtname wavelength width eff_response blue_wave red_wave
 NIRCAM  F070W	0.704	0.132	0.200	0.621	0.781	
 NIRCAM  F090W	0.902	0.194	0.292	0.795	1.005	
@@ -30,6 +34,19 @@ NIRCAM  F460M	4.630	0.229	0.392	4.515	4.747
 NIRCAM  F466N	4.654	0.054	0.293	4.629	4.681
 NIRCAM  F470N	4.708	0.051	0.274	4.683	4.733
 NIRCAM  F480M	4.874	0.300	0.317	4.662	4.977
+#
+NIRISS  F090W	0.901	0.194	0.880	0.796	1.005
+NIRISS  F115W	1.150	0.241	0.839	1.013	1.283
+NIRISS  F150W	1.498	0.333	0.936	1.330	1.671
+NIRISS  F200W	1.984	0.461	0.945	1.751	2.226
+NIRISS  F277W	2.771	0.717	0.873	2.413	3.143
+NIRISS  F356W	3.592	0.922	0.900	3.140	4.068
+NIRISS  F444W	4.434	1.121	0.858	3.880	5.023
+NIRISS  F140M	1.405	0.147	0.900	1.331	1.480
+NIRISS  F158M	1.583	0.197	0.871	1.488	1.688
+NIRISS  F380M	3.825	0.205	0.864	3.726	3.931
+NIRISS  F430M	4.285	0.203	0.793	4.182	4.395
+NIRISS  F480M	4.815	0.298	0.689	4.668	4.971
 #
 MIRI F560W    5.6   1.2
 MIRI F770W    7.7   2.2
