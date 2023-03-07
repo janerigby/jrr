@@ -14,7 +14,8 @@ from astropy.io import fits
 from astropy.stats import sigma_clip, median_absolute_deviation
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-from astropy.cosmology import WMAP9 as cosmo
+#from astropy.cosmology import WMAP9 as cosmo
+from astropy.cosmology import Planck18 as cosmo
 from astropy.wcs import WCS
 import scipy  
 import scikits.bootstrap as bootstrap  
@@ -203,6 +204,11 @@ def Kennicutt_SFR_to_fHa(SFR, zz) :
 
 def luminosity_distance(zz) :
     return ( cosmo.luminosity_distance(zz).to(u.cm).value ) # in cm
+
+def  lookback_time(zz) :
+    return( cosmo.lookback_time(zz))
+
+
 
 #####  Astronomy coordinate systems  #####
 

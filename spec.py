@@ -556,3 +556,12 @@ def pssc_to_pssl_df(df, PSSLcol='PSSL', PSSCcol='PSSC', wavecol='wavelength', Rc
     return(0) # acts on df
 
 # Need to add the reverse
+
+def calculate_Hydrogen_series(series=1) :
+    # Optional argument is Series (1=Lyman, 2=Balmer, 3=Paschen, 4=Brackett...)
+    Rh = 1.0/911.8; #Angstroms
+    for n2 in range(series+1, 30) :
+        n1 = series
+        lam =   1.0/(Rh * (1.0/n1**2 - 1.0/n2**2))
+        print("H(%d-->series)   %.3f  Ang\n", n2,lam)
+    return(0)

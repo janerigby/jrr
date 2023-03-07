@@ -131,12 +131,12 @@ def pixscale(*args):
         return(pixscale[args[0]])
     else : raise Exception("ERROR: number of arguments must be 0 or 1.")
 
-def cal_to_Jy(fnu_in, detector):  # no longer assuming a default, that's not safe
+def cal_to_Jy(fnusb_in, detector): 
     # helper function to convert summed flux density in MJy/SR *Npixels to Jy.
     # This allows user to sum SB in the _CAL images and easily get a flux density in Jy
     megajy_sr_to_Jy_sqarcsec = 2.35044E-5   #1 MJy/sr = 2.35044E-5 Jy/arcsec^2
     area_1pix = pixscale(detector)**2
-    fnu_Jy = fnu_in *  megajy_sr_to_Jy_sqarcsec * area_1pix
+    fnu_Jy = fnusb_in *  megajy_sr_to_Jy_sqarcsec * area_1pix
     return(fnu_Jy)
 
 def get_coords_dayofyear_from_jwstfile(jwstfile, verbose=False):
@@ -198,7 +198,7 @@ def plot_expected_bkgs(plotdf, scalestray=1.0, plotlegend=True, plotthermal=Fals
     plotdf['scaledstraylight'] = plotdf.straylight * scalestray
     plt.plot(plotdf.wave, plotdf.total - plotdf.straylight + plotdf.scaledstraylight, lw=2, color='k', ls='dashed')
     if plotall:
-        plt.plot(plotdf.wave, plotdf.total - plotdf.straylight, color='y', lw=1, label='Predicted bkg if no stray light', linestyle='dashed')
+        plt.plot(plotdf.wave, plotdf.total - plotdf.straylight, color='orange', lw=2, label='Predicted bkg if no stray light', linestyle='dashed')
         plt.plot(plotdf.wave, plotdf.scaledstraylight, color='b', lw=1, label='Predicted stray light only', linestyle='dashed')
     if plotthermal :
         plt.plot(plotdf.wave, plotdf.thermal, color='r', lw=1, label='thermal only', linestyle='dashed')

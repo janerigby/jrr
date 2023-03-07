@@ -62,7 +62,7 @@ def replace_one_oldsunburstname(oldname) :  # Helper function for replace_all_ol
     else : return(oldname)
 
 def replace_all_oldstarburstnames_df(df, newcol='shortname', oldcol='oldshortname') :  #apply to a dataframe
-    df[oldcol] = df[newcol]
+    df[newcol] = df[oldcol]
     df[newcol] = df[oldcol].apply(replace_one_oldsunburstname)  # magic with Pandas Apply
     return(0)
 
