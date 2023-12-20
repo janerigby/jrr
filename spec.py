@@ -303,7 +303,7 @@ def get_boxcar4autocont(sp, smooth_length=100.) :
 
 def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask', linetype='all') :
     # Flag regions within +- vmask km/s around lines in linelist LL
-    # Inputs:   sp        spectrum as Pandas data frame
+    # Inputs:   sp        spectrum as Pandas data frame 
     #           LL        linelist as pandas data frame
     #           zz        redshift
     #           colv2mask  column containing velocity around which to mask each line +-, in km/s
