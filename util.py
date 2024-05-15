@@ -78,6 +78,9 @@ def convenience1(df) : # uncertainties get smaller when binning
 def mad(data):
     return median_absolute_deviation(data)
 
+def mad_nan(x) :  # Median absolute deviation, robust to NaNs
+    return(np.nanmedian(np.absolute(x - np.nanmedian(x))))
+
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''
     notnull = Series[Series.notnull()]

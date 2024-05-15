@@ -177,9 +177,9 @@ def flam2fnu(wave, flam) :
     fnu = flam * (wave * 1E-8 ) * wave / A_c;
     return(fnu)
 
-def flam2fnu_df(df, colwave='wave', colf='flam', colf_u='flam_u') : # same, for a data frame
-    df['fnu']   = pandas.Series(flam2fnu(df[colwave], df[colf]))
-    df['fnu_u'] = pandas.Series(flam2fnu(df[colwave], df[colf_u]))
+def flam2fnu_df(df, colwave='wave', colf='flam', colf_u='flam_u', out1='fnu', out2='fnu_u') : # same, for a data frame
+    df[out1]   = pandas.Series(flam2fnu(df[colwave], df[colf]))
+    df[out2] = pandas.Series(flam2fnu(df[colwave], df[colf_u]))
     return(0)  # acts on df
 
 def convert2restframe(wave, f, f_u, zz, units) :
@@ -313,8 +313,8 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     #print "Flagging regions near lines."
     if linetype == 'all' :  subset = LL
     else :                  subset = LL[LL['type'].isin(linetype)]
-    line_lo = np.array(subset['restwav'] * (1. - subset[colv2mask]/2.997E5) * (1. + subset['zz']))
-    line_hi = np.array(subset['restwav'] * (1. + subset[colv2mask]/2.997E5) * (1. + subset['zz']))
+    line_lo = np.array(subset[colwave] * (1. - subset[colv2mask]/2.997E5) * (1. + subset['zz']))
+    line_hi = np.array(subset[colwave] * (1. + subset[colv2mask]/2.997E5) * (1. + subset['zz']))
     temp_wave = np.array(sp[colwave])
     temp_mask = np.zeros_like(temp_wave).astype(np.bool)
     for ii in range(0, len(line_lo)) :    # doing this in observed wavelength

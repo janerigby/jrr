@@ -108,7 +108,8 @@ def getwave_for_filter(*args):
                'F200W': 1.989, 'F212N': 2.121, 'F250M': 2.503, 'F277W': 2.762, 'F300M': 2.989, \
                'F322W2': 3.232, 'F356W': 3.568, 'F410M': 4.082, 'F430M': 4.281,  'F444W': 4.408, 'F480M': 4.874, \
                'F560W': 5.6, 'F770W': 7.7, 'F1000W': 10.0, 'F1130W': 11.3, 'F1280W': 12.8, 'F1500W': 15.0, \
-               'F1800W': 18.0, 'F2100W': 21.0, 'F2550W': 25.5 }
+               'F1800W': 18.0, 'F2100W': 21.0, 'F2550W': 25.5, 'NIS_F200W': 2.0999 }
+               # CLEAR is a kludge for PEARLS, for NIS
     if len(args)==0 : return(filter_wave)
     elif len(args)==1 and args[0] in filter_wave.keys() :
         return(filter_wave[args[0]])
@@ -142,11 +143,17 @@ def cal_to_Jy(fnusb_in, detector):
 def get_coords_dayofyear_from_jwstfile(jwstfile, verbose=False):
      hdu = fits.open(jwstfile)
      return(get_coords_dayofyear_from_jwst_hdu(hdu))
+
+def date_to_DOY(date) :
+    # date in format: '2023-02-21' or '2022-07-01T00:00:00.0' 
+    dayofyear = int((split(':', Time(date).yday)[1]).lstrip('0'))
+    return(dayofyear)
     
 def get_coords_dayofyear_from_jwst_hdu(hdu, verbose=False):
     # Grab RA, DEC, Day of Year from header.  Converts UTC date (in header) to DOY (what JWST Background Tool expects).
     datetime = hdu[0].header['DATE-BEG']
-    dayofyear = int((split(':', Time(datetime).yday)[1]).lstrip('0'))  # cumbersome format for jwst_backgrounds
+    dayofyear = date_to_DOY(datetime)
+    #dayofyear = int((split(':', Time(datetime).yday)[1]).lstrip('0'))  # cumbersome format for jwst_backgrounds
     # Gotta format day of year so it's int and doesn't have a leading zero
     RA       = hdu[0].header['TARG_RA']
     DEC      = hdu[0].header['TARG_DEC']
@@ -193,10 +200,11 @@ def interpolate_bkg_try2(bkg_df, wave_to_find):  #wavelength in micron
 
 
 # Convenience functions for plotting stray light and other backgrounds
-def plot_expected_bkgs(plotdf, scalestray=1.0, plotlegend=True, plotthermal=False, plot_not_thermal=False, plotall=True, plotsuffix=""):
+def plot_expected_bkgs(plotdf, scalestray=1.0, plotlegend=True, plotthermal=False, plot_not_thermal=False, plotall=True, plotsuffix="", \
+                           override_color='k', override_width=2.0, override_ls='dashed'):
     wave = np.arange(1,30.,0.1)  
     plotdf['scaledstraylight'] = plotdf.straylight * scalestray
-    plt.plot(plotdf.wave, plotdf.total - plotdf.straylight + plotdf.scaledstraylight, lw=2, color='k', ls='dashed')
+    plt.plot(plotdf.wave, plotdf.total - plotdf.straylight + plotdf.scaledstraylight, lw=override_width, color=override_color, ls=override_ls)
     if plotall:
         plt.plot(plotdf.wave, plotdf.total - plotdf.straylight, color='orange', lw=2, label='Predicted bkg if no stray light', linestyle='dashed')
         plt.plot(plotdf.wave, plotdf.scaledstraylight, color='b', lw=1, label='Predicted stray light only', linestyle='dashed')

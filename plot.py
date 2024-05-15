@@ -40,7 +40,6 @@ def annotate_from_dataframe(df, xcol='x', ycol='y', text='label', xycoords='data
                             fontname=fontname, arrowprops=arrowprops)
     return(0)
 
-
 def standard_colors1():
     return(['black', 'blue', 'green', 'purple', 'red', 'orange', 'cyan'])
 def standard_colors2():
@@ -51,7 +50,13 @@ def standard_colors3():
 def standard_colors4():
     return([color1, color2, color3])
 
-        
+def load_rainbow_colors(Ncolors=10, linestyles=['solid' , (0, (5, 10))]):
+    # Load Ncolor sequential rainbow colors, as in the stray light confusogram
+    cmap = plt.get_cmap('hsv')
+    colors = cmap(np.linspace(0.87,0,Ncolors)) #get N colors along the full range of hsv colormap
+    plt.rc('axes', prop_cycle=(cycler('color', colors) * cycler('linestyle', linestyles))) 
+    return(colors)
+
 def boxplot_spectra(wave, fnu, dfnu, line_label, line_center, redshift, win, Ncol, spec_label="",figsize=(8,8), vel_plot=True, verbose=True) :
     '''Make a plot of flux density versus rest-frame velocity or rest-frame wavelength for several spectral lines, in a
     [Nrow x Ncol] box.
