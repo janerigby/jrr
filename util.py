@@ -106,6 +106,19 @@ def median_ignore_zero(somearray):
     masked_array = np.ma.masked_equal(somearray, 0)
     return(np.ma.median(masked_array))
 
+def straightline(slope, intercept, x):  # obvious but decent coding
+    return(slope * x + intercept )  # y = b + mx
+
+def get_uncert_lines_given_dslope(slope, dslope, intercept, xmidpt, ymidpt):
+    # For a linear fit with an uncertainty in the slope dslope, and the x,y coords of
+    # at the midpoint of the original line, calculate the parameters of the two lines
+    # that cross this line at xmidpt, ymidpt, with slopes +dslope and -dslope
+    newintercept1 = ymidpt - (slope + dslope) * xmidpt     #b = y - mx
+    newintercept2 = ymidpt - (slope - dslope) * xmidpt     #b = y - mx
+    return((slope + dslope, newintercept1), (slope - dslope, newintercept2))
+
+
+
 #####  Handle files  #####
 
 def appendfile_if_exists_elseopenit(filename):  # If a file exists, open it as append. If it does not exist, open it for writing

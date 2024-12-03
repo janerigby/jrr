@@ -295,13 +295,12 @@ def test_wave_in_spectrum(sp, linecen, colwave='wave') : # Is given wavelength l
 
 # Below are functions to automatically fit a smooth continuum to a spectrum.  Generalized from jrr.mage
 
-def get_boxcar4autocont(sp, smooth_length=100.) :
-    # Helper function for fit_autocont().  For the given input spectrum, finds the number of pixels that
+def get_boxcar4autocont(sp, smooth_length=100.) :    # Helper function for fit_autocont().  For the given input spectrum, finds the number of pixels that
     # corresponds to smooth_length in rest-frame Angstroms.  This will be the boxcar smoothing length.
     # target is in rest-frame Angstroms.  Default is 100 A, which works well for MagE spectra.
     return(np.int(util.round_up_to_odd(smooth_length / sp.rest_disp.median())))  # in pixels
 
-def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask', linetype='all') :
+def flag_near_lines(sp, LL, colv2mask='vmask', colwave='restwav', colwave2='restwav', colmask='linemask', linetype='all') :
     # Flag regions within +- vmask km/s around lines in linelist LL
     # Inputs:   sp        spectrum as Pandas data frame 
     #           LL        linelist as pandas data frame
@@ -313,8 +312,8 @@ def flag_near_lines(sp, LL, colv2mask='vmask', colwave='wave', colmask='linemask
     #print "Flagging regions near lines."
     if linetype == 'all' :  subset = LL
     else :                  subset = LL[LL['type'].isin(linetype)]
-    line_lo = np.array(subset[colwave] * (1. - subset[colv2mask]/2.997E5) * (1. + subset['zz']))
-    line_hi = np.array(subset[colwave] * (1. + subset[colv2mask]/2.997E5) * (1. + subset['zz']))
+    line_lo = np.array(subset[colwave2] * (1. - subset[colv2mask]/2.997E5) * (1. + subset['zz']))
+    line_hi = np.array(subset[colwave2] * (1. + subset[colv2mask]/2.997E5) * (1. + subset['zz']))
     temp_wave = np.array(sp[colwave])
     temp_mask = np.zeros_like(temp_wave).astype(np.bool)
     for ii in range(0, len(line_lo)) :    # doing this in observed wavelength
@@ -435,9 +434,10 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
 
 # NB: Can get MW extinction for a given RA, DEC from jrr.MW_EBV.get_MW_EBV
 
-### Extinction routines below
+### Extinction routines below  
 def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u', colmed='median') :
     #print "Dereddening Milky Way extinction"
+    # WAVE NEEDS TO BE IN ANGSTROMS
     Rv = 3.1
     Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
     print("jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW)

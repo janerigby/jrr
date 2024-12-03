@@ -118,8 +118,8 @@ def getpath(mage_mode) :
         return(spec_path, line_path)
     elif mage_mode == "released" :
         homedir = expanduser('~')
-        spec_path = homedir + "/Dropbox/MagE_atlas/Spectra/"
-        line_path = homedir + "/Dropbox/MagE_atlas/Linelists/"
+        spec_path = homedir + "/SCIENCE/Dropbox_restore/MagE_atlas/Spectra/"
+        line_path = homedir + "/SCIENCE/Dropbox_restore/MagE_atlas/Linelists/"
         return(spec_path, line_path)
     else :
         print("Unrecognized mage_mode " + mage_mode)
@@ -553,7 +553,7 @@ def get_linelist(linelist) :
     '''
     L = pandas.read_csv(linelist,  delim_whitespace=True, comment="%", names=('restwav', 'lab1', 'lab2', 'foo1', 'foo2', 'color', 'zz', 'type', 'src'))
     L.lab1 = L.lab1.str.replace("_", " ")  # clean up formatting.  Should go fix original Linelists/MINE to get all to have _
-    L.insert(7, 'obswav', L.restwav * (1.0 + L.zz))  # observed wavelength for this line
+    L.insert(7, 'obswav', L.restwav * (1.0 + (L.zz.astype(float))))  # observed wavelength for this line
     L.insert(8, 'fake_v',   0)  # need this for plot_linelist if velplot
     L.insert(8, 'fake_wav', 0)  # need this for Mage_plot if restframe
     L['vmask'] = 500.0 # default window to mask the line 
@@ -645,7 +645,7 @@ def flag_where_nocont(sp) :
     sp.badmask.loc[sp['fnu_cont'].eq(9999)] = True  # where hand-drawn continuum is undefined
     return(0)
         
-def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
+def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_derived=True, colwave='wave', colwave2='obswav', colfnu='fnu', colfnuu='fnu_u', colcont='fnu_autocont') : 
     ''' Automatically fits a smooth continuum to a spectrum.
      Inputs:  sp,  a Pandas data frame containing the spectra, opened by mage.open_spectrum or similar
               LL,  a Pandas data frame containing the linelist, opened by mage.get_linelist(linelist) or similar
@@ -660,7 +660,7 @@ def fit_autocont(sp, LL, zz, vmask=500, boxcar=1001, flag_lines=True, make_deriv
     # Third, mask out regions near lines.  Flagged in sp.linemask
     if flag_lines :
         LL['vmask'] = vmask
-        spec.flag_near_lines(sp, LL, colv2mask='vmask', colwave=colwave)
+        spec.flag_near_lines(sp, LL, colv2mask='vmask', colwave=colwave, colwave2=colwave2)
     # Populate colcont with fnu, unless pixel is bad or has a spectral feature, in which case it stays nan.
     temp_fnu = sp[colfnu].copy(deep=True)
     temp_fnu.loc[(sp.badmask | sp.linemask).astype(np.bool)] = np.nan
