@@ -12,6 +12,11 @@ from astropy.stats import mad_std
 import astropy.io.ascii as ascii
 from astropy import constants
 from scipy.optimize import brentq    # Equation solving
+from jrr.spec import rebin_spec_new
+from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
+from jwst.associations import asn_from_list as afl
+import json
+
 
 h = constants.h.cgs.value
 c = constants.c.cgs.value
@@ -109,9 +114,10 @@ def getwave_for_filter(*args):
     # Retrieve either a specific central wavelength for a filter, or a dict of them
     # just NIRCam and MIRI so far.  Pivot wavelengths from JDox on 3/2022
     # This should be in the header; asked helpdesk why it isn't
-    filter_wave = {'F070W': 0.704, 'F090W': 0.902, 'F115W': 1.154, 'F150W': 1.501, 'F150W2': 1.659, \
-               'F200W': 1.989, 'F212N': 2.121, 'F250M': 2.503, 'F277W': 2.762, 'F300M': 2.989, \
-               'F322W2': 3.232, 'F356W': 3.568, 'F410M': 4.082, 'F430M': 4.281,  'F444W': 4.408, 'F480M': 4.874, \
+    filter_wave = {'F070W': 0.704, 'F090W': 0.902, 'F115W': 1.154, 'F140M': 1.405, 'F150W': 1.501, 'F150W2': 1.659, \
+               'F162M': 1.627, 'F182M': 1.845, 'F200W': 1.989, 'F210M': 2.096, 'F212N': 2.121, 'F250M': 2.503, \
+               'F277W': 2.762, 'F300M': 2.989, 'F322W2': 3.232, 'F335M': 3.362, 'F356W': 3.568, 'F360M': 3.623, \
+               'F410M': 4.082, 'F430M': 4.281, 'F444W': 4.408, 'F460M': 4.630, 'F480M': 4.874, \
                'F560W': 5.6, 'F770W': 7.7, 'F1000W': 10.0, 'F1130W': 11.3, 'F1280W': 12.8, 'F1500W': 15.0, \
                'F1800W': 18.0, 'F2100W': 21.0, 'F2550W': 25.5, 'NIS_F200W': 2.0999, \
                'F1065C' : 10.65, 'F1140C' : 11.40, 'F1550C' : 15.50, 'F2300C' : 23.00 
@@ -240,6 +246,61 @@ def BB_given_2fnu_computeT(fnu1, fnu2, wave1=10., wave2=20.) :
     area = ( np.exp(h*nu2/k/T) - 1.0)* fnu2/ (2.0*h * nu2**3 / c**2)
     return(np.float64(T), area) 
 
+# Load the measurements of the MIRI imager backgrounds and their rate of increase
+def open_MIRI_JRsummaryfile(infile):
+    df = pandas.read_csv(infile,  comment='#', sep='\s+')
+    df['wave'] = df['Filter'].map(getwave_for_filter())    
+    black_df       = df.loc[df.symbol == 'MIRI_imager_alltexp']   # Filtered by eclipt lat, Gal lat
+    red_df         = df.loc[df.symbol == 'MIRI_imager_longtexp']  # addnl filtering by exposure time
+    df_glowsticks  = df.loc[df.symbol == 'MIRI_corona_glowstick'] # MIRI coronagraph in glowstick region
+    df_corona      = df.loc[df.symbol == 'MIRI_corona_notglow']   # MIRI coronagraph avoiding the glowsticks
+    raw_df         = df.loc[df.symbol == 'MIRI_imager_raw_longtexp']   # same as red_df, but raw flux density rather than subtracted for astrophysical backgrounds
+    return(df, black_df, red_df, df_glowsticks, df_corona, raw_df)
+
+
+#### Pitch and Roll (attitude) of JWST
+
+# Load JWST pitch and roll angles, from telemetry provided by FOT
+def jwst_load_pitchroll_database(telemfile=None):
+    #Load the prettefied concatenated telemetry file, made by JWST_getroll_pitch.ipynb
+    if telemfile == None:
+        telemfile = '/Users/jrrigby1/Python/JWST_scienceops/RollPitch/' + 'jwst_sunpitch_sunroll_JR_032025.csv'
+    df_pitchroll = pandas.read_csv(telemfile, comment='#', index_col=0)
+    format = '%Y:%j:%H:%M:%S.%f'
+    dti = pandas.to_datetime(df_pitchroll.index, format=format)  # date/time in a format pandas understands
+    df_pitchroll.set_index(dti)
+    return(df_pitchroll)
+
+## Interpolate the roll and pitch for one given time
+def jwst_lookup_1_pitchandroll(timetofind, df_pitchroll, timecol='decimalyr') :   # time is in decimal years
+    right_after = df_pitchroll[timecol].searchsorted(timetofind)
+    subset = df_pitchroll.iloc[right_after - 1 : right_after + 1]
+    #print(subset.head())
+    new_pitch = rebin_spec_new(subset[timecol],  subset.sun_pitch, timetofind)
+    new_roll  = rebin_spec_new(subset[timecol],  subset.sun_roll,  timetofind)
+    return(float(new_pitch), float(new_roll))
+
+def jwst_lookup_pitchandroll_df(df, df_pitchroll, timecol='time') : # timecol should have time in decimal years
+    # look up the pitch and roll for every entry in input dataframe, from database df_pitchroll=jwst_load_pitchroll_database()
+    df['temp'] = df[timecol].apply(lambda x: jwst_lookup_1_pitchandroll(x, df_pitchroll))
+    df[['sun_pitch', 'sun_roll']] = df['temp'].apply(pandas.Series)
+    df.drop(['temp',], axis=1, inplace=True)
+    return(0) # acts on df
+
+#  Read a jsonfile of solar activity
+def read_solar_activity_file(filename=None):
+    # see Solar_storm_example for how these json files are retrieved from https://iswa.ccmc.gsfc.nasa.gov/IswaSystemWebApp/
+    # pandas.read_json won't read the json file, bc it's too irregular.  Pull out what we need
+    ajson = json.load(open(filename))
+    #print(ajson.keys())   # Grab metadata
+    columns = [ajson['parameters'][0]['name'], ajson['parameters'][1]['name']]
+    df = pandas.DataFrame(ajson['data'], columns=columns)
+    # Prepare for pandas timeseries analysis later
+    df['datetime'] = pandas.to_datetime(df['Time'])
+    df.set_index('datetime', inplace=True)
+    return(df)
+
+
 
 # MAST ARCHIVE 
 
@@ -297,3 +358,58 @@ def get_mast_filename(filename, outputdir=None, overwrite=False, progress=False,
         progress_bar.close()
         if total_size_in_bytes != 0 and progress_bar.n != total_size_in_bytes:
             print("ERROR, something went wrong")
+
+
+            
+# BELOW COPIED FROM DAVID LAW'S MIRI MRS NOTEBOOK: 
+# https://github.com/STScI-MIRI/MRS-ExampleNB/blob/main/Flight_Notebook1/MRS_FlightNB1.ipynb
+# 
+# Define a useful function to write out a Lvl3 association file from an input list
+# Note that any background exposures have to be of type x1d.
+def writel3asn(scifiles, bgfiles, asnfile, prodname):
+    # Define the basic association of science files
+    asn = afl.asn_from_list(scifiles, rule=DMS_Level3_Base, product_name=prodname)
+        
+    # Add background files to the association
+    if bgfiles:
+        nbg=len(bgfiles)
+        for ii in range(0,nbg):
+            asn['products'][0]['members'].append({'expname': bgfiles[ii], 'exptype': 'background'})
+        
+    # Write the association to a json file
+    _, serialized = asn.dump()
+    with open(asnfile, 'w') as outfile:
+        outfile.write(serialized)
+
+
+def extract1D_SB(x1dfile, s2dfile, sourcepix_range=None):
+    '''
+    Extract spectrum from s2d file, using wavelength solution from x1dfile
+    perform local background subtraction if bgpix_range set to something
+    extracts spectrum from sourcepix_range. Just sums surface brightness in those pixels
+    By Brian Welch 3/2025
+    '''
+    with fits.open(x1dfile) as xfile:
+        wl = xfile[1].data["WAVELENGTH"]
+    with fits.open(s2dfile) as sfile:
+        s2dim = sfile[1].data 
+        s2derr = sfile[2].data
+        pixar_sr = sfile[1].header["PIXAR_SR"] # assuming this is in MJy/s
+        sb_im = s2dim #/ pixar_sr
+        sberr_im = s2dim #/ pixar_sr            
+        
+    if sourcepix_range == None:
+        ysize = s2dim.shape[0] # vertical size of slit
+        sourcepix_range = (2,ysize-1) # account for nan row at bottom, split rows at top&bottom
+    elif sourcepix_range == 'middle':
+        ysize = s2dim.shape[0] # vertical size of slit
+        midpt = int(np.round(ysize/2))
+        sourcepix_range = (midpt, midpt+1) # account for nan row at bottom, split rows at top&bottom
+    
+    sourcemin, sourcemax = sourcepix_range[0], sourcepix_range[1]
+    #s2dim *= pixar_sr
+    source_sb = np.nanmedian(sb_im[sourcemin:sourcemax,:],axis=0) # surface brightness in MJy/sr
+    #source_flux = sum(s2dim[sourcemin:sourcemax,:]*pixar_sr*(sourcemax-sourcemin)) * 1e6 # convert MJy/sr -> MJy -> Jy
+    source_err = np.sqrt(np.nansum(sberr_im[sourcemin:sourcemax,:]**2, axis=0)) 
+        
+    return source_sb, source_err, wl

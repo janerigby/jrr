@@ -106,18 +106,6 @@ def median_ignore_zero(somearray):
     masked_array = np.ma.masked_equal(somearray, 0)
     return(np.ma.median(masked_array))
 
-def straightline(slope, intercept, x):  # obvious but decent coding
-    return(slope * x + intercept )  # y = b + mx
-
-def get_uncert_lines_given_dslope(slope, dslope, intercept, xmidpt, ymidpt):
-    # For a linear fit with an uncertainty in the slope dslope, and the x,y coords of
-    # at the midpoint of the original line, calculate the parameters of the two lines
-    # that cross this line at xmidpt, ymidpt, with slopes +dslope and -dslope
-    newintercept1 = ymidpt - (slope + dslope) * xmidpt     #b = y - mx
-    newintercept2 = ymidpt - (slope - dslope) * xmidpt     #b = y - mx
-    return((slope + dslope, newintercept1), (slope - dslope, newintercept2))
-
-
 
 #####  Handle files  #####
 
@@ -187,11 +175,12 @@ def cgs2Jy(fnu_cgs) : # convert flux density fnu in Janskies to fnu in erg/s/cm^
     return(fnu_cgs  /  1E-23)
 
 #### Conversions that are useful to estimate SFRs  From Kennicutt 1998 and supporting
-def mAB_to_fnu(m_AB, zz=0, convert_to_rest=False) :
+def mAB_to_fnu(m_AB, zz=0, convert_to_rest=False, cgs=True) :
     # Convert AB magnitude to fnu in erg/s/cm^2/Hz.  Does not remove bandwidth compression by default
-     fnu = 10**((m_AB + 48.60)/-2.5)
-     if convert_to_rest :  fnu /= (1 + zz)    # Remove the bandwidth compression
-     return(fnu)
+    fnu = 10**((m_AB + 48.60)/-2.5)
+    if convert_to_rest :  fnu /= (1 + zz)    # Remove the bandwidth compression
+    if cgs:  return(fnu)      # units of erg/s/cm/Hz
+    else  : return(fnu / 1E3) # units of  W/m^2/Hz 
 
 def fnu_to_Lnu(fnu, zz) :  # From observed fnu to rest Fnu.  Remove bandwidth compression
     d_L =  luminosity_distance(zz)

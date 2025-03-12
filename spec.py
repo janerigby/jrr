@@ -14,6 +14,7 @@ import numpy as np
 import math
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
+#from scipy import asarray as ar,exp  # what is this doing??
 from astropy.stats import sigma_clip
 import astropy.convolution
 from astropy import constants
@@ -21,7 +22,6 @@ from astropy import units
 from astropy.stats import gaussian_fwhm_to_sigma 
 import extinction
 from matplotlib import pyplot as plt
-from scipy import asarray as ar,exp
 
 #print("Constants, h, c, k, MJySR in cgs:", h, c, k, MJySR_in_cgs)
 def BB_fnu(wave, T, area) :

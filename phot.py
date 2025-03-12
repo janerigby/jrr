@@ -5,7 +5,7 @@ import numpy as np
 import numpy.ma as ma
 from astropy.io import fits
 from astropy.io.fits import getdata
-import pyregion
+#import pyregion
 from astropy.wcs import WCS
 from astropy.stats import sigma_clipped_stats
 import regions # Maybe astropy regions will work better than pyregion
