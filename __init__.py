@@ -14,3 +14,4 @@ from . import lens
 from . import sunburst
 from . import phot
 from . import jwst
+from . import fitting
