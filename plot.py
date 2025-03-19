@@ -273,11 +273,11 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
     else : 
         first_index = 0
         last_index  = len(the_dfs[0][colwave])-1
-    ind = (np.linspace(first_index, last_index, num=Npanels+1)).astype(np.int)
+    ind = (np.linspace(first_index, last_index, num=Npanels+1)).astype(int)
     start = the_dfs[0][colwave][ind[0:-1]].values
     end   = the_dfs[0][colwave][ind[1:]].values
 
-    max_per_page = np.int(np.float64(Npanels) / Npages)
+    max_per_page = int(np.float64(Npanels) / Npages)
     the_format = max_per_page*100 + 11  # makes label: 311 for 3 rows, 1 col, start at 1
 
     for df in the_dfs :
@@ -294,9 +294,9 @@ def echelle_spectrum(the_dfs, the_zzs, LL=(), Npages=4, Npanels=24, plotsize=(11
             if apply_bad : subset = df[df[colwave].between(start[kk], end[kk]) & ~df['badmask']]
             else:          subset = df[df[colwave].between(start[kk], end[kk])]
 
-            plt.plot(subset[colwave], subset[colfnu]/subset['normby'],   color=linecolor[ss],  linestyle='steps', linewidth=1)
-            plt.plot(subset[colwave], subset[colfnu_u]/subset['normby'], color=linecolor[ss], linestyle='steps', linewidth=1) # plot 1 sigma uncert spectrum
-            if plot_cont :  plt.plot(subset[colwave], subset[colcont].astype(np.float)/subset['normby'], contcolor, linestyle='steps', zorder=1, linewidth=1) # plot the continuum
+            plt.plot(subset[colwave], subset[colfnu]/subset['normby'],   color=linecolor[ss], drawstyle='steps', linewidth=1)
+            plt.plot(subset[colwave], subset[colfnu_u]/subset['normby'], color=linecolor[ss], drawstyle='steps', linewidth=1) # plot 1 sigma uncert spectrum
+            if plot_cont :  plt.plot(subset[colwave], subset[colcont].astype(np.float)/subset['normby'], contcolor, drawstyle='steps', zorder=1, linewidth=1) # plot the continuum
             if ss == 0 :  # If the first df, set the plot ranges
                 top = (subset[colfnu]/subset['normby']).median()*topfid[0] + util.IQR(subset[colfnu]/subset['normby'])*topfid[1]
                 #print "DEBUGGING top", kk, top, (subset[colfnu]/subset['normby']).median(), + util.IQR(subset[colfnu]/subset['normby'])

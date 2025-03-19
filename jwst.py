@@ -288,8 +288,12 @@ def jwst_lookup_pitchandroll_df(df, df_pitchroll, timecol='time') : # timecol sh
     return(0) # acts on df
 
 #  Read a jsonfile of solar activity
-def read_solar_activity_file(filename=None):
-    # see Solar_storm_example for how these json files are retrieved from https://iswa.ccmc.gsfc.nasa.gov/IswaSystemWebApp/
+def read_1solar_activity_file(filename=None):
+    # How to get the solar activity data:
+    # Go find this infile:  ISWALayout_July22topresent_from_BobMeloy.json
+    # Load it on https://iswa.ccmc.gsfc.nasa.gov/IswaSystemWebApp/
+    # Then download the particular metric you want.  Bob recommended 50 MeV and higher
+    # For an example, see Solar_storm_example.ipynb
     # pandas.read_json won't read the json file, bc it's too irregular.  Pull out what we need
     ajson = json.load(open(filename))
     #print(ajson.keys())   # Grab metadata
@@ -298,6 +302,17 @@ def read_solar_activity_file(filename=None):
     # Prepare for pandas timeseries analysis later
     df['datetime'] = pandas.to_datetime(df['Time'])
     df.set_index('datetime', inplace=True)
+    df.drop('Time', axis=1, inplace=True)
+    return(df)
+
+def read_several_solar_activity_files(filenames=None, thedir=None) :
+    df_temp = {}
+    if not filenames :  filenames = ['P30MeV.json', 'P50MeV.json', 'P100MeV.json']
+    if not thedir:        thedir = '/Users/jrrigby1/Python/JWST_scienceops/Radiation_env/'
+    for filename in filenames:
+        df_temp[filename] = read_1solar_activity_file(thedir + filename)
+    df = pandas.concat(df_temp, axis=1)
+    df.columns = df.columns.get_level_values(1)
     return(df)
 
 
@@ -390,6 +405,7 @@ def extract1D_SB(x1dfile, s2dfile, sourcepix_range=None):
     By Brian Welch 3/2025
     '''
     with fits.open(x1dfile) as xfile:
+        #print("DEBUG", x1dfile)
         wl = xfile[1].data["WAVELENGTH"]
     with fits.open(s2dfile) as sfile:
         s2dim = sfile[1].data 
