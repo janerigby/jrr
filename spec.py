@@ -20,7 +20,7 @@ import astropy.convolution
 from astropy import constants
 from astropy import units 
 from astropy.stats import gaussian_fwhm_to_sigma 
-import extinction
+#import extinction  # this seems to be breaking numpy.  Comemnt out for now
 from matplotlib import pyplot as plt
 
 #print("Constants, h, c, k, MJySR in cgs:", h, c, k, MJySR_in_cgs)
@@ -419,55 +419,55 @@ def stack_spectra(df, colwave='wave', colf='fnu', colfu='fnu_u', colmask=[], out
     stacked['Ngal'] = np.ma.MaskedArray.count(nf, axis=0)  # How many spectra contribute to each wavelength
     
     # compute the jackknife variance.  Adapt from mage_stack_redo.py.
-    jackknife= np.ma.zeros(shape=(nspectra, nbins)) # The goal.
-    jack_var = np.ma.zeros(shape=nbins)
-    for ii in range(0, nspectra) :
-        jnf = nf.copy()
-        #print "DEBUGGING Jackknife, dropping ", ii,  "from the stack"
-        jnf[ii, :].mask = True  # Mask one spectrum
-        jackknife[ii], weight = np.ma.average(jnf, axis=0, weights=weights, returned=True)  # all the work is done here.
-        jack_var = jack_var +  (jackknife[ii] - stacked[pre+'weightavg'])**2
-    jack_var *= ((nspectra -1.0)/float(nspectra))   
-    jack_std = np.sqrt(jack_var)
-    stacked[pre+'jack_std'] = jack_std
+    #jackknife= np.ma.zeros(shape=(nspectra, nbins)) # The goal.
+    #jack_var = np.ma.zeros(shape=nbins)
+    #for ii in range(0, nspectra) :
+    #    jnf = nf.copy()
+    #    #print "DEBUGGING Jackknife, dropping ", ii,  "from the stack"
+    #    jnf[ii, :].mask = True  # Mask one spectrum
+    #    jackknife[ii], weight = np.ma.average(jnf, axis=0, weights=weights, returned=True)  # all the work is done here.
+    #    jack_var = jack_var +  (jackknife[ii] - stacked[pre+'weightavg'])**2
+    #jack_var *= ((nspectra -1.0)/float(nspectra))   
+    #jack_std = np.sqrt(jack_var)
+    #stacked[pre+'jack_std'] = jack_std
     return(stacked, nf, nf_u)
 
 # NB: Can get MW extinction for a given RA, DEC from jrr.MW_EBV.get_MW_EBV
 
 ### Extinction routines below  
-def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u', colmed='median') :
-    #print "Dereddening Milky Way extinction"
-    # WAVE NEEDS TO BE IN ANGSTROMS
-    Rv = 3.1
-    Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
-    print("jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW)
-    #sp['oldfnu'] = sp[colf]  # Debugging
-    MW_extinction = extinction.ccm89(sp[colwave].astype('float64').to_numpy(), Av, Rv)
-    sp['MWredcor'] = 10**(-0.4 * MW_extinction)
-    sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').to_numpy()))
-    sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').to_numpy()))
-    if colcont  in list(sp.keys()) :  sp[colcont] = pandas.Series(extinction.apply(MW_extinction,  sp[colcont].astype('float64').to_numpy()))
-    if colcontu in list(sp.keys()) : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').to_numpy()))
-    if colmed   in list(sp.keys()) :   sp[colmed] = pandas.Series(extinction.apply(MW_extinction,   sp[colmed].astype('float64').to_numpy()))
-    return(0)
+#def deredden_MW_extinction(sp, EBV_MW, colwave='wave', colf='fnu', colfu='fnu_u', colcont='fnu_cont', colcontu='fnu_cont_u', colmed='median') :
+#    #print "Dereddening Milky Way extinction"
+#    # WAVE NEEDS TO BE IN ANGSTROMS
+#    Rv = 3.1
+#    Av = -1 * Rv *  EBV_MW  # Want to deredden, so negative sign
+#    print("jrr.spec.deredden_MW_extinction, applying Av  EBV_MW: ", Av, EBV_MW)
+#    #sp['oldfnu'] = sp[colf]  # Debugging
+#    MW_extinction = extinction.ccm89(sp[colwave].astype('float64').to_numpy(), Av, Rv)
+#    sp['MWredcor'] = 10**(-0.4 * MW_extinction)
+#    sp[colf]     = pandas.Series(extinction.apply(MW_extinction, sp[colf].astype('float64').to_numpy()))
+#    sp[colfu]    = pandas.Series(extinction.apply(MW_extinction, sp[colfu].astype('float64').to_numpy()))
+#    if colcont  in list(sp.keys()) :  sp[colcont] = pandas.Series(extinction.apply(MW_extinction,  sp[colcont].astype('float64').to_numpy()))
+#    if colcontu in list(sp.keys()) : sp[colcontu] = pandas.Series(extinction.apply(MW_extinction, sp[colcontu].astype('float64').to_numpy()))
+#    if colmed   in list(sp.keys()) :   sp[colmed] = pandas.Series(extinction.apply(MW_extinction,   sp[colmed].astype('float64').to_numpy()))
+#    return(0)
 
-def deredden_internal_extinction(sp, this_ebv, colwave='rest_wave', colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, whichlaw='Calzetti') :
-    # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti by default, rewriting to accept CCM
-    if whichlaw == 'Calzetti' :
-        Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
-        Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
-        thelaw = extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa')
-    elif whichlaw == 'ccm89' :
-        Rv = 3.1
-        Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
-        thelaw = extinction.ccm89(sp[colwave].astype('float64').to_numpy(), Av, Rv)
-    else : raise Exception("Uncrecognized extinction law, not Calzetti or ccm89", whichlaw)
-    sp_filt = sp.loc[sp[colwave].between(1200,20000)]
-    colfout = colf + "_dered"
-    coluout = colu + "_dered"
-    sp[colfout]  =                        pandas.Series(extinction.apply(thelaw, sp[colf].astype('float64').to_numpy()))
-    if deredden_uncert :   sp[coluout]  = pandas.Series(extinction.apply(thelaw, sp[colu].astype('float64').to_numpy()))
-    return(0) 
+#def deredden_internal_extinction(sp, this_ebv, colwave='rest_wave', colf='rest_fnu', colu="rest_fnu_u", deredden_uncert=True, whichlaw='Calzetti') :
+#    # Remove internal extinction as fit by Chisholm's S99 fits.  Assumes Calzetti by default, rewriting to accept CCM
+#    if whichlaw == 'Calzetti' :
+#        Rv = 4.05  # IS THIS RIGHT FOR STELLAR CONTINUUM?*****
+#        Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
+#        thelaw = extinction.calzetti00(sp[colwave].astype('float64').to_numpy(), Av, Rv, unit='aa')
+#    elif whichlaw == 'ccm89' :
+#        Rv = 3.1
+#        Av = -1 * Rv * this_ebv  # stupidity w .Series and .to_numpy() is bc extinction package barfs on pandas. pandas->np->pandas
+#        thelaw = extinction.ccm89(sp[colwave].astype('float64').to_numpy(), Av, Rv)
+#    else : raise Exception("Uncrecognized extinction law, not Calzetti or ccm89", whichlaw)
+#    sp_filt = sp.loc[sp[colwave].between(1200,20000)]
+#    colfout = colf + "_dered"
+#    coluout = colu + "_dered"
+#    sp[colfout]  =                        pandas.Series(extinction.apply(thelaw, sp[colf].astype('float64').to_numpy()))
+#    if deredden_uncert :   sp[coluout]  = pandas.Series(extinction.apply(thelaw, sp[colu].astype('float64').to_numpy()))
+#    return(0) 
 
 def find_lines_simple(sp, abs=True, wavcol='wave', fcol='fnu', delta=0.15) :
     sp['temp'] = False  # 1st pass, found a peak

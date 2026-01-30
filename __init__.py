@@ -13,5 +13,5 @@ from . import sgas
 from . import lens
 from . import sunburst
 from . import phot
-from . import jwst
+from . import jrjwst
 from . import fitting

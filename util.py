@@ -21,6 +21,11 @@ import scipy
 import scikits.bootstrap as bootstrap  
 import csv
 
+# basic things that should be in python but are not
+def unique_elements_in_list(mylist):
+    # returns an unordered list of the unique elements in the input list.  Like pandas' unique
+    return(list(set(mylist)))
+
 #####  Math  #####
 
 def bootstrap_val_confint(df, statfunction, alpha=0.05) :
