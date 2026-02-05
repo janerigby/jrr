@@ -565,3 +565,13 @@ def calculate_Hydrogen_series(series=1) :
         lam =   1.0/(Rh * (1.0/n1**2 - 1.0/n2**2))
         print("H(%d-->series)   %.3f  Ang\n", n2,lam)
     return(0)
+
+def mark_CaII_Fraunhofer_lines(units='microns'):
+    ca2 = np.array((0.850036, 0.854444, 0.866452))  # units are micron
+    # CaII absorption lines according to SDSS https://classic.sdss.org/dr6/algorithms/linestable.php
+    if units   == 'microns': thewaves = ca2
+    elif units == 'Angstroms':   thewaves = ca2 * 1E4  # convert to Angstroms
+    else: raise Exception("Error, I do not understand units of wavelengths, not micron or Angstroms")
+    for thisline in thewaves:
+        plt.vlines(thisline, ymin=-1, ymax=1, color='k', ls='--')
+    return(0)

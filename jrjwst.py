@@ -140,6 +140,9 @@ def getwidth_for_filter(*args):
     if len(args)==0 : return(filter_width)
     elif len(args)==1 and args[0] in filter_width.keys() :
         return(filter_width[args[0]]) 
+
+def get_nirspec_disperser_names():  # Get strings for all the NIRSpec dispersers
+    return('prism', 'G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H')  # Mirror is another option, but I DON't want it in here
     
 def pixscale(*args):
     # Retrieve the pixel scale in arcseconds, for a given detector. Have not added NIRSpec yet
@@ -149,6 +152,9 @@ def pixscale(*args):
         return(pixscale[args[0]])
     else : raise Exception("ERROR: number of arguments must be 0 or 1.")
 
+def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
+    return(['DATALOSS', 'UNSUCCESSFUL', 'SKIPPED', 'SKIPPED_COORDINATED'])
+    
 def cal_to_Jy(fnusb_in, detector): 
     # helper function to convert summed flux density in MJy/SR *Npixels to Jy.
     # This allows user to sum SB in the _CAL images and easily get a flux density in Jy
