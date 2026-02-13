@@ -15,11 +15,9 @@ import math
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 #from scipy import asarray as ar,exp  # what is this doing??
-from astropy.stats import sigma_clip
-import astropy.convolution
-from astropy import constants
-from astropy import units 
-from astropy.stats import gaussian_fwhm_to_sigma 
+from astropy.stats import sigma_clip, gaussian_fwhm_to_sigma 
+from astropy import units, constants, convolution
+from astropy.io import ascii
 #import extinction  # this seems to be breaking numpy.  Comemnt out for now
 from matplotlib import pyplot as plt
 
@@ -54,7 +52,6 @@ def calz_unred_df(sp, ebv, R_V=4.05, colwave='rest_wave', colf='rest_fnu', colde
     sp[coldered] = funred
     return(0)
     
-
 def calc_dispersion(sp, colwave='wave', coldisp='disp') :
     '''Calculate the dispersion for a pandas dataframe
     Inputs: spectrum dataframe, column to write dispersion, column to read wavelength'''
@@ -575,3 +572,25 @@ def mark_CaII_Fraunhofer_lines(units='microns'):
     for thisline in thewaves:
         plt.vlines(thisline, ymin=-1, ymax=1, color='k', ls='--')
     return(0)
+
+def load_solar_atlas():
+    # Load the Solar atlas of Wallace et al. 2011
+    # from https://content.cld.iop.org/journals/0067-0049/195/1/6/revision1/apjs395296t2_mrt.txt
+    solar_atlas_file = '/Users/jrrigby1/Utils/SED_models/The_sun/apjs395296t2_mrt.txt'
+    temp_table = ascii.read(solar_atlas_file) # this automagically gets the format right.
+    df_solar = temp_table.to_pandas()  # Convert from astropy Table to Pandas Data Frame. 
+    return(df_solar)
+
+def get_NIRSpec_spectral_resolution_Shajib2025(mode, disperser, blockingfilter, wave_in):  # Wave in in micron
+    # Return the spectral resolutions in km/s reported by Shajib et al. 2025 for NIRSpec
+    df_R = pandas.read_csv('/Users/jrrigby1/Python/jrr/nirspec_instr_resoln_Shajib2025.txt', sep='\\s+', comment='#')
+    df_R['index'] = df_R['mode'] + '_' + df_R.disperser + '_' + df_R['filter']
+    df_R.set_index('index', inplace=True)
+    sigma_PN = 6.90 #km/s
+    if mode != 'FS' and mode != 'IFS':  raise Exception("Error, mode is not FS or IFS")
+    if disperser not in ('G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H'): raise Exception("Grating not recognized.  Paper did not deal w prism.")
+    if blockingfilter not in ('F070LP', 'F100LP', 'F170LP', 'F290LP'): raise Exception("blocking filter not recognized")
+    thiskey = mode + '_' + disperser + '_' + blockingfilter
+    mine = df_R.loc[thiskey]
+    sigma_out = np.sqrt((mine.sigma_pivot / (1 + mine.alpha  * (wave_in *1E4 - mine.pivot_wavelength)/1E4))**2 - sigma_PN**2 )
+    return(sigma_out)

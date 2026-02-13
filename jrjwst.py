@@ -131,6 +131,7 @@ def getwave_for_filter(*args):
     elif len(args)==1 and args[0] in filter_wave.keys() :
         return(filter_wave[args[0]])
 
+
 def getwidth_for_filter(*args):
     # Retrieve either a specific central wavelength for a filter, or a dict of them
     # just MIRI so far.  Pivot wavelengths from JDox on 3/2022
@@ -142,7 +143,7 @@ def getwidth_for_filter(*args):
         return(filter_width[args[0]]) 
 
 def get_nirspec_disperser_names():  # Get strings for all the NIRSpec dispersers
-    return('prism', 'G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H')  # Mirror is another option, but I DON't want it in here
+    return('PRISM', 'G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H')  # Mirror is another option, but I DON't want it in here
     
 def pixscale(*args):
     # Retrieve the pixel scale in arcseconds, for a given detector. Have not added NIRSpec yet
