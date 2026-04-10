@@ -163,6 +163,14 @@ def check_df_for_Object(df) :
         if df[thiscol].dtype == 'O' : print("\n ***WARNING found dtype Object", thiscol, "\n")
     return(0)
 
+def get_firstday_from_epoch(epoch):
+    # Background filename will be for first day in epoch.  Epoch may have name like 2026-01-01to04 or 2024-01-01and02xs
+    if 'and' in epoch :   first_day = epoch.split('and')[0]   # If a range, pick the first day
+    elif 'to' in epoch:   first_day = epoch.split('to')[0]
+    else:  first_day = epoch
+    first_day = (first_day.replace('a', '')).replace('b', '').replace('c', '').replace('d', '')
+    return(first_day)
+
 #####  Basic Astronomy  #####
 
 def Jy2AB(Jy):   # convert flux density fnu in Janskies to AB magnitude
@@ -276,6 +284,25 @@ def distancefrom_coords2_df(df, colRA1='RA1', colDEC1='DEC1', colRA2='RA2', colD
     
     df[newcol] = distancefrom_coords(df[colRA1], df[colDEC1], df[colRA2], df[colDEC2], uRA0=uRA, uDEC0=uDEC)
     return(0) # acts on df
+
+def identify_unique_pointing_df(df_in, tol=60., racol='RA', deccol='DEC', newcol='sourceID'):
+    # Walk through a dataframe, find unique objects by coordinates, and assign each one a unique source ID
+    # tol: If coordinates are separated by < tol (tolerance, in arcec), call it the same source
+    df = df_in.sort_values(by=[racol, deccol])
+    df.reset_index(inplace=True)
+    results = []
+    ID = 1  # initialize
+    lastRA  = df.iloc[0][racol]    # initialize
+    lastDEC = df.iloc[0][deccol]
+    for index, row in df.iterrows():
+        offset = angular_separation(lastRA, lastDEC, row[racol], row[deccol])  * 180. / np.pi * 60. * 60 # in arcsec
+        if offset > tol : 
+            ID = ID +  1  # A new source
+        results.append(ID)
+        lastRA = row[racol]  ;  lastDEC = row[deccol]
+    df[newcol] = pandas.Series(results)
+    return(df, results)
+
   
 def convert_RADEC_Galactic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Galactic.  Can be LISTS []
     thisradec = SkyCoord(RA_deg, DEC_deg, unit=(u.deg, u.deg), frame='icrs')

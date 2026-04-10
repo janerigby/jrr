@@ -582,7 +582,8 @@ def load_solar_atlas():
     return(df_solar)
 
 def get_NIRSpec_spectral_resolution_Shajib2025(mode, disperser, blockingfilter, wave_in):  # Wave in in micron
-    # Return the spectral resolutions in km/s reported by Shajib et al. 2025 for NIRSpec
+    # Return the spectral resolutions in km/s reported by Shajib et al. 2025 for JWST NIRSpec
+    # Should I move this to the JWST module?
     df_R = pandas.read_csv('/Users/jrrigby1/Python/jrr/nirspec_instr_resoln_Shajib2025.txt', sep='\\s+', comment='#')
     df_R['index'] = df_R['mode'] + '_' + df_R.disperser + '_' + df_R['filter']
     df_R.set_index('index', inplace=True)

@@ -13,6 +13,7 @@ import astropy.io.ascii as ascii
 from astropy import constants
 from scipy.optimize import brentq    # Equation solving
 from jrr.spec import rebin_spec_new
+from jrr.util import gethead
 from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
 from jwst.associations import asn_from_list as afl
 import json
@@ -131,7 +132,6 @@ def getwave_for_filter(*args):
     elif len(args)==1 and args[0] in filter_wave.keys() :
         return(filter_wave[args[0]])
 
-
 def getwidth_for_filter(*args):
     # Retrieve either a specific central wavelength for a filter, or a dict of them
     # just MIRI so far.  Pivot wavelengths from JDox on 3/2022
@@ -153,6 +153,18 @@ def pixscale(*args):
         return(pixscale[args[0]])
     else : raise Exception("ERROR: number of arguments must be 0 or 1.")
 
+def get_keywords_from_jwst_header(thisfile):
+    # Grab several useful keywords from a JWST spectrum
+    RA =  gethead(thisfile, 'targ_ra',  extension=0)
+    DEC = gethead(thisfile, 'targ_dec', extension=0)
+    texp=     gethead(thisfile, 'EFFEXPTM', extension=0)
+    velosys = gethead(thisfile, 'velosys',  extension=1)  # Not sure why this is extension 1, but whatevs
+    mjd = gethead(thisfile, 'expmid',   extension=0) # midpoint of the exposure in MJD
+    pid = gethead(thisfile, 'PROGRAM',  extension=0)
+    obsid = gethead(thisfile, 'OBS_ID', extension=0)
+    return(RA, DEC, texp, velosys, mjd, pid, obsid)
+
+    
 def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
     return(['DATALOSS', 'UNSUCCESSFUL', 'SKIPPED', 'SKIPPED_COORDINATED'])
     
@@ -425,7 +437,7 @@ def extract1D_SB(x1dfile, s2dfile, sourcepix_range=None):
     '''
     Extract spectrum from s2d file, using wavelength solution from x1dfile
     perform local background subtraction if bgpix_range set to something
-    extracts spectrum from sourcepix_range. Just sums surface brightness in those pixels
+    extracts spectrum from sourcepix_range. Just sums/medians surface brightness in those pixels
     By Brian Welch 3/2025
     '''
     with fits.open(x1dfile) as xfile:
@@ -451,5 +463,29 @@ def extract1D_SB(x1dfile, s2dfile, sourcepix_range=None):
     source_sb = np.nanmedian(sb_im[sourcemin:sourcemax,:],axis=0) # surface brightness in MJy/sr
     #source_flux = sum(s2dim[sourcemin:sourcemax,:]*pixar_sr*(sourcemax-sourcemin)) * 1e6 # convert MJy/sr -> MJy -> Jy
     source_err = np.sqrt(np.nansum(sberr_im[sourcemin:sourcemax,:]**2, axis=0)) 
-        
     return source_sb, source_err, wl
+
+
+def extract1D_fromlevel2(s2dfile, extension=1, sourcepix_range=None):
+    # modification of the above, tailored for level 2 file.  by jrigby
+    with fits.open(s2dfile) as sfile:
+        wl2D = sfile[extension + 2].data  # JR modifying, get wavelength from s2d file, not the x1d file
+        s2dim = sfile[extension].data
+        s2derr = sfile[extension + 1 ].data
+        pixar_sr = sfile[extension].header["PIXAR_SR"] # assuming this is in MJy/s
+        sb_im = s2dim #/ pixar_sr
+        sberr_im = s2dim #/ pixar_sr            
+        
+    if sourcepix_range == None:
+        ysize = s2dim.shape[0] # vertical size of slit
+        sourcepix_range = (2,ysize-1) # account for nan row at bottom, split rows at top&bottom
+    elif sourcepix_range == 'middle':
+        ysize = s2dim.shape[0] # vertical size of slit
+        midpt = int(np.round(ysize/2))
+        sourcepix_range = (midpt, midpt+1) # account for nan row at bottom, split rows at top&bottom
+    
+    sourcemin, sourcemax = sourcepix_range[0], sourcepix_range[1]
+    source_sb = np.nanmedian(sb_im[sourcemin:sourcemax,:],axis=0) # surface brightness in MJy/sr
+    wave1D    = np.nanmedian(wl2D[sourcemin:sourcemax,:],axis=0)
+    source_err = np.sqrt(np.nansum(sberr_im[sourcemin:sourcemax,:]**2, axis=0)) 
+    return source_sb, source_err, wave1D
