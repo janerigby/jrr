@@ -144,6 +144,15 @@ def getwidth_for_filter(*args):
 
 def get_nirspec_disperser_names():  # Get strings for all the NIRSpec dispersers
     return('PRISM', 'G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H')  # Mirror is another option, but I DON't want it in here
+
+def get_nirspec_fixedslit_widths():
+    # returns a dictionary w widths of the NIRSpec fixed slits, in arcsec
+    return({'S200A1': 0.2, 'S200A2': 0.2, 'S400A1': 0.4, 'S1600A1': 1.6, 'S200B1': 0.2})  # from Jdox
+
+def get_nirspec_fixedslit_lengths():
+    # returns a dictionary w lengths of the NIRSpec fixed slits, in arcsec
+    return({'S200A1': 3.2, 'S200A2': 3.2, 'S400A1': 3.65, 'S1600A1': 1.6, 'S200B1': 3.2}) # from JDox
+
     
 def pixscale(*args):
     # Retrieve the pixel scale in arcseconds, for a given detector. Have not added NIRSpec yet

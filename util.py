@@ -12,7 +12,7 @@ from   re import split, sub, search
 from astropy.io.fits import getdata
 from astropy.io import fits
 from astropy.stats import sigma_clip, median_absolute_deviation
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, angular_separation
 from astropy import units as u
 #from astropy.cosmology import WMAP9 as cosmo
 from astropy.cosmology import Planck18 as cosmo
