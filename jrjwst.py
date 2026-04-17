@@ -1,7 +1,6 @@
 import os, requests, sys, getopt
 from tqdm import tqdm
 from astropy.io import fits
-from astropy.time import Time
 from jwst_backgrounds import jbt # Import the background module
 from re import split
 import matplotlib.pyplot as plt
@@ -13,7 +12,7 @@ import astropy.io.ascii as ascii
 from astropy import constants
 from scipy.optimize import brentq    # Equation solving
 from jrr.spec import rebin_spec_new
-from jrr.util import gethead
+from jrr.util import gethead, date_to_DOY
 from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
 from jwst.associations import asn_from_list as afl
 import json
@@ -188,11 +187,6 @@ def cal_to_Jy(fnusb_in, detector):
 def get_coords_dayofyear_from_jwstfile(jwstfile, verbose=False, output_datetime=False):
      hdu = fits.open(jwstfile)
      return(get_coords_dayofyear_from_jwst_hdu(hdu, output_datetime=output_datetime))
-
-def date_to_DOY(date) :
-    # date in format: '2023-02-21' or '2022-07-01T00:00:00.0' 
-    dayofyear = int((split(':', Time(date).yday)[1]).lstrip('0'))
-    return(dayofyear)
     
 def get_coords_dayofyear_from_jwst_hdu(hdu, verbose=False, output_datetime=False):
     # Grab RA, DEC, Day of Year from header.  Converts UTC date (in header) to DOY (what JWST Background Tool expects).

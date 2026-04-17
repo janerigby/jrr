@@ -9,6 +9,7 @@ from shutil import copy
 import fileinput
 import operator
 from   re import split, sub, search
+from astropy.time import Time
 from astropy.io.fits import getdata
 from astropy.io import fits
 from astropy.stats import sigma_clip, median_absolute_deviation
@@ -226,7 +227,10 @@ def luminosity_distance(zz) :
 def  lookback_time(zz) :
     return( cosmo.lookback_time(zz))
 
-
+def date_to_DOY(date) :
+    # date in format: '2023-02-21' or '2022-07-01T00:00:00.0' 
+    dayofyear = int((split(':', Time(date).yday)[1]).lstrip('0'))
+    return(dayofyear)
 
 #####  Astronomy coordinate systems  #####
 
