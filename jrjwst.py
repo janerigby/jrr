@@ -144,9 +144,12 @@ def getwidth_for_filter(*args):
 def get_nirspec_disperser_names():  # Get strings for all the NIRSpec dispersers
     return('PRISM', 'G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H')  # Mirror is another option, but I DON't want it in here
 
-def get_nirspec_fixedslit_widths():
-    # returns a dictionary w widths of the NIRSpec fixed slits, in arcsec
-    return({'S200A1': 0.2, 'S200A2': 0.2, 'S400A1': 0.4, 'S1600A1': 1.6, 'S200B1': 0.2})  # from Jdox
+def get_nirspec_fixedslit_widths(units='arcsec'):
+    # returns a dictionary w widths of the NIRSpec fixed slits, in arcsec or in pixels
+    # If units='pixels', these are native nirspec pixels, 0.1"/pix
+    if  units == 'arcsec':   return({'S200A1': 0.2, 'S200A2': 0.2, 'S400A1': 0.4, 'S1600A1': 1.6, 'S200B1': 0.2})  # from Jdox
+    elif units == 'pixels':  return({'S200A1': 2.0, 'S200A2': 2.0, 'S400A1': 4.0, 'S1600A1': 16., 'S200B1': 2.0})  # from Jdox
+    else: raise Exception("ERROR: units was not arcsec or pixels")
 
 def get_nirspec_fixedslit_lengths():
     # returns a dictionary w lengths of the NIRSpec fixed slits, in arcsec
@@ -172,7 +175,12 @@ def get_keywords_from_jwst_header(thisfile):
     obsid = gethead(thisfile, 'OBS_ID', extension=0)
     return(RA, DEC, texp, velosys, mjd, pid, obsid)
 
-    
+def get_spec_keywords_from_jwst_header(thisfile):
+    thefilter = gethead(thisfile, 'FILTER',  extension=0)
+    disperser = gethead(thisfile, 'GRATING',  extension=0)
+    slitname = gethead(thisfile, 'SLTNAME', extension=1)
+    return(thefilter, disperser, slitname)
+
 def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
     return(['DATALOSS', 'UNSUCCESSFUL', 'SKIPPED', 'SKIPPED_COORDINATED'])
     

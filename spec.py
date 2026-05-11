@@ -15,7 +15,7 @@ import math
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 #from scipy import asarray as ar,exp  # what is this doing??
-from astropy.stats import sigma_clip, gaussian_fwhm_to_sigma 
+from astropy.stats import sigma_clip, gaussian_fwhm_to_sigma, gaussian_sigma_to_fwhm
 from astropy import units, constants, convolution
 from astropy.io import ascii
 #import extinction  # this seems to be breaking numpy.  Comemnt out for now
@@ -79,7 +79,7 @@ def bin_boxcar_better(df, bins, how_to_comb, bincol='wave') :
     # Bin the data, binning bincol by bins, and then doing math to the other columns following the how_to_comb dict
     # https://stackoverflow.com/questions/33217702/groupby-in-pandas-with-different-functions-for-different-columns
     newdf = df.groupby(pandas.cut(df[bincol], bins)).agg(how_to_comb)  # This seems to be onto something...
-    # where how_to_comb = {'flam' : 'mean', 'flam_u' : 'sum', 'wave' : 'mean'}
+    # example:  how_to_comb = {'flam' : 'mean', 'flam_u' : 'sum', 'wave' : 'mean'}
     newdf.set_index(bincol, inplace=True, drop=False)
     return(newdf)
 
@@ -235,6 +235,18 @@ def onegaus(x, aa, bb, cc, cont): # Define a Gaussian with linear continuum
     y = (aa * np.exp((x - bb)**2/(-2*cc**2))  + cont)
     return y
 
+# THIS FUNCTION SHOULD BE THE MOST USEFUL FOR FITTING A GAUSSIAN
+def onegaus_byflux_redshift(wave, zz, linecenter, lineflux, linewidth_fwhm, cont):
+    # Helper function for fitting a gaussian, where parameters are recast to what's useful
+    # for fitting emission lines in a galaxy: redshift, lineflux (not amplitude), and linewidth.
+    # Linecenter is rest-frame central wavelength of line to fit
+    # cont is a linear continuum 
+    y = np.zeros_like(wave)
+    sigma = linewidth_fwhm / gaussian_sigma_to_fwhm  # Gaussian eqn uses sigma, but astronomers use FWHM
+    aa = lineflux / sigma / np.sqrt(2.*np.pi)  #  Convert from gaussian flux to gaussian height
+    y += (onegaus(wave, aa, (linecenter*(1+zz)), sigma, 0.0) + cont)
+    return(y)
+
 def fit_quick_gaussian(sp, guess_pars, colwave='wave', colf='flam', zz=0., method='least_squares', sigma=None) : # Gaussian fit to emission line.  Uses Pandas
     # guess_pars are the initial guess at the Gaussian.
     if colwave == "index" : xvar = sp.index
@@ -344,10 +356,10 @@ def fit_autocont(sp, LL, zz, colv2mask='vmask', boxcar=1001, flag_lines=True, co
         if colmask not in sp : sp[colmask] = False
         flag_near_lines(sp, LL, colv2mask=colv2mask, colwave=colwave)  # lines are masked in sp.linemask
         sp.loc[sp['linemask'], colmask] = True           # add masked lines to the continuum-fitting mask
-    # astropy.convolve barfs on pandas.Series as input.  Use .to_numpy() to send as np array
-    smooth1 = astropy.convolution.convolve(sp[colf].to_numpy(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].to_numpy()) # boxcar smooth
+    # astropy's convolve barfs on pandas.Series as input.  Use .to_numpy() to send as np array
+    smooth1 = convolution.convolve(sp[colf].to_numpy(), np.ones((boxcar,))/boxcar, boundary='extend', fill_value=np.nan, mask=sp[colmask].to_numpy()) # boxcar smooth
     small_kern = int(util.round_up_to_odd(boxcar/10.))
-    smooth2 = astropy.convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
+    smooth2 = convolution.convolve(smooth1, np.ones((small_kern,))/small_kern, boundary='extend', fill_value=np.nan) # Smooth again, to remove nans
     sp[colcont] = pandas.Series(smooth2)  # Write the smooth continuum back to data frame
     sp[colcont].interpolate(method='linear',axis=0, limit_direction='both', inplace=True)  #replace nans
     #print "DEBUGGING", np.isnan(smooth1).sum(),  np.isnan(smooth2).sum(), sp[colcont].isnull().sum()
@@ -582,7 +594,8 @@ def load_solar_atlas():
     return(df_solar)
 
 def get_NIRSpec_spectral_resolution_Shajib2025(mode, disperser, blockingfilter, wave_in):  # Wave in in micron
-    # Return the spectral resolutions in km/s reported by Shajib et al. 2025 for JWST NIRSpec
+    # Return the sigma_prime_inst spectral resolution (units of km/s) reported by Shajib et al. 2025 for JWST NIRSpec
+    #  Where   R = c / (2.355 * sigma)
     # Should I move this to the JWST module?
     df_R = pandas.read_csv('/Users/jrrigby1/Python/jrr/nirspec_instr_resoln_Shajib2025.txt', sep='\\s+', comment='#')
     df_R['index'] = df_R['mode'] + '_' + df_R.disperser + '_' + df_R['filter']
