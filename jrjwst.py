@@ -9,7 +9,9 @@ import numpy as np
 from scipy.interpolate import interp1d
 from astropy.stats import mad_std
 import astropy.io.ascii as ascii
+from astropy.stats import gaussian_sigma_to_fwhm
 from astropy import constants
+from astropy.constants import c as speed_of_light
 from scipy.optimize import brentq    # Equation solving
 from jrr.spec import rebin_spec_new
 from jrr.util import gethead, date_to_DOY
@@ -19,8 +21,10 @@ import json
 
 
 h = constants.h.cgs.value
-c = constants.c.cgs.value
+c = speed_of_light.cgs.value
 k = constants.k_B.cgs.value
+
+c_inkms = speed_of_light.to('km/s').value
 
 def get_mrieke_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/mrieke_fluxcalib_08252022.txt'):
     # Create a dict of Marcia Rieke's PHOTMJSR flux calibration zeropoints for NIRCam
@@ -154,6 +158,25 @@ def get_nirspec_fixedslit_widths(units='arcsec'):
 def get_nirspec_fixedslit_lengths():
     # returns a dictionary w lengths of the NIRSpec fixed slits, in arcsec
     return({'S200A1': 3.2, 'S200A2': 3.2, 'S400A1': 3.65, 'S1600A1': 1.6, 'S200B1': 3.2}) # from JDox
+
+def get_NIRSpec_spectral_resolution_Shajib2025(mode, disperser, blockingfilter, wave_in, outformat='sigma'):  # Wave in in micron
+    # Return the sigma_prime_inst spectral resolution (units of km/s) reported by Shajib et al. 2025 for JWST NIRSpec
+    #  Where   R = c / (2.355 * sigma)
+    df_R = pandas.read_csv('/Users/jrrigby1/Python/jrr/nirspec_instr_resoln_Shajib2025.txt', sep='\\s+', comment='#')
+    df_R['index'] = df_R['mode'] + '_' + df_R.disperser + '_' + df_R['filter']
+    df_R.set_index('index', inplace=True)
+    sigma_PN = 6.90 #km/s
+    if mode != 'FS' and mode != 'IFS':  raise Exception("Error, mode is not FS or IFS")
+    if disperser not in ('G140M', 'G140H', 'G235M', 'G235H', 'G395M', 'G395H'): raise Exception("Grating not recognized.  Paper did not deal w prism.")
+    if blockingfilter not in ('F070LP', 'F100LP', 'F170LP', 'F290LP'): raise Exception("blocking filter not recognized")
+    thiskey = mode + '_' + disperser + '_' + blockingfilter
+    mine = df_R.loc[thiskey]
+    sigma_out = np.sqrt((mine.sigma_pivot / (1 + mine.alpha  * (wave_in *1E4 - mine.pivot_wavelength)/1E4))**2 - sigma_PN**2 )
+    if outformat.upper()   =='SIGMA' : return(sigma_out)                 # returns gaussian sigma in km/s
+    elif outformat.upper() =='FWHM'  : return (sigma_out * gaussian_sigma_to_fwhm) # returns fwhm in km/s
+    elif outformat.upper() == 'R'    : return (c_inkms  /  sigma_out / gaussian_sigma_to_fwhm)  # returns dimensionless R
+    else : raise Exception("ERROR: output format not understood, not sigma, fwhm, or R", outformat)
+
 
     
 def pixscale(*args):
