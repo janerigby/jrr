@@ -169,7 +169,7 @@ def get_firstday_from_epoch(epoch):
     if 'and' in epoch :   first_day = epoch.split('and')[0]   # If a range, pick the first day
     elif 'to' in epoch:   first_day = epoch.split('to')[0]
     else:  first_day = epoch
-    first_day = (first_day.replace('a', '')).replace('b', '').replace('c', '').replace('d', '')
+    first_day = (first_day.replace('a', '')).replace('b', '').replace('c', '').replace('d', '').replace('e', '')
     return(first_day)
 
 #####  Basic Astronomy  #####
