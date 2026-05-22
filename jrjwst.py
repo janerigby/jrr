@@ -18,7 +18,7 @@ from jrr.util import gethead, date_to_DOY
 from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
 from jwst.associations import asn_from_list as afl
 import json
-
+import joblib
 
 h = constants.h.cgs.value
 c = speed_of_light.cgs.value
@@ -162,6 +162,7 @@ def get_nirspec_fixedslit_lengths():
 def get_NIRSpec_spectral_resolution_Shajib2025(mode, disperser, blockingfilter, wave_in, outformat='sigma'):  # Wave in in micron
     # Return the sigma_prime_inst spectral resolution (units of km/s) reported by Shajib et al. 2025 for JWST NIRSpec
     #  Where   R = c / (2.355 * sigma)
+    #  Or (bc it's more useful), return the actual dimensionless Resolution R, or the FHWM in km/s
     df_R = pandas.read_csv('/Users/jrrigby1/Python/jrr/nirspec_instr_resoln_Shajib2025.txt', sep='\\s+', comment='#')
     df_R['index'] = df_R['mode'] + '_' + df_R.disperser + '_' + df_R['filter']
     df_R.set_index('index', inplace=True)
@@ -177,7 +178,25 @@ def get_NIRSpec_spectral_resolution_Shajib2025(mode, disperser, blockingfilter, 
     elif outformat.upper() == 'R'    : return (c_inkms  /  sigma_out / gaussian_sigma_to_fwhm)  # returns dimensionless R
     else : raise Exception("ERROR: output format not understood, not sigma, fwhm, or R", outformat)
 
+def get_NIRSpec_prism_resolution_ptsrc(wave, whichone='MSA_and_FS'):
+    # NIRSpec prism spectral resolution of a point source, measured by jrigby for FS, and jrigby's fits
+    # to Glidic et al 2025's measurements for MSA. R should be the same for FS and MSA, and the curves are
+    # almost identical, so prob best to use the fit to both FS and MSA
+    # Returns dimensionless R
+    MSA_and_FS = 108.10989461 +  -84.0294412*wave  + 26.37992393 * wave**2
+    justMSA    = 107.49008484 +  -87.21263238*wave + 27.15750358 * wave**2
+    justFS     = 108.3275342  +  -80.74348845      + 25.53958356 * wave**2
+    if    whichone.upper() == 'MSA_AND_FS' : return(MSA_and_FS)
+    elif  whichone.upper() == 'JUSTMSA' : return(justMSA)
+    elif  whichone.upper() == 'JUSTFS' : return(justFS)
+    else : raise Exception("ERROR, output format whichone not understood, not one of MSA_and_FS, justMSA, or justFS", whichone)
 
+def get_NIRSpec_prism_resolution_uniformillum(wave, whichslit='S200A1'):
+    infile = 'nirspec_measured_R_prism_uniformillum_fromconvolution_allFS.pkl'
+    R = joblib.load(infile)
+    if whichslit not in R.keys():
+        raise Exception("ERROR, I did not understand choice of slit width, not S200A1, S400A1, S1600A1", whichslit)
+    return(R[whichslit](wave))
     
 def pixscale(*args):
     # Retrieve the pixel scale in arcseconds, for a given detector. Have not added NIRSpec yet
