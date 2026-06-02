@@ -575,48 +575,46 @@ def find_science_extensions_nirspecFS(infile):
                 out_dict[thisslit].append(ii)
     return(out_dict)
 
-def median_combine_level3_calfile_nirspecFS(infile, sci_to_wave_off=3):
+def median_combine_level3_calfile_nirspecFS(infile, thisslit, outdir, sci_to_wave_off=3):
     # v2.0.1 of JWST pipeline now makes a level 3 calfile that has an extension for every exposure.
     # If we want to ignore the WCS, it may be simplest to extract bkgs from that cal file
     # sci_to_wave_off is the offset of extension nubmers of SCI and WAVELENGTH.
     fixed_slit_names = get_nirspec_good_fixedslit_names()
+    if thisslit not in fixed_slit_names:
+        raise Exception('ERROR: fixed slit name', thisslit, 'not in', fixed_slit_names)
     sci_extensions = find_science_extensions_nirspecFS(infile)
-    median_sci_1D = {} ;  median_wave_1D = {}
-    for thisslit in fixed_slit_names:
-        sci_images = []
-        wave_images = []
-        for ii in sci_extensions[thisslit]:
-            with fits.open(infile) as sfile:
-                sci_image = sfile[ii].data 
-            sci_images.append(sci_image)
-            with fits.open(infile) as sfile:
-                wave_image = sfile[ii + sci_to_wave_off ].data 
-            wave_images.append(wave_image)
+    if len(sci_extensions[thisslit]) == 0:  raise Exception('ERROR: no SCI extensions for this slit', thisslit, infile)
+    sci_images = []
+    wave_images = []
+    for ii in sci_extensions[thisslit]:
+        with fits.open(infile) as sfile:
+            sci_image = sfile[ii].data 
+        sci_images.append(sci_image)
+        with fits.open(infile) as sfile:
+            wave_image = sfile[ii + sci_to_wave_off].data 
+        wave_images.append(wave_image)
 
-        # Calculate the 1D wavelength array.  
-        big_wave_array = np.array(wave_images) 
-        median_2D = np.nanmedian(big_wave_array, axis=0)
-        median_wave_1D[thisslit] = np.nanmedian(big_wave_array, axis=[0,1])
+    # Calculate the 1D wavelength array.  
+    big_wave_array = np.array(wave_images) 
+    median_2D = np.nanmedian(big_wave_array, axis=0)
+    median_wave_1D = np.nanmedian(big_wave_array, axis=[0,1])
         
-        # Now compute the fnu array. 
-        # L3 Calfiles have slanted wavelength calib.  So take resample to common wavelength grid, then take median
-        big_fnu_array = np.array(sci_images) # otherwise median wont work, ugh
-        resampled_array = np.zeros_like(big_fnu_array)
-        for ii in range(0, big_fnu_array.shape[0]):        # for each file
-            for jj in range (0, big_fnu_array.shape[1]):   # for each row in that file
-                # resample fnu to a common grid of wavelength. Removes slant
-                resampled_array[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], big_fnu_array[ii, jj, ], median_wave_1D[thisslit])
-        median_2D = np.nanmedian(resampled_array, axis=0)
-        #fits.writeto(thisslit + 'median.fits', median_2D, overwrite=True)
-        median_sci_1D[thisslit] = np.nanmedian(resampled_array, axis=[0,1])
-    return(median_sci_1D, median_wave_1D)
+    # Now compute the fnu array. 
+    # L3 Calfiles have slanted wavelength calib.  So take resample to common wavelength grid, then take median
+    big_fnu_array = np.array(sci_images) # otherwise median wont work, ugh
+    x = np.zeros_like(big_fnu_array)
+    for ii in range(0, big_fnu_array.shape[0]):        # for each file
+        for jj in range (0, big_fnu_array.shape[1]):   # for each row in that file
+            # resample fnu to a common grid of wavelength. Removes slant
+            x[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], \
+                                        big_fnu_array[ii, jj, ], median_wave_1D)
+    median_2D = np.nanmedian(x, axis=0)
+    #fits.writeto(thisslit + 'median.fits', median_2D, overwrite=True)
+    median_sci_1D = np.nanmedian(x, axis=(0,1))
+    std_1D        = np.nanstd(x, axis=(0,1))
+    mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))))
+    df = pandas.DataFrame({'wave': median_wave_1D, 'fnu': median_sci_1D, 'stddev': std_1D, 'mad': mad})
+    outfile = 'FSmedianL3cal_' + thisslit + '.csv'
+    df.to_csv(outdir + outfile, index=False)
+    return(df)
         
-def wrap_median_combine_level3_calfile_nirspecFS(infile, outdir, sci_to_wave_off=3, debug=False):
-    fixed_slit_names = get_nirspec_good_fixedslit_names()
-    (median_sci_1D, median_wave_1D) = median_combine_level3_calfile_nirspecFS(infile, sci_to_wave_off=3)
-    for thisslit in fixed_slit_names:
-        df = pandas.DataFrame({'wave': median_wave_1D[thisslit], 'fnu': median_sci_1D[thisslit]})
-        outfile = 'FSmedianL3cal_' + thisslit + '.csv'
-        df.to_csv(outdir + outfile, index=False)
-        if debug:  print("outfile", outfile)
-    return(median_sci_1D, median_wave_1D)
