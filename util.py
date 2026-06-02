@@ -19,7 +19,7 @@ from astropy import units as u
 from astropy.cosmology import Planck18 as cosmo
 from astropy.wcs import WCS
 import scipy  
-import scikits.bootstrap as bootstrap  
+#import scikits.bootstrap as bootstrap  
 import csv
 
 # basic things that should be in python but are not
@@ -29,13 +29,13 @@ def unique_elements_in_list(mylist):
 
 #####  Math  #####
 
-def bootstrap_val_confint(df, statfunction, alpha=0.05) :
-    '''Calculates the value of statfunction for a dataset df (numpy array or pandas df), and
-    also the confidence interval (by default, 5%,95%)
-    Returns the value, and the -,+ uncertainties'''
-    result = statfunction(df)
-    CI = bootstrap.ci(data=df, statfunction=statfunction, alpha=alpha)
-    return( result,  np.abs(CI[0] - result),  CI[1] - result) 
+#def bootstrap_val_confint(df, statfunction, alpha=0.05) :
+#    '''Calculates the value of statfunction for a dataset df (numpy array or pandas df), and
+#    also the confidence interval (by default, 5%,95%)
+#    Returns the value, and the -,+ uncertainties'''
+#    result = statfunction(df)
+#    CI = bootstrap.ci(data=df, statfunction=statfunction, alpha=alpha)
+#    return( result,  np.abs(CI[0] - result),  CI[1] - result) 
 
 def sigma_atimesb(a, siga, b, sigb) : # find uncertainty in f, where f=a*b, and siga, sigb are uncerts in a,b
     return(np.sqrt( (siga * b)**2 + (sigb * a)**2 ))
@@ -232,6 +232,32 @@ def date_to_DOY(date) :
     dayofyear = int((split(':', Time(date).yday)[1]).lstrip('0'))
     return(dayofyear)
 
+#### FITS files ######
+
+def gethead(imagefile, header_keyword, extension=1) :
+    # return a header keyword from a file, similar to wcstools gethead
+    hdu = fits.open(imagefile)
+    return( hdu[extension].header[header_keyword] )
+
+
+def find_science_extensions(infile, kind='SCI'):  # much faster
+    with fits.open(infile) as hdulist:
+        names = [hdu.name for hdu in hdulist]
+        indexes = [i for i, x in enumerate(names) if x == kind]
+    return(indexes)
+
+#def find_science_extensions(infile, kind='SCI'):  # SUPER SLOW
+#    # Which extensions are science extensions?  (or some other kind you specify)
+#    extensions = []
+#    with fits.open(infile) as fitsfile:
+#        N_extensions = len(fitsfile)
+#    for ii in range (1, N_extensions):
+#        extname = gethead(infile, 'EXTNAME', extension=ii)
+#        if extname.upper() == kind:
+#            extensions.append(ii)
+#    return(extensions)
+
+
 #####  Astronomy coordinate systems  #####
 
 def convert_RADEC_segidecimal(RA_segi, DEC_segi) :  # convert RA, DEC in segidecimal to RA, DEC in degrees
@@ -252,11 +278,6 @@ def offset_coords(sk, delta_RA=0, delta_DEC=0) :
     # Coords should be in picky Astropy format, for example sk = SkyCoord(RA, DEC, unit='deg') 
     newsk = sk.directional_offset_by(0. *u.deg, delta_DEC * u.arcsec).directional_offset_by(90. *u.deg, delta_RA * u.arcsec)
     return(newsk)
-
-def gethead(imagefile, header_keyword, extension=1) :
-    # return a header keyword from a file, similar to wcstools gethead
-    hdu = fits.open(imagefile)
-    return( hdu[extension].header[header_keyword] )
 
 def imval_at_coords(imagefile, sk) :
     ''' For a given image and coordinates, return value of that image at coordinates, and nearest xy pixel
@@ -292,21 +313,23 @@ def distancefrom_coords2_df(df, colRA1='RA1', colDEC1='DEC1', colRA2='RA2', colD
 def identify_unique_pointing_df(df_in, tol=60., racol='RA', deccol='DEC', newcol='sourceID'):
     # Walk through a dataframe, find unique objects by coordinates, and assign each one a unique source ID
     # tol: If coordinates are separated by < tol (tolerance, in arcec), call it the same source
-    df = df_in.sort_values(by=[racol, deccol])
+    df = df_in.copy(deep=True)
+    df = df.sort_values(by=[racol, deccol])
     df.reset_index(inplace=True)
     results = []
     ID = 1  # initialize
     lastRA  = df.iloc[0][racol]    # initialize
     lastDEC = df.iloc[0][deccol]
     for index, row in df.iterrows():
-        offset = angular_separation(lastRA, lastDEC, row[racol], row[deccol])  * 180. / np.pi * 60. * 60 # in arcsec
-        if offset > tol : 
+        offset = angular_separation(lastRA *u.deg, lastDEC*u.deg, row[racol]*u.deg, row[deccol]*u.deg)
+        #print(offset.to_value('arcsec'))
+        if offset > tol * u.arcsec : 
             ID = ID +  1  # A new source
         results.append(ID)
         lastRA = row[racol]  ;  lastDEC = row[deccol]
+        #print(ID, offset.to_value('arcmin'), "updated RA, DEC to", lastRA, lastDEC)
     df[newcol] = pandas.Series(results)
     return(df, results)
-
   
 def convert_RADEC_Galactic(RA_deg, DEC_deg) :    # Convert (decimal) RA, DEC to Galactic.  Can be LISTS []
     thisradec = SkyCoord(RA_deg, DEC_deg, unit=(u.deg, u.deg), frame='icrs')
