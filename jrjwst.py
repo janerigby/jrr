@@ -630,7 +630,9 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
         std_1D        = np.nanstd(x, axis=(0,1))
         mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))), axis=(0, 1))
     df = pandas.DataFrame({'wave': median_wave_1D, 'fnu': median_sci_1D, 'stddev': std_1D, 'mad': mad})
-    outfile = 'FS_1Dmedian_from' + intype + '_' + thisslit + '.csv'
+    dateobs = gethead(infile, 'date-obs', extension=0)
+    fileroot = (infile.split('/')[-1]).split('_')[0]
+    outfile = dateobs + '_' + fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
     header =  '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
     header += '# spatial direction, from Level 3 CAL files\n'
