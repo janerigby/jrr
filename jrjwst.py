@@ -1,4 +1,5 @@
 import os, requests, sys, getopt
+from os.path import basename
 from tqdm import tqdm
 from astropy.io import fits
 from jwst_backgrounds import jbt # Import the background module
@@ -14,12 +15,14 @@ from astropy import constants
 from astropy.constants import c as speed_of_light
 from scipy.optimize import brentq    # Equation solving
 from jrr.spec import rebin_spec_new
-from jrr.util import gethead, date_to_DOY,  find_science_extensions
+from jrr.util import gethead, date_to_DOY,  find_science_extensions, put_header_on_file
 from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
 from jwst.associations import asn_from_list as afl
+import glob
 import json
 import joblib
 import pickle
+import warnings
 
 h = constants.h.cgs.value
 c = speed_of_light.cgs.value
@@ -507,7 +510,7 @@ def extract1D_SB(x1dfile, s2dfile, sourcepix_range=None):
     By Brian Welch 3/2025
     '''
     with fits.open(x1dfile) as xfile:
-        print("DEBUG", x1dfile)
+        #print("DEBUG", x1dfile)
         wl = xfile[1].data["WAVELENGTH"]
     with fits.open(s2dfile) as sfile:
         s2dim = sfile[1].data 
@@ -575,10 +578,20 @@ def find_science_extensions_nirspecFS(infile):
                 out_dict[thisslit].append(ii)
     return(out_dict)
 
-def median_combine_level3_calfile_nirspecFS(infile, thisslit, outdir, sci_to_wave_off=3):
+def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='Default', write2D=False):
+    # Does a spatial and exposure level (and exposure level, if CAL file) median combine of a level 3 JWST
+    # input spectral file.  Should handle L3 CAL or S2D files.  For making background measurements.
     # v2.0.1 of JWST pipeline now makes a level 3 calfile that has an extension for every exposure.
-    # If we want to ignore the WCS, it may be simplest to extract bkgs from that cal file
+    # In principle, this may be cleanest since it ignores the WCS.  In practice, the outputs are v similar.
     # sci_to_wave_off is the offset of extension nubmers of SCI and WAVELENGTH.
+
+    if   ('s2d' in infile) or ('S2D' in infile) : intype = 'S2D'
+    elif ('cal' in infile) or ('CAL' in infile) : intype = 'CAL'
+    offsets = {'CAL': 3, 'S2D': 2}
+    # For CAL files, wavelength extension is 3 behind SCI.  For S2D, 2 behind.
+    # At least this is true in pipeline v2.0.1.
+    if sci_to_wave_off == 'Default':
+        sci_to_wave_off = offsets[intype]
     fixed_slit_names = get_nirspec_good_fixedslit_names()
     if thisslit not in fixed_slit_names:
         raise Exception('ERROR: fixed slit name', thisslit, 'not in', fixed_slit_names)
@@ -593,28 +606,44 @@ def median_combine_level3_calfile_nirspecFS(infile, thisslit, outdir, sci_to_wav
         with fits.open(infile) as sfile:
             wave_image = sfile[ii + sci_to_wave_off].data 
         wave_images.append(wave_image)
-
-    # Calculate the 1D wavelength array.  
-    big_wave_array = np.array(wave_images) 
-    median_2D = np.nanmedian(big_wave_array, axis=0)
-    median_wave_1D = np.nanmedian(big_wave_array, axis=[0,1])
-        
-    # Now compute the fnu array. 
-    # L3 Calfiles have slanted wavelength calib.  So take resample to common wavelength grid, then take median
-    big_fnu_array = np.array(sci_images) # otherwise median wont work, ugh
-    x = np.zeros_like(big_fnu_array)
-    for ii in range(0, big_fnu_array.shape[0]):        # for each file
-        for jj in range (0, big_fnu_array.shape[1]):   # for each row in that file
-            # resample fnu to a common grid of wavelength. Removes slant
-            x[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], \
-                                        big_fnu_array[ii, jj, ], median_wave_1D)
-    median_2D = np.nanmedian(x, axis=0)
-    #fits.writeto(thisslit + 'median.fits', median_2D, overwrite=True)
-    median_sci_1D = np.nanmedian(x, axis=(0,1))
-    std_1D        = np.nanstd(x, axis=(0,1))
-    mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))))
+    # nan median gives a useless warning on all-nan rows.  Suppress the warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        # Calculate the 1D wavelength array.  
+        big_wave_array = np.array(wave_images) 
+        median_2D = np.nanmedian(big_wave_array, axis=0)
+        median_wave_1D = np.nanmedian(big_wave_array, axis=[0,1])
+    
+        # Now compute the fnu array. 
+        # L3 Calfiles have slanted wavelength calib.  So take resample to common wavelength grid, then take median
+        big_fnu_array = np.array(sci_images) # otherwise median wont work, ugh
+        x = np.zeros_like(big_fnu_array)
+        for ii in range(0, big_fnu_array.shape[0]):        # for each file
+            for jj in range (0, big_fnu_array.shape[1]):   # for each row in that file
+                # resample fnu to a common grid of wavelength. Removes slant
+                x[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], \
+                                         big_fnu_array[ii, jj, ], median_wave_1D)
+                median_2D = np.nanmedian(x, axis=0)
+                if write2D:
+                    fits.writeto(outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits', median_2D, overwrite=True)
+        median_sci_1D = np.nanmedian(x, axis=(0,1))
+        std_1D        = np.nanstd(x, axis=(0,1))
+        mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))), axis=(0, 1))
     df = pandas.DataFrame({'wave': median_wave_1D, 'fnu': median_sci_1D, 'stddev': std_1D, 'mad': mad})
-    outfile = 'FSmedianL3cal_' + thisslit + '.csv'
+    outfile = 'FS_1Dmedian_from' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
+    header =  '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
+    header += '# spatial direction, from Level 3 CAL files\n'
+    put_header_on_file(outdir + outfile, header, outdir + outfile)
+    return(df)
+        
+def wrap_median_combine_level3_nirspecFS(indir, outdir):
+    df = {}
+    for kind in ('s2d', 'cal'):
+        infiles = glob.glob(indir + '*' +  kind + '*.fits')
+        for infile in infiles:
+            thisslit = gethead(infile, 'SLTNAME')
+            label = basename(infile)
+            df[label] = median_combine_level3_nirspecFS(infile, thisslit, outdir)
     return(df)
         
