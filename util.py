@@ -137,7 +137,7 @@ def strip_pound_before_colnames(infile) :
     how to teach pandas to ignore that, so I wrote this pre-processor.
     input is a file.  Returns filename of temp file that has first # stripped'''
     tmp = "/tmp/workaround"
-    subprocess.check_output("sed s/\#// < " + infile + "> "+tmp, shell=True)
+    subprocess.check_output(r"sed s/\#// < " + infile + "> "+tmp, shell=True)
     return(tmp)
 
 def put_header_on_file(infile, header_text, outfile) :
@@ -158,6 +158,18 @@ def read_header_from_file(infile, comment="#") :
             if bool(search(comment, line)) :
                 head += line
     return(head)
+
+def retrieve_header_from_file(infile, prefix='##'):
+    # Go grab the header made above, and send it to a dict
+    mydict = {}
+    retrieved_header =  read_header_from_file(infile, prefix)
+    bar = [sub('##', '', x) for x in retrieved_header.split('\n')]
+    for x in bar:
+        if len(x) >0:
+            foo = x.split(' ')
+            mydict[foo[0]] =  foo[1]
+    return(mydict)
+
 
 def check_df_for_Object(df) :
     for thiscol in list(df.keys()):
@@ -391,6 +403,5 @@ def df_xy_from_ds9regions(regionsfile, skiprows=3, x='x', y='y', r='r') :
     # Parse a simple ds9 file of x,y,r in IMAGE coords, and convert to dataframe
     df2 = pandas.read_csv(regionsfile, skiprows=skiprows, names=(x, y, r))
     df2[x] = df2[x].str.replace('circle\(','')
-    df2[r] = df2[r].str.replace('\)','')
+    df2[r] = df2[r].str.replace(r'\)','')
     return(df2)
-

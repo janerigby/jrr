@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas
 import numpy as np
 from scipy.interpolate import interp1d
+from astropy.time import Time
 from astropy.stats import mad_std
 import astropy.io.ascii as ascii
 from astropy.stats import gaussian_sigma_to_fwhm
@@ -15,7 +16,7 @@ from astropy import constants
 from astropy.constants import c as speed_of_light
 from scipy.optimize import brentq    # Equation solving
 from jrr.spec import rebin_spec_new
-from jrr.util import gethead, date_to_DOY,  find_science_extensions, put_header_on_file
+from jrr.util import gethead, date_to_DOY,  find_science_extensions, put_header_on_file,  read_header_from_file
 from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
 from jwst.associations import asn_from_list as afl
 import glob
@@ -238,6 +239,18 @@ def get_spec_keywords_from_jwst_header(thisfile):
     disperser = gethead(thisfile, 'GRATING',  extension=0)
     slitname = gethead(thisfile, 'SLTNAME', extension=1)
     return(thefilter, disperser, slitname)
+
+def get_spec_keywords_from_jwst_header_2dict(thisfile):  # Let's make my life easier, and write this to a dict
+    (thefilter, disperser, slitname) = get_spec_keywords_from_jwst_header(thisfile)
+    dateobs = gethead(thisfile, 'DATE-OBS',  extension=0)
+    (RA, DEC, texp, velosys, mjd, pid, obsid) = get_keywords_from_jwst_header(thisfile)
+    # convert MJD of midpoint of observation to more useful formats
+    datestamp   = Time(mjd, format='mjd').to_value('isot')
+    decimalyear = Time(mjd, format='mjd').to_value('decimalyear')    
+    mydict = {'FILTER': thefilter,  'GRATING': disperser, 'SLTNAME': slitname, 'DATE-OBS': dateobs, 'datestamp': datestamp, \
+              'decimalyear': decimalyear, 'mjd': mjd, 'RA': RA, 'DEC': DEC, 'texp': texp, 'velosys': velosys,  \
+              'pid': pid, 'obsid': obsid}
+    return(mydict)
 
 def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
     return(['DATALOSS', 'UNSUCCESSFUL', 'SKIPPED', 'SKIPPED_COORDINATED'])
@@ -634,8 +647,13 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
     fileroot = (infile.split('/')[-1]).split('_')[0]
     outfile = dateobs + '_' + fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
+    myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
+
     header =  '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
-    header += '# spatial direction, from Level 3 CAL files\n'
+    header += '# spatial direction, from Level 3 CAL or S2D file\n'
+    header += ('# filename ' + basename(infile) + '\n')
+    for key, value in myheaderdict.items():  # add the header from dict
+        header += ('##' + key + ' ' + str(value) + '\n') 
     put_header_on_file(outdir + outfile, header, outdir + outfile)
     return(df)
         
@@ -644,8 +662,11 @@ def wrap_median_combine_level3_nirspecFS(indir, outdir):
     for kind in ('s2d', 'cal'):
         infiles = glob.glob(indir + '*' +  kind + '*.fits')
         for infile in infiles:
-            thisslit = gethead(infile, 'SLTNAME')
             label = basename(infile)
+            thisslit = gethead(infile, 'SLTNAME')
             df[label] = median_combine_level3_nirspecFS(infile, thisslit, outdir)
     return(df)
         
+def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 steps
+    myheader = retrieve_header_from_file(infile, comment="##")
+    return(myheader)  # dict
