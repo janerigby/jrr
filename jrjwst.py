@@ -7,6 +7,7 @@ from re import split
 import matplotlib.pyplot as plt
 import pandas
 import numpy as np
+from scipy.signal import find_peaks # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html
 from scipy.interpolate import interp1d
 from astropy.time import Time
 from astropy.stats import mad_std
@@ -624,7 +625,6 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
         warnings.simplefilter("ignore", category=RuntimeWarning)
         # Calculate the 1D wavelength array.  
         big_wave_array = np.array(wave_images) 
-        median_2D = np.nanmedian(big_wave_array, axis=0)
         median_wave_1D = np.nanmedian(big_wave_array, axis=[0,1])
     
         # Now compute the fnu array. 
@@ -648,6 +648,11 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
     outfile = dateobs + '_' + fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
     myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
+    if intype.upper() == 'S2D':
+        myheaderdict['S2D_trace'] = wrap_detect_source_s2d(infile)  # Search for a spectral trace of a source in the 2D S2d file
+    elif intype.upper() == 'CAL':
+         myheaderdict['S2D_trace'] = detect_source_s2d(median_2D[5:-5])   # Do the same, on the 2D median combine of the Cal file
+    # Not sure if above line will make sense for cal file.  It working on the 
 
     header =  '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
     header += '# spatial direction, from Level 3 CAL or S2D file\n'
@@ -670,3 +675,105 @@ def wrap_median_combine_level3_nirspecFS(indir, outdir):
 def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 steps
     myheader = retrieve_header_from_file(infile, comment="##")
     return(myheader)  # dict
+
+
+
+def wrap_detect_source_s2d(s2dfile, plot=False):
+    spec2d = fits.open(s2dfile)['SCI'].data[5:-5] # Read the 2d spec
+    detection_level = detect_source_s2d(spec2d, plot=False)
+    return(detection_level)
+
+# Function to detect a source in a 2d JWST S2D NIRSpec spectrum  # From Rosalia O'Brien
+def detect_source_s2d(spectrum_2d, plot=False):
+    """
+    Detects if a horizontal trace is present in a 2D (works with NaNs in data).
+
+    Params
+    ------
+    spectrum_2d - arr
+        2D spectrum
+    plot - bool
+        Make pretty plots or no
+
+    Output
+    ------
+    detection_level - Float
+        Detection level which sources are found 
+    """
+    
+    # Collapse the 2D spectrum using np.nanmedian
+    # axis = 1 means each row gets collapsed into one value
+    collapsed_med_spec = np.nanmedian(spectrum_2d, axis=1)
+    
+    # Estimate the background level and noise 
+    background_level = np.nanmedian(collapsed_med_spec)
+    mad = np.nanmedian(np.abs(collapsed_med_spec - background_level))
+    sigma = mad * 1.4826 # std ≈ 1.4826 × mad (https://statisticsbyjim.com/basics/median-absolute-deviation/)
+        
+    # Find "peaks" in 2d speak corresponding to sources
+    # For now, just identify sources that are at least 1 sigma in height
+    required_height = background_level + (sigma)
+    peak_positions, properties = find_peaks(collapsed_med_spec, height=required_height)
+    # peak_positions --> xloc of peaks
+    # collapsed_med_spec[peak_positions] --> "height" (yloc) of peaks
+    
+    source_detected = len(peak_positions) > 0 # Bool, if source is found
+    detection_level_all = (collapsed_med_spec[peak_positions] - background_level)/sigma
+
+    if source_detected:
+        # print(np.max(detection_level_all))
+        detection_level = np.max(detection_level_all)
+    if not source_detected:
+        detection_level = 0.0
+
+    if plot:
+        fig = plt.figure(figsize=(12, 7))
+
+        # Make plot pretty 
+        gs = gridspec.GridSpec(2, 2, height_ratios=[1, 1.5]) # Create a grid: 2 rows, 3 columns
+        ax1 = fig.add_subplot(gs[0, :]) # ax1 spans all 3 columns in the first row
+        ax2 = fig.add_subplot(gs[1, 0]) # ax2 sits only in the middle column of the second row
+        
+        # Plot
+        norm = ImageNormalize(spectrum_2d, interval=zscale)
+        im = ax1.imshow(spectrum_2d, aspect='auto', origin='lower', cmap='Greys_r', norm=norm)
+        ax1.set_title("2D Spectrum")
+        ax1.set_xlabel("Dispersion Axis [Pixels]")
+        ax1.set_ylabel("Spatial Axis [Pixels]")
+        
+        # Overlay locations of detected source traces
+        for i, p in enumerate(peak_positions):
+
+            leg = False # Whether or not to plot legend (only show legend if you actually find sources at > 3 sigma)
+
+            # Only show >3 sigma sources
+            if collapsed_med_spec[p] > (background_level + 3*(sigma)):
+                
+                # Only assign the label to the very first line drawn
+                lbl = 'Detected 3-sigma Source' if i == 0 else '_nolegend_'
+                
+                ax1.axhline(p+3, color='red', linestyle='--', alpha=0.3, label=lbl)
+                ax1.axhline(p-3, color='red', linestyle='--', alpha=0.3)
+
+                leg = True
+                
+            if leg:
+                ax1.legend()
+        
+        # Plot 1D median spatial spectra
+        ax2.plot(collapsed_med_spec, color='blue', label='Collapsed Profile')
+        ax2.axhline(background_level, color='gray', linestyle='--', label='Background')
+        ax2.axhline(background_level + (3*sigma), color='orange', linestyle='--', label='3-Sigma Threshold')
+        
+        if source_detected:
+            ax2.plot(peak_positions, collapsed_med_spec[peak_positions], "rx", markersize=10, label='Detected 1-Sigma Peaks')
+            
+        ax2.set_title("1D Spatial Profile")
+        ax2.set_xlabel("Spatial Axis [Pixels]")
+        ax2.set_ylabel("Median Flux [MJy/sr]")
+        ax2.legend(bbox_to_anchor = (1,1), loc = 'upper left')
+        
+        plt.tight_layout()
+        plt.show()
+    
+    return detection_level
