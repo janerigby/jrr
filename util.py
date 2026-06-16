@@ -402,6 +402,6 @@ def make_ds9_regions_file_xy(outfile, df, xcol='x', ycol='y', rcol='r') :
 def df_xy_from_ds9regions(regionsfile, skiprows=3, x='x', y='y', r='r') :
     # Parse a simple ds9 file of x,y,r in IMAGE coords, and convert to dataframe
     df2 = pandas.read_csv(regionsfile, skiprows=skiprows, names=(x, y, r))
-    df2[x] = df2[x].str.replace('circle\(','')
+    df2[x] = df2[x].str.replace(r'circle\(','')
     df2[r] = df2[r].str.replace(r'\)','')
     return(df2)

@@ -5,6 +5,8 @@ from astropy.io import fits
 from jwst_backgrounds import jbt # Import the background module
 from re import split
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
+from astropy.visualization import ZScaleInterval, ImageNormalize
 import pandas
 import numpy as np
 from scipy.signal import find_peaks # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html
@@ -634,11 +636,10 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
         for ii in range(0, big_fnu_array.shape[0]):        # for each file
             for jj in range (0, big_fnu_array.shape[1]):   # for each row in that file
                 # resample fnu to a common grid of wavelength. Removes slant
-                x[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], \
-                                         big_fnu_array[ii, jj, ], median_wave_1D)
-                median_2D = np.nanmedian(x, axis=0)
-                if write2D:
-                    fits.writeto(outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits', median_2D, overwrite=True)
+                x[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], big_fnu_array[ii, jj, ], median_wave_1D)
+        median_2D = np.nanmedian(x, axis=0)
+        if write2D:
+            fits.writeto(outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits', median_2D, overwrite=True)
         median_sci_1D = np.nanmedian(x, axis=(0,1))
         std_1D        = np.nanstd(x, axis=(0,1))
         mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))), axis=(0, 1))
@@ -649,9 +650,9 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
     df.to_csv(outdir + outfile, index=False)
     myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
     if intype.upper() == 'S2D':
-        myheaderdict['S2D_trace'] = wrap_detect_source_s2d(infile)  # Search for a spectral trace of a source in the 2D S2d file
+        myheaderdict['trace_sig'] = wrap_detect_source_s2d(infile)  # Search for a spectral trace of a source in the 2D S2d file
     elif intype.upper() == 'CAL':
-         myheaderdict['S2D_trace'] = detect_source_s2d(median_2D[5:-5])   # Do the same, on the 2D median combine of the Cal file
+         myheaderdict['trace_sig'] = detect_source_s2d(median_2D[1:-1])   # Do the same, on the 2D median combine of the Cal file
     # Not sure if above line will make sense for cal file.  It working on the 
 
     header =  '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
@@ -679,8 +680,8 @@ def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 
 
 
 def wrap_detect_source_s2d(s2dfile, plot=False):
-    spec2d = fits.open(s2dfile)['SCI'].data[5:-5] # Read the 2d spec
-    detection_level = detect_source_s2d(spec2d, plot=False)
+    spec2d = fits.open(s2dfile)['SCI'].data[1:-1] # Read the 2d spec
+    detection_level = detect_source_s2d(spec2d, plot=plot)
     return(detection_level)
 
 # Function to detect a source in a 2d JWST S2D NIRSpec spectrum  # From Rosalia O'Brien
@@ -735,6 +736,7 @@ def detect_source_s2d(spectrum_2d, plot=False):
         ax2 = fig.add_subplot(gs[1, 0]) # ax2 sits only in the middle column of the second row
         
         # Plot
+        zscale = ZScaleInterval(contrast = 0.5)
         norm = ImageNormalize(spectrum_2d, interval=zscale)
         im = ax1.imshow(spectrum_2d, aspect='auto', origin='lower', cmap='Greys_r', norm=norm)
         ax1.set_title("2D Spectrum")
