@@ -645,8 +645,10 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
         mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))), axis=(0, 1))
     df = pandas.DataFrame({'wave': median_wave_1D, 'fnu': median_sci_1D, 'stddev': std_1D, 'mad': mad})
     dateobs = gethead(infile, 'date-obs', extension=0)
-    fileroot = (infile.split('/')[-1]).split('_')[0]
-    outfile = dateobs + '_' + fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
+    #fileroot = (infile.split('/')[-1]).split('_')[0]
+    fileroot = infile.split('/')[-1].split('_s')[0]
+    #print("DEBUG JR, fileroot is", fileroot)
+    outfile = fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
     myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
     if intype.upper() == 'S2D':
