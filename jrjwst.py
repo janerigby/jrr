@@ -163,7 +163,8 @@ def get_nirspec_fixedslit_widths(units='arcsec'):
     # returns a dictionary w widths of the NIRSpec fixed slits, in arcsec or in pixels
     # If units='pixels', these are native nirspec pixels, 0.1"/pix
     if  units == 'arcsec':   return({'S200A1': 0.2, 'S200A2': 0.2, 'S400A1': 0.4, 'S1600A1': 1.6, 'S200B1': 0.2})  # from Jdox
-    elif units == 'pixels':  return({'S200A1': 2.0, 'S200A2': 2.0, 'S400A1': 4.0, 'S1600A1': 16., 'S200B1': 2.0})  # from Jdox
+    #elif units == 'pixels':  return({'S200A1': 2.0,  'S200A2': 2.0,  'S400A1': 4.0,  'S1600A1': 16.,   'S200B1': 2.0})  # from Jdox
+    elif units  == 'pixels':  return({'S200A1': 1.87, 'S200A2': 1.88, 'S400A1': 3.82, 'S1600A1': 15.49, 'S200B1': 1.87}) # From SIAF, via Marshall
     else: raise Exception("ERROR: units was not arcsec or pixels")
 
 def get_nirspec_fixedslit_lengths():
@@ -209,7 +210,7 @@ def get_NIRSpec_prism_resolution_uniformillum(wave, whichslit='S200A1'):
         raise Exception("ERROR, I did not understand choice of slit width, not S200A1, S400A1, S1600A1", whichslit)
     return(R[whichslit](wave))
 
-def get_NIRSpec_allgratings_resolution_uniformillum(wave, whichsetup='F100G140H', whichslit='S200A1'):
+def get_NIRSpec_allgratings_resolution_uniformillum(wave, whichsetup='F100LPG140H', whichslit='S200A1'):
     if whichslit == 'S200A2' : whichslit = 'S200A1'  # don't have measurements for A2, so assume it's like A1
     infile = 'nirspec_R_allgratings_uniformillum_fromconvolution_alLFS.pkl'
     with open(infile, 'rb') as ff:    df = pickle.load(ff)
