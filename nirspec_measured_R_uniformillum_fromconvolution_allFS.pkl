@@ -1,0 +1,1 @@
+../JWST_scienceops/NIRSpec_FS/nirspec_measured_R_uniformillum_fromconvolution_allFS.pkl

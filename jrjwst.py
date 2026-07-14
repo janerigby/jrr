@@ -212,13 +212,11 @@ def get_NIRSpec_prism_resolution_uniformillum(wave, whichslit='S200A1'):
 
 def get_NIRSpec_allgratings_resolution_uniformillum(wave, whichsetup='F100LPG140H', whichslit='S200A1'):
     if whichslit == 'S200A2' : whichslit = 'S200A1'  # don't have measurements for A2, so assume it's like A1
-    infile = 'nirspec_R_allgratings_uniformillum_fromconvolution_alLFS.pkl'
-    with open(infile, 'rb') as ff:    df = pickle.load(ff)
-    #print("debug", df.keys())
+    infile = 'nirspec_measured_R_uniformillum_fromconvolution_allFS.pkl'
+    polyfit = joblib.load(infile)
     label = whichsetup + '_' + whichslit
-    return(rebin_spec_new( df[label].wave, df[label].R_uniformillum, wave))  # uses linear interpolation. 
-    # may be weird near chip gap
-
+    return(polyfit[label](wave))
+    
 def pixscale(*args):
     # Retrieve the pixel scale in arcseconds, for a given detector. Have not added NIRSpec yet
     pixscale = {'nrc_sw': 0.031, 'nrc_lw': 0.063, 'niriss': 0.0656, 'fgs': 0.0656, 'miri_imager':0.11} #from JDox
