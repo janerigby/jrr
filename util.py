@@ -37,6 +37,10 @@ def unique_elements_in_list(mylist):
 #    CI = bootstrap.ci(data=df, statfunction=statfunction, alpha=alpha)
 #    return( result,  np.abs(CI[0] - result),  CI[1] - result) 
 
+def regridx2plot(x, resample=100):
+    # regrid an x axis more finely, for example to plot a fitted gaussian more smoothly than native wavelength axis
+    return(np.linspace(x[0], x[-1], len(x)*resample))
+
 def sigma_atimesb(a, siga, b, sigb) : # find uncertainty in f, where f=a*b, and siga, sigb are uncerts in a,b
     return(np.sqrt( (siga * b)**2 + (sigb * a)**2 ))
 
@@ -84,8 +88,13 @@ def convenience1(df) : # uncertainties get smaller when binning
 def mad(data):
     return median_absolute_deviation(data)
 
-def mad_nan(x) :  # Median absolute deviation, robust to NaNs
+def mad_nan(x) :  # Median absolute deviation, robust to NaNs, for 1D arrays
     return(np.nanmedian(np.absolute(x - np.nanmedian(x))))
+
+def mad_nan_axis(x, axis=0):  # MAD along a chosen axis, robust to NaNs
+    # this is some slick AI 
+    med = np.nanmedian(x, axis=axis, keepdims=True)
+    return np.nanmedian(np.absolute(x - med), axis=axis)
 
 def IQR(Series) :
     ''' Compute interquartile range.  Input is pandas data series.  Output is IQR as np.float64'''

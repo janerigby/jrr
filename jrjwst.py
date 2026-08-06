@@ -3,7 +3,7 @@ from os.path import basename
 from tqdm import tqdm
 from astropy.io import fits
 from jwst_backgrounds import jbt # Import the background module
-from re import split
+from re import split, sub
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from astropy.visualization import ZScaleInterval, ImageNormalize
@@ -20,6 +20,7 @@ from astropy.constants import c as speed_of_light
 from scipy.optimize import brentq    # Equation solving
 from jrr.spec import rebin_spec_new
 from jrr.util import gethead, date_to_DOY,  find_science_extensions, put_header_on_file,  read_header_from_file
+from jrr.util import mad_nan_axis
 from jwst.associations.lib.rules_level3_base import DMS_Level3_Base # Definition of a Lvl3 association file
 from jwst.associations import asn_from_list as afl
 import glob
@@ -549,31 +550,32 @@ def extract1D_SB(x1dfile, s2dfile, sourcepix_range=None):
     source_err = np.sqrt(np.nansum(sberr_im[sourcemin:sourcemax,:]**2, axis=0)) 
     return source_sb, source_err, wl
 
-
-def extract1D_fromlevel2(s2dfile, extension=1, sourcepix_range=None):
-    # modification of the above, tailored for level 2 file.  by jrigby
+def extract1D_fromlevel2(s2dfile, extension=1, clip_edge=7):
+    # modification of the above, tailored for level 2 file.  But appears to work on level 3 files as well.  Used in FS_HeI_fitting.ipynb 
     with fits.open(s2dfile) as sfile:
-        wl2D = sfile[extension + 2].data  # JR modifying, get wavelength from s2d file, not the x1d file
-        s2dim = sfile[extension].data
-        s2derr = sfile[extension + 1 ].data
-        pixar_sr = sfile[extension].header["PIXAR_SR"] # assuming this is in MJy/s
-        sb_im = s2dim #/ pixar_sr
-        sberr_im = s2dim #/ pixar_sr            
-        
-    if sourcepix_range == None:
-        ysize = s2dim.shape[0] # vertical size of slit
-        sourcepix_range = (2,ysize-1) # account for nan row at bottom, split rows at top&bottom
-    elif sourcepix_range == 'middle':
-        ysize = s2dim.shape[0] # vertical size of slit
-        midpt = int(np.round(ysize/2))
-        sourcepix_range = (midpt, midpt+1) # account for nan row at bottom, split rows at top&bottom
-    
+        wl2D = sfile[extension + 2].data  # JR modifying, get wavelength from s2d file, not the x1d filew
+        sb_im = sfile[extension].data
+        ysize = sb_im.shape[0] # vertical size of slit
+        sourcepix_range = (clip_edge, ysize - clip_edge) # account for nan row at bottom, split rows at top&bottom, and weird bkg at edges
     sourcemin, sourcemax = sourcepix_range[0], sourcepix_range[1]
-    source_sb = np.nanmedian(sb_im[sourcemin:sourcemax,:],axis=0) # surface brightness in MJy/sr
-    wave1D    = np.nanmedian(wl2D[sourcemin:sourcemax,:],axis=0)
-    source_err = np.sqrt(np.nansum(sberr_im[sourcemin:sourcemax,:]**2, axis=0)) 
+    source_sb  = np.nanmedian(sb_im[sourcemin:sourcemax,:],axis=0) # surface brightness in MJy/sr
+    wave1D     = np.nanmedian(wl2D[sourcemin:sourcemax,:],axis=0)
+    source_err = mad_nan_axis(sb_im[sourcemin:sourcemax,:], axis=0)
     return source_sb, source_err, wave1D
 
+# this is simpler than  median_combine_level3_nirspecFS, and appears to perform as well
+def wrap_extract1D_fromlevel2(indir, outdir, extension=1, clip_edge=7, lookfor='s2d.fits'):
+    df = {}
+    infiles  = glob.glob(indir + '*' + lookfor)
+    for infile in infiles:
+        if    's2d' in infile.lower() : suffix = '_FS1DextractfromS2D.csv'
+        elif  'cal' in infile.lower() : suffix = '_FS1DextractfromCAL.csv'
+        else : raise Exception("Do not recognize infile as being either S2D or CAL file", infile)
+        (sb, uncert, wl) = extract1D_fromlevel2(infile, extension=1, clip_edge=7)
+        df[basename(infile)] = pandas.DataFrame({'wave':wl, 'fnu': sb, 'uncert': uncert})
+        outfile = outdir  + sub('.fits', suffix, basename(infile))
+        df[basename(infile)].to_csv(outfile)
+    return(df)
 
 def find_science_extensions_nirspecFS(infile):
     # JWST level 3 calfiles have extensions for each exposure.  Group the science extensions
@@ -593,7 +595,7 @@ def find_science_extensions_nirspecFS(infile):
                 out_dict[thisslit].append(ii)
     return(out_dict)
 
-def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='Default', write2D=False):
+def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='Default', write2D=False, clip_edge=5):
     # Does a spatial and exposure level (and exposure level, if CAL file) median combine of a level 3 JWST
     # input spectral file.  Should handle L3 CAL or S2D files.  For making background measurements.
     # v2.0.1 of JWST pipeline now makes a level 3 calfile that has an extension for every exposure.
@@ -616,8 +618,12 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
     wave_images = []
     for ii in sci_extensions[thisslit]:
         with fits.open(infile) as sfile:
-            sci_image = sfile[ii].data 
-        sci_images.append(sci_image)
+            sci_image = sfile[ii].data
+            ysize = sci_image.shape[0] # vertical size of slit
+            sourcepix_range = (clip_edge, ysize - clip_edge) # account for nan row at bottom, split rows at top&bottom
+            sourcemin, sourcemax = sourcepix_range[0], sourcepix_range[1]
+        # Test the next line!!!!
+        sci_images.append(sci_image[sourcemin:sourcemax,:])
         with fits.open(infile) as sfile:
             wave_image = sfile[ii + sci_to_wave_off].data 
         wave_images.append(wave_image)
@@ -644,9 +650,7 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
         mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))), axis=(0, 1))
     df = pandas.DataFrame({'wave': median_wave_1D, 'fnu': median_sci_1D, 'stddev': std_1D, 'mad': mad})
     dateobs = gethead(infile, 'date-obs', extension=0)
-    #fileroot = (infile.split('/')[-1]).split('_')[0]
     fileroot = infile.split('/')[-1].split('_s')[0]
-    #print("DEBUG JR, fileroot is", fileroot)
     outfile = fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
     myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
@@ -664,14 +668,15 @@ def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='D
     put_header_on_file(outdir + outfile, header, outdir + outfile)
     return(df)
         
-def wrap_median_combine_level3_nirspecFS(indir, outdir):
+def wrap_median_combine_level3_nirspecFS(indir, outdir, clip_edge=5):
     df = {}
     for kind in ('s2d', 'cal'):
         infiles = glob.glob(indir + '*' +  kind + '*.fits')
         for infile in infiles:
             label = basename(infile)
             thisslit = gethead(infile, 'SLTNAME')
-            df[label] = median_combine_level3_nirspecFS(infile, thisslit, outdir)
+            if thisslit == 'S200B1' : pass  # ignore this uncalibrated slit
+            else:   df[label] = median_combine_level3_nirspecFS(infile, thisslit, outdir, clip_edge=clip_edge)
     return(df)
         
 def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 steps
