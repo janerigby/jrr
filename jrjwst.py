@@ -77,34 +77,7 @@ def get_mboyer_fluxcal_sep202022_justdict(infile='/Users/jrrigby1/Python/jrr/mbo
     return(martha_dict)
 
 
-#def get_mboyer_fluxcal_sep202022_fulldf(infile='/Users/jrrigby1/Python/jrr/mbyoyer_P330E_zeropoints_Sept20_2022.txt'):
-#    df = pandas.read_csv(infile, comment='#', sep='\\s+')
-#    df['filter_detector'] = df['filter'].str.replace('CLEAR+', '', regex=False) + '_' +  df['detector']
-#    return(df)
-#
-#def get_mboyer_fluxcal_sep202022_justdict(infile='/Users/jrrigby1/Python/jrr/mbyoyer_P330E_zeropoints_Sept20_2022.txt'):
-#    df = get_mboyer_fluxcal_sep202022_fulldf(infile=infile)
-#    df.drop(['filter', 'detector', 'std'], inplace=True, axis=1)
-#    df.set_index('filter_detector', inplace=True)
-#    martha_dict = df.to_dict()['PHOTMJSR']
-#    return(martha_dict)
-#
-#def get_mboyer_fluxcal_aug2022_fulldataframe(infile='/Users/jrrigby1/Python/jrr/boyer2022_nircamoffsets.txt'):
-#    temp_table = ascii.read(infile) # Read a machine-readable table into Pandas, via astropy.Table. Automatically gets f#ormat right
-#    df = temp_table.to_pandas()
-#    df['wave'] = df['Filter'].apply(getwave_for_filter)
-#    df['filter_detector'] = df['Filter'] + '_' + df['Detector']
-#    return(df)
-#
-#def get_mboyer_fluxcal_aug2022_justdict(infile='/Users/jrrigby1/Python/jrr/boyer2022_nircamoffsets.txt'):
-#    df = get_mboyer_fluxcal_aug2022_fulldataframe(infile=infile)
-#    df.drop(['Filter', 'Detector', 'Pupil', 'MJSR-0959'], inplace=True, axis=1)
-#    df.drop(['MJSR-mr', 'MJSR-gbr', 'MJSR-1D', 'MJSR-LMC', 'wave'], inplace=True, axis=1)
-#    df.rename(columns={'MJSR-2D' : 'PHOTMJSR'}, inplace=True)
-#    df.set_index('filter_detector', inplace=True)
-#    martha_dict = df.to_dict()['PHOTMJSR']
-#    return(martha_dict)
-    
+
 def estimate_1fnoise_nircam(filename_wpath):
     # This is an experiment.  std1 should be the standard deviation in the medians of each columns, an estimate of the 1/f noise
     hdu = fits.open(filename_wpath)
@@ -206,10 +179,11 @@ def get_NIRSpec_prism_resolution_ptsrc(wave, whichone='MSA_and_FS'):
 
 def get_NIRSpec_prism_resolution_uniformillum(wave, whichslit='S200A1'):
     infile = 'nirspec_measured_R_prism_uniformillum_fromconvolution_allFS.pkl'
+    newkey = 'prism_' + whichslit
     R = joblib.load(infile)
-    if whichslit not in R.keys():
-        raise Exception("ERROR, I did not understand choice of slit width, not S200A1, S400A1, S1600A1", whichslit)
-    return(R[whichslit](wave))
+    if newkey not in R.keys():
+        raise Exception("ERROR, I did not understand choice of slit width", whichslit, "not in", R.keys())
+    return(R[newkey](wave))
 
 def get_NIRSpec_allgratings_resolution_uniformillum(wave, whichsetup='F100LPG140H', whichslit='S200A1'):
     if whichslit == 'S200A2' : whichslit = 'S200A1'  # don't have measurements for A2, so assume it's like A1
@@ -564,6 +538,7 @@ def extract1D_fromlevel2(s2dfile, extension=1, clip_edge=7):
     return source_sb, source_err, wave1D
 
 # this is simpler than  median_combine_level3_nirspecFS, and appears to perform as well
+# But doesn't do the fancy edge and nan clipping
 def wrap_extract1D_fromlevel2(indir, outdir, extension=1, clip_edge=7, lookfor='s2d.fits'):
     df = {}
     infiles  = glob.glob(indir + '*' + lookfor)
@@ -595,79 +570,142 @@ def find_science_extensions_nirspecFS(infile):
                 out_dict[thisslit].append(ii)
     return(out_dict)
 
-def median_combine_level3_nirspecFS(infile, thisslit, outdir, sci_to_wave_off='Default', write2D=False, clip_edge=5):
-    # Does a spatial and exposure level (and exposure level, if CAL file) median combine of a level 3 JWST
-    # input spectral file.  Should handle L3 CAL or S2D files.  For making background measurements.
-    # v2.0.1 of JWST pipeline now makes a level 3 calfile that has an extension for every exposure.
-    # In principle, this may be cleanest since it ignores the WCS.  In practice, the outputs are v similar.
-    # sci_to_wave_off is the offset of extension nubmers of SCI and WAVELENGTH.
+def _expand_row_mask(anchor_rows, radius, row_count):
+    """Return a mask covering each anchor row and all rows within a radius."""
+    expanded_row_mask = np.zeros(row_count, dtype=bool)
+    for anchor_row in anchor_rows:
+        start = max(0, anchor_row - radius)
+        # The upper slice bound is exclusive, hence the extra +1.
+        stop = min(row_count, anchor_row + radius + 1)
+        expanded_row_mask[start:stop] = True
+    return expanded_row_mask
 
-    if   ('s2d' in infile) or ('S2D' in infile) : intype = 'S2D'
-    elif ('cal' in infile) or ('CAL' in infile) : intype = 'CAL'
+def _nirspecfs_nan_mask_rows(sci_image, clip_nan):
+    nan_counts = np.count_nonzero(np.isnan(sci_image), axis=1)
+    # Integer arithmetic implements "at least half" without a fractional
+    # threshold when the wavelength-axis length is odd.
+    mostly_nan_rows = np.flatnonzero(2 * nan_counts >= sci_image.shape[1])
+    # Edge rows are always anchors, even when their pixels are all finite.
+    masking_anchor_rows = np.unique(np.concatenate((
+        mostly_nan_rows, np.array([0, sci_image.shape[0] - 1]))))
+    excluded_row_mask = _expand_row_mask(
+        masking_anchor_rows, clip_nan, sci_image.shape[0])
+    neighbor_masked_rows = np.flatnonzero(
+        excluded_row_mask &
+        ~np.isin(np.arange(sci_image.shape[0]), mostly_nan_rows))
+    return mostly_nan_rows, neighbor_masked_rows, excluded_row_mask
+
+def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='Default', \
+        write2D=False, clip_nan=5, debug=False):
+    """  Makes a spatial (and exposure level, if CAL file) median combine of a level 3 JWST
+    input spectral file.  Should handle L3 CAL or S2D files.  For making background measurements.
+    v2.0.1 of JWST pipeline now makes a level 3 calfile that has an extension for every exposure.
+    In principle, using this file may be best, since it ignores WCS.   In practice, outputs are v similar.
+    sci_to_wave_off is the offset of extension nubmers of SCI and WAVELENGTH. Changed from edge-clipping
+    in v1 to clipping within clip_nan rows of the edges OR rows that are mostly nans. """
+    if not isinstance(clip_nan, (int, np.integer)) or clip_nan < 0:
+        raise ValueError('clip_nan must be a non-negative integer')
+
+    if ('s2d' in infile) or ('S2D' in infile):
+        intype = 'S2D'
+    elif ('cal' in infile) or ('CAL' in infile):
+        intype = 'CAL'
+    else:
+        raise ValueError('Could not determine whether input is S2D or CAL: ' + infile)
+
     offsets = {'CAL': 3, 'S2D': 2}
-    # For CAL files, wavelength extension is 3 behind SCI.  For S2D, 2 behind.
-    # At least this is true in pipeline v2.0.1.
     if sci_to_wave_off == 'Default':
         sci_to_wave_off = offsets[intype]
     fixed_slit_names = get_nirspec_good_fixedslit_names()
     if thisslit not in fixed_slit_names:
         raise Exception('ERROR: fixed slit name', thisslit, 'not in', fixed_slit_names)
     sci_extensions = find_science_extensions_nirspecFS(infile)
-    if len(sci_extensions[thisslit]) == 0:  raise Exception('ERROR: no SCI extensions for this slit', thisslit, infile)
+    if len(sci_extensions[thisslit]) == 0:
+        raise Exception('ERROR: no SCI extensions for this slit', thisslit, infile)
+
     sci_images = []
     wave_images = []
-    for ii in sci_extensions[thisslit]:
-        with fits.open(infile) as sfile:
-            sci_image = sfile[ii].data
-            ysize = sci_image.shape[0] # vertical size of slit
-            sourcepix_range = (clip_edge, ysize - clip_edge) # account for nan row at bottom, split rows at top&bottom
-            sourcemin, sourcemax = sourcepix_range[0], sourcepix_range[1]
-        # Test the next line!!!!
-        sci_images.append(sci_image[sourcemin:sourcemax,:])
-        with fits.open(infile) as sfile:
-            wave_image = sfile[ii + sci_to_wave_off].data 
+    for sci_extension in sci_extensions[thisslit]:
+        with fits.open(infile, mode='readonly', memmap=False) as sfile:
+            sci_image = np.array(
+                sfile[sci_extension].data, dtype=float, copy=True)
+            wave_image = np.array(
+                sfile[sci_extension + sci_to_wave_off].data,
+                dtype=float, copy=True)
+
+        mostly_nan_rows, neighbor_masked_rows, excluded_row_mask = \
+            _nirspecfs_nan_mask_rows(sci_image, clip_nan)
+
+        if debug:
+            print(
+                f'SCI extension {sci_extension} mostly-NaN rows: '
+                f'{mostly_nan_rows.tolist()}')
+            print(
+                f'SCI extension {sci_extension} other rows masked within '
+                f'{clip_nan} rows '
+                f'of a mostly-NaN row or image edge: '
+                f'{neighbor_masked_rows.tolist()}')
+
+        sci_image[excluded_row_mask, :] = np.nan
+        wave_image[excluded_row_mask, :] = np.nan
+        sci_images.append(sci_image)
         wave_images.append(wave_image)
-    # nan median gives a useless warning on all-nan rows.  Suppress the warning
+
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        # Calculate the 1D wavelength array.  
-        big_wave_array = np.array(wave_images) 
-        median_wave_1D = np.nanmedian(big_wave_array, axis=[0,1])
-    
-        # Now compute the fnu array. 
-        # L3 Calfiles have slanted wavelength calib.  So take resample to common wavelength grid, then take median
-        big_fnu_array = np.array(sci_images) # otherwise median wont work, ugh
-        x = np.zeros_like(big_fnu_array)
-        for ii in range(0, big_fnu_array.shape[0]):        # for each file
-            for jj in range (0, big_fnu_array.shape[1]):   # for each row in that file
-                # resample fnu to a common grid of wavelength. Removes slant
-                x[ii, jj, ] = rebin_spec_new(big_wave_array[ii, jj, ], big_fnu_array[ii, jj, ], median_wave_1D)
-        median_2D = np.nanmedian(x, axis=0)
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+        # Cube axes are (exposure, spatial row, wavelength).  Collapse the
+        # first two axes to define one common wavelength grid.
+        wavelength_cube = np.array(wave_images)
+        median_wave_1D = np.nanmedian(wavelength_cube, axis=(0, 1))
+
+        science_cube = np.array(sci_images)
+        resampled_science_cube = np.full_like(science_cube, np.nan)
+        for exposure_index in range(science_cube.shape[0]):
+            for spatial_row in range(science_cube.shape[1]):
+                if (not np.any(np.isfinite(
+                        science_cube[exposure_index, spatial_row, :])) or
+                        not np.any(np.isfinite(
+                            wavelength_cube[exposure_index, spatial_row, :]))):
+                    continue
+                # Rebin every spatial row onto the common wavelength grid.
+                resampled_science_cube[exposure_index, spatial_row, :] = \
+                    rebin_spec_new(
+                        wavelength_cube[exposure_index, spatial_row, :],
+                        science_cube[exposure_index, spatial_row, :],
+                        median_wave_1D)
+        median_2D = np.nanmedian(resampled_science_cube, axis=0)
         if write2D:
-            fits.writeto(outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits', median_2D, overwrite=True)
-        median_sci_1D = np.nanmedian(x, axis=(0,1))
-        std_1D        = np.nanstd(x, axis=(0,1))
-        mad = np.nanmedian(np.absolute(x - np.nanmedian(x, axis=(0,1))), axis=(0, 1))
-    df = pandas.DataFrame({'wave': median_wave_1D, 'fnu': median_sci_1D, 'stddev': std_1D, 'mad': mad})
-    dateobs = gethead(infile, 'date-obs', extension=0)
+            fits.writeto(
+                outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits',
+                median_2D, overwrite=True)
+        median_sci_1D = np.nanmedian(resampled_science_cube, axis=(0, 1))
+        std_1D = np.nanstd(resampled_science_cube, axis=(0, 1))
+        mad = np.nanmedian(
+            np.absolute(
+                resampled_science_cube -
+                np.nanmedian(resampled_science_cube, axis=(0, 1))),
+            axis=(0, 1))
+
+    df = pandas.DataFrame({
+        'wave': median_wave_1D, 'fnu': median_sci_1D,
+        'stddev': std_1D, 'mad': mad})
     fileroot = infile.split('/')[-1].split('_s')[0]
     outfile = fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
     df.to_csv(outdir + outfile, index=False)
     myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
     if intype.upper() == 'S2D':
-        myheaderdict['trace_sig'] = wrap_detect_source_s2d(infile)  # Search for a spectral trace of a source in the 2D S2d file
+        myheaderdict['trace_sig'] = wrap_detect_source_s2d(infile)
     elif intype.upper() == 'CAL':
-         myheaderdict['trace_sig'] = detect_source_s2d(median_2D[1:-1])   # Do the same, on the 2D median combine of the Cal file
-    # Not sure if above line will make sense for cal file.  It working on the 
+        myheaderdict['trace_sig'] = detect_source_s2d(median_2D[1:-1])
 
-    header =  '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
+    header = '# Custom background from NIRSpec fixed slit, from median combine of all exposures and\n'
     header += '# spatial direction, from Level 3 CAL or S2D file\n'
-    header += ('# filename ' + basename(infile) + '\n')
-    for key, value in myheaderdict.items():  # add the header from dict
-        header += ('##' + key + ' ' + str(value) + '\n') 
+    header += '# filename ' + basename(infile) + '\n'
+    for key, value in myheaderdict.items():
+        header += '##' + key + ' ' + str(value) + '\n'
     put_header_on_file(outdir + outfile, header, outdir + outfile)
-    return(df)
-        
+    return df
+
 def wrap_median_combine_level3_nirspecFS(indir, outdir, clip_edge=5):
     df = {}
     for kind in ('s2d', 'cal'):
@@ -676,13 +714,12 @@ def wrap_median_combine_level3_nirspecFS(indir, outdir, clip_edge=5):
             label = basename(infile)
             thisslit = gethead(infile, 'SLTNAME')
             if thisslit == 'S200B1' : pass  # ignore this uncalibrated slit
-            else:   df[label] = median_combine_level3_nirspecFS(infile, thisslit, outdir, clip_edge=clip_edge)
+            else:   df[label] = median_combine_level3_nirspecFS2(infile, thisslit, outdir, clip_edge=clip_edge)
     return(df)
         
 def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 steps
     myheader = retrieve_header_from_file(infile, comment="##")
     return(myheader)  # dict
-
 
 
 def wrap_detect_source_s2d(s2dfile, plot=False):
