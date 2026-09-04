@@ -706,7 +706,7 @@ def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='
     put_header_on_file(outdir + outfile, header, outdir + outfile)
     return df
 
-def wrap_median_combine_level3_nirspecFS(indir, outdir, clip_edge=5):
+def wrap_median_combine_level3_nirspecFS(indir, outdir, clip_nan=5):
     df = {}
     for kind in ('s2d', 'cal'):
         infiles = glob.glob(indir + '*' +  kind + '*.fits')
@@ -714,7 +714,7 @@ def wrap_median_combine_level3_nirspecFS(indir, outdir, clip_edge=5):
             label = basename(infile)
             thisslit = gethead(infile, 'SLTNAME')
             if thisslit == 'S200B1' : pass  # ignore this uncalibrated slit
-            else:   df[label] = median_combine_level3_nirspecFS2(infile, thisslit, outdir, clip_edge=clip_edge)
+            else:   df[label] = median_combine_level3_nirspecFS2(infile, thisslit, outdir, clip_nan=clip_nan)
     return(df)
         
 def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 steps
