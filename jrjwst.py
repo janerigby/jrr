@@ -651,8 +651,8 @@ def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='
         sci_images.append(sci_image)
         wave_images.append(wave_image)
 
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', category=RuntimeWarning)
+    with warnings.catch_warnings():   # Numpy freks out about all-nan rows, which the jwst pipeline routinely produces
+        warnings.filterwarnings('ignore', message=r'All-NaN slice encountered', category=RuntimeWarning,)        
         # Cube axes are (exposure, spatial row, wavelength).  Collapse the
         # first two axes to define one common wavelength grid.
         wavelength_cube = np.array(wave_images)
@@ -679,7 +679,12 @@ def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='
                 outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits',
                 median_2D, overwrite=True)
         median_sci_1D = np.nanmedian(resampled_science_cube, axis=(0, 1))
-        std_1D = np.nanstd(resampled_science_cube, axis=(0, 1))
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                'ignore',
+                message=r'Degrees of freedom <= 0 for slice\.',
+                category=RuntimeWarning)
+            std_1D = np.nanstd(resampled_science_cube, axis=(0, 1))
         mad = np.nanmedian(
             np.absolute(
                 resampled_science_cube -
@@ -723,7 +728,8 @@ def read_custom_spec_headers(infile): # should be a CSV file made by previous 2 
 
 
 def wrap_detect_source_s2d(s2dfile, plot=False):
-    spec2d = fits.open(s2dfile)['SCI'].data[1:-1] # Read the 2d spec
+    with fits.open(s2dfile) as hdul:
+        spec2d = hdul['SCI'].data[1:-1].copy()  # Read the 2D spectrum.
     detection_level = detect_source_s2d(spec2d, plot=plot)
     return(detection_level)
 
@@ -747,7 +753,12 @@ def detect_source_s2d(spectrum_2d, plot=False):
     
     # Collapse the 2D spectrum using np.nanmedian
     # axis = 1 means each row gets collapsed into one value
-    collapsed_med_spec = np.nanmedian(spectrum_2d, axis=1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            'ignore',
+            message=r'All-NaN slice encountered',
+            category=RuntimeWarning)
+        collapsed_med_spec = np.nanmedian(spectrum_2d, axis=1)
     
     # Estimate the background level and noise 
     background_level = np.nanmedian(collapsed_med_spec)
