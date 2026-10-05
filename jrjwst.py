@@ -651,45 +651,142 @@ def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='
         sci_images.append(sci_image)
         wave_images.append(wave_image)
 
-    with warnings.catch_warnings():   # Numpy freks out about all-nan rows, which the jwst pipeline routinely produces
-        warnings.filterwarnings('ignore', message=r'All-NaN slice encountered', category=RuntimeWarning,)        
-        # Cube axes are (exposure, spatial row, wavelength).  Collapse the
-        # first two axes to define one common wavelength grid.
-        wavelength_cube = np.array(wave_images)
-        median_wave_1D = np.nanmedian(wavelength_cube, axis=(0, 1))
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            'ignore',
+            message=r'All-NaN slice encountered',
+            category=RuntimeWarning,
+        )
 
-        science_cube = np.array(sci_images)
-        resampled_science_cube = np.full_like(science_cube, np.nan)
-        for exposure_index in range(science_cube.shape[0]):
-            for spatial_row in range(science_cube.shape[1]):
-                if (not np.any(np.isfinite(
-                        science_cube[exposure_index, spatial_row, :])) or
-                        not np.any(np.isfinite(
-                            wavelength_cube[exposure_index, spatial_row, :]))):
+        image_shapes = [image.shape for image in wave_images]
+
+        if len(set(image_shapes)) == 1:
+            # Preserve the existing behavior when every exposure has the
+            # same dimensions.
+            wavelength_cube = np.stack(wave_images)
+            median_wave_1D = np.nanmedian(
+                wavelength_cube, axis=(0, 1)
+            )
+        else:
+            # Some CAL products have exposure cutouts that differ by one
+            # spatial or wavelength pixel. Construct a common wavelength
+            # grid without first forcing the images into a rectangular cube.
+            wavelength_length = min(
+                image.shape[1] for image in wave_images
+            )
+            common_pixel_coordinate = np.linspace(
+                0.0, 1.0, wavelength_length
+            )
+
+            normalized_wave_rows = []
+
+            for wave_image in wave_images:
+                native_pixel_coordinate = np.linspace(
+                    0.0, 1.0, wave_image.shape[1]
+                )
+
+                for wave_row in wave_image:
+                    finite = np.isfinite(wave_row)
+
+                    if np.count_nonzero(finite) < 2:
+                        continue
+
+                    normalized_wave_rows.append(
+                        np.interp(
+                            common_pixel_coordinate,
+                            native_pixel_coordinate[finite],
+                            wave_row[finite],
+                            left=np.nan,
+                            right=np.nan,
+                        )
+                    )
+
+            if not normalized_wave_rows:
+                raise ValueError(
+                    'No usable wavelength rows found in ' + infile
+                )
+
+            median_wave_1D = np.nanmedian(
+                np.stack(normalized_wave_rows), axis=0
+            )
+
+        # Allocate a rectangular output only after every exposure has been
+        # placed onto the common wavelength grid. Spatially shorter images
+        # are padded with NaNs.
+        maximum_spatial_rows = max(
+            image.shape[0] for image in sci_images
+        )
+
+        resampled_science_cube = np.full(
+            (
+                len(sci_images),
+                maximum_spatial_rows,
+                median_wave_1D.size,
+            ),
+            np.nan,
+            dtype=float,
+        )
+
+        for exposure_index, (science_image, wavelength_image) in enumerate(
+                zip(sci_images, wave_images)):
+
+            # Approximately center cutouts whose spatial dimensions differ.
+            row_offset = (
+                maximum_spatial_rows - science_image.shape[0]
+            ) // 2
+
+            for spatial_row in range(science_image.shape[0]):
+                science_row = science_image[spatial_row, :]
+                wavelength_row = wavelength_image[spatial_row, :]
+
+                if (
+                    not np.any(np.isfinite(science_row))
+                    or not np.any(np.isfinite(wavelength_row))
+                ):
                     continue
-                # Rebin every spatial row onto the common wavelength grid.
-                resampled_science_cube[exposure_index, spatial_row, :] = \
-                    rebin_spec_new(
-                        wavelength_cube[exposure_index, spatial_row, :],
-                        science_cube[exposure_index, spatial_row, :],
-                        median_wave_1D)
-        median_2D = np.nanmedian(resampled_science_cube, axis=0)
+
+                resampled_science_cube[
+                    exposure_index,
+                    row_offset + spatial_row,
+                    :,
+                ] = rebin_spec_new(
+                    wavelength_row,
+                    science_row,
+                    median_wave_1D,
+                )
+
+        median_2D = np.nanmedian(
+            resampled_science_cube, axis=0
+        )
+
         if write2D:
             fits.writeto(
-                outdir + 'FS_2Dmedian_from' + intype + '_' + thisslit + '.fits',
-                median_2D, overwrite=True)
-        median_sci_1D = np.nanmedian(resampled_science_cube, axis=(0, 1))
+                outdir + 'FS_2Dmedian_from'
+                + intype + '_' + thisslit + '.fits',
+                median_2D,
+                overwrite=True,
+            )
+
+        median_sci_1D = np.nanmedian(
+            resampled_science_cube, axis=(0, 1)
+        )
+
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 'ignore',
                 message=r'Degrees of freedom <= 0 for slice\.',
-                category=RuntimeWarning)
-            std_1D = np.nanstd(resampled_science_cube, axis=(0, 1))
+                category=RuntimeWarning,
+            )
+            std_1D = np.nanstd(
+                resampled_science_cube, axis=(0, 1)
+            )
+
         mad = np.nanmedian(
             np.absolute(
-                resampled_science_cube -
-                np.nanmedian(resampled_science_cube, axis=(0, 1))),
-            axis=(0, 1))
+                resampled_science_cube - median_sci_1D
+            ),
+            axis=(0, 1),
+        )
 
     df = pandas.DataFrame({
         'wave': median_wave_1D, 'fnu': median_sci_1D,
@@ -833,3 +930,4 @@ def detect_source_s2d(spectrum_2d, plot=False):
         plt.show()
     
     return detection_level
+
