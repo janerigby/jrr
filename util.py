@@ -238,7 +238,7 @@ def Kennicutt_LHa_to_SFR(LHa) :
 
 def Kennicutt_SFR_to_fHa(SFR, zz) :
     LHa = Kennicutt_SFR_to_LHa(SFR)   # this is a flux, redshift invariant
-    fHa = LHa / (4. * np.pi * util.luminosity_distance(zz)**2)
+    fHa = LHa / (4. * np.pi * luminosity_distance(zz)**2)
     return(fHa)
     
 
