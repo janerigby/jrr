@@ -200,35 +200,22 @@ def pixscale(*args):
         return(pixscale[args[0]])
     else : raise Exception("ERROR: number of arguments must be 0 or 1.")
 
-def get_keywords_from_jwst_header(thisfile):
-    # Grab several useful keywords from a JWST spectrum
-    RA =  gethead(thisfile, 'targ_ra',  extension=0)
-    DEC = gethead(thisfile, 'targ_dec', extension=0)
-    texp=     gethead(thisfile, 'EFFEXPTM', extension=0)
-    velosys = gethead(thisfile, 'velosys',  extension=1)  # Not sure why this is extension 1, but whatevs
-    mjd = gethead(thisfile, 'expmid',   extension=0) # midpoint of the exposure in MJD
-    pid = gethead(thisfile, 'PROGRAM',  extension=0)
-    obsid = gethead(thisfile, 'OBS_ID', extension=0)
-    return(RA, DEC, texp, velosys, mjd, pid, obsid)
 
-def get_spec_keywords_from_jwst_header(thisfile):
-    thefilter = gethead(thisfile, 'FILTER',   extension=0)
-    disperser = gethead(thisfile, 'GRATING',  extension=0)
-    slitname  = gethead(thisfile, 'SLTNAME',  extension=1)
-    readpatt  = gethead(thisfile, 'READPATT', extension=0)
-    return(thefilter, disperser, slitname, readpatt)
-
-def get_spec_keywords_from_jwst_header_2dict(thisfile):  # Let's make my life easier, and write this to a dict
-    (thefilter, disperser, slitname, readpatt) = get_spec_keywords_from_jwst_header(thisfile)
-    dateobs = gethead(thisfile, 'DATE-OBS',  extension=0)
-    (RA, DEC, texp, velosys, mjd, pid, obsid) = get_keywords_from_jwst_header(thisfile)
+def get_keywords_from_jwst_header2(thisfile):   # common keywords I need all the time
+    keys1     = ['targ_ra', 'targ_dec', 'EFFEXPTM',  'expmid', 'PROGRAM', 'OBS_ID', 'FILTER', 'GRATING', 'READPATT', 'TARGTYPE', 'TARGNAME', 'READPATT']
+    extens1   = [  0,            0,          0,           0,          0,      0,        0,         0,         0,           0,          0,       0]
+    keys2     = ['DATE-OBS', 'velosys', 'SLTNAME']
+    extens2   = [  0,           1,           1   ] 
+    keys     = keys1 + keys2
+    extens  = extens1 + extens2
+    result  = {}
+    for ii, thiskey in enumerate(keys):
+        result[thiskey] =  gethead(thisfile, thiskey, extension=extens[ii])
+    result['mjd'] = result['expmid']  # synonym
     # convert MJD of midpoint of observation to more useful formats
-    datestamp   = Time(mjd, format='mjd').to_value('isot')
-    decimalyear = Time(mjd, format='mjd').to_value('decimalyear')    
-    mydict = {'FILTER': thefilter,  'GRATING': disperser, 'SLTNAME': slitname, 'READPATT': readpatt, 'DATE-OBS': dateobs, \
-              'datestamp': datestamp, 'decimalyear': decimalyear, 'mjd': mjd, 'RA': RA, 'DEC': DEC, 'texp': texp, \
-              'velosys': velosys,  'pid': pid, 'obsid': obsid}
-    return(mydict)
+    datestamp   = Time(result['mjd'], format='mjd').to_value('isot')
+    decimalyear = Time(result['mjd'], format='mjd').to_value('decimalyear')    
+    return(result)
 
 def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
     return(['DATALOSS', 'UNSUCCESSFUL', 'SKIPPED', 'SKIPPED_COORDINATED'])
@@ -793,9 +780,10 @@ def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='
         'wave': median_wave_1D, 'fnu': median_sci_1D,
         'stddev': std_1D, 'mad': mad})
     fileroot = infile.split('/')[-1].split('_s')[0]
-    outfile = fileroot + '_FS1Dmedianfrom' + intype + '_' + thisslit + '.csv'
+    print("Debug", fileroot, infile, basename(infile))
+    outfile    = sub('.fits', '_extract.csv', basename(infile))
     df.to_csv(outdir + outfile, index=False)
-    myheaderdict = get_spec_keywords_from_jwst_header_2dict(infile)
+    myheaderdict =  get_keywords_from_jwst_header2(infile)
     if intype.upper() == 'S2D':
         myheaderdict['trace_sig'] = wrap_detect_source_s2d(infile)
     elif intype.upper() == 'CAL':
