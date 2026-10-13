@@ -212,21 +212,22 @@ def get_keywords_from_jwst_header(thisfile):
     return(RA, DEC, texp, velosys, mjd, pid, obsid)
 
 def get_spec_keywords_from_jwst_header(thisfile):
-    thefilter = gethead(thisfile, 'FILTER',  extension=0)
+    thefilter = gethead(thisfile, 'FILTER',   extension=0)
     disperser = gethead(thisfile, 'GRATING',  extension=0)
-    slitname = gethead(thisfile, 'SLTNAME', extension=1)
-    return(thefilter, disperser, slitname)
+    slitname  = gethead(thisfile, 'SLTNAME',  extension=1)
+    readpatt  = gethead(thisfile, 'READPATT', extension=0)
+    return(thefilter, disperser, slitname, readpatt)
 
 def get_spec_keywords_from_jwst_header_2dict(thisfile):  # Let's make my life easier, and write this to a dict
-    (thefilter, disperser, slitname) = get_spec_keywords_from_jwst_header(thisfile)
+    (thefilter, disperser, slitname, readpatt) = get_spec_keywords_from_jwst_header(thisfile)
     dateobs = gethead(thisfile, 'DATE-OBS',  extension=0)
     (RA, DEC, texp, velosys, mjd, pid, obsid) = get_keywords_from_jwst_header(thisfile)
     # convert MJD of midpoint of observation to more useful formats
     datestamp   = Time(mjd, format='mjd').to_value('isot')
     decimalyear = Time(mjd, format='mjd').to_value('decimalyear')    
-    mydict = {'FILTER': thefilter,  'GRATING': disperser, 'SLTNAME': slitname, 'DATE-OBS': dateobs, 'datestamp': datestamp, \
-              'decimalyear': decimalyear, 'mjd': mjd, 'RA': RA, 'DEC': DEC, 'texp': texp, 'velosys': velosys,  \
-              'pid': pid, 'obsid': obsid}
+    mydict = {'FILTER': thefilter,  'GRATING': disperser, 'SLTNAME': slitname, 'READPATT': readpatt, 'DATE-OBS': dateobs, \
+              'datestamp': datestamp, 'decimalyear': decimalyear, 'mjd': mjd, 'RA': RA, 'DEC': DEC, 'texp': texp, \
+              'velosys': velosys,  'pid': pid, 'obsid': obsid}
     return(mydict)
 
 def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
