@@ -8,6 +8,7 @@ from os.path import exists, basename
 from shutil import copy
 import fileinput
 import operator
+from pathlib import Path
 from   re import split, sub, search
 from astropy.time import Time
 from astropy.io.fits import getdata
@@ -26,6 +27,16 @@ import csv
 def unique_elements_in_list(mylist):
     # returns an unordered list of the unique elements in the input list.  Like pandas' unique
     return(list(set(mylist)))
+
+
+def max_filesize(indir):
+    folder_path = Path(indir)
+    # Find the largest filesize for a bunch of files in a directory (ignore directories)
+    files = [f for f in folder_path.rglob("*") if f.is_file()]
+    if files:
+        largest_file = max(files, key=lambda f: f.stat().st_size)
+        return(largest_file.stat().st_size)
+    else: raise Exception("No files found")
 
 #####  Math  #####
 

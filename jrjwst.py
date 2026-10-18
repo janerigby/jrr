@@ -28,12 +28,18 @@ import json
 import joblib
 import pickle
 import warnings
+import subprocess
 
 h = constants.h.cgs.value
 c = speed_of_light.cgs.value
 k = constants.k_B.cgs.value
 
 c_inkms = speed_of_light.to('km/s').value
+
+def predownload_crds(myfiles, context="jwst_1584.pmap"):
+    # Download all needed JWST CRDS files *before* calling the pipeline.  Prevents collisions when multiprocessing
+    subprocess.run(["crds", "bestrefs","--new-context", context,
+        "--files", *map(str, myfiles), "--sync-references=1",], check=True)
 
 def get_mrieke_fluxcal_aug2022(infile='/Users/jrrigby1/Python/jrr/mrieke_fluxcalib_08252022.txt'):
     # Create a dict of Marcia Rieke's PHOTMJSR flux calibration zeropoints for NIRCam
@@ -213,8 +219,8 @@ def get_keywords_from_jwst_header2(thisfile):   # common keywords I need all the
         result[thiskey] =  gethead(thisfile, thiskey, extension=extens[ii])
     result['mjd'] = result['expmid']  # synonym
     # convert MJD of midpoint of observation to more useful formats
-    datestamp   = Time(result['mjd'], format='mjd').to_value('isot')
-    decimalyear = Time(result['mjd'], format='mjd').to_value('decimalyear')    
+    result['datestamp']    = Time(result['mjd'], format='mjd').to_value('isot')
+    result['decimalyear']  = Time(result['mjd'], format='mjd').to_value('decimalyear')
     return(result)
 
 def get_bad_status_keys():   #  The status of the visit is available in the VISITSTA keyword
@@ -780,7 +786,7 @@ def median_combine_level3_nirspecFS2(infile, thisslit, outdir, sci_to_wave_off='
         'wave': median_wave_1D, 'fnu': median_sci_1D,
         'stddev': std_1D, 'mad': mad})
     fileroot = infile.split('/')[-1].split('_s')[0]
-    print("Debug", fileroot, infile, basename(infile))
+    #print("Debug", fileroot, infile, basename(infile))
     outfile    = sub('.fits', '_extract.csv', basename(infile))
     df.to_csv(outdir + outfile, index=False)
     myheaderdict =  get_keywords_from_jwst_header2(infile)
