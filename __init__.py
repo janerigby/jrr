@@ -15,3 +15,4 @@ from . import sunburst
 from . import phot
 from . import jrjwst
 from . import fitting
+from . import source_detect
